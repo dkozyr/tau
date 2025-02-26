@@ -3,7 +3,7 @@
 #include <gtest/gtest.h>
 
 TEST(BufferTest, Basic) {
-    auto buffer = Buffer::Create(g_system_allocator, 256);
+    auto buffer = Buffer::Create(g_system_allocator, 256, Buffer::Info{.tp = 42});
     ASSERT_EQ(SystemAllocator::kDefaultSize, g_system_allocator.GetChunkSize());
 
     auto view = buffer.GetView();
@@ -31,15 +31,18 @@ TEST(BufferTest, Size) {
     ASSERT_EQ(buffer.GetCapacity(), buffer.GetSize());
     ASSERT_EQ(256, buffer.GetSize());
     ASSERT_EQ(256, buffer.GetView().size);
+
+    ASSERT_EQ(0, buffer.GetInfo().tp);
 }
 
 TEST(BufferTest, Move) {
-    auto buffer = Buffer::Create(g_system_allocator, 256);
+    const Buffer::Info info{.tp = 1234567890};
+    auto buffer = Buffer::Create(g_system_allocator, 256, info);
     buffer.SetSize(42);
 
     auto buffer2 = std::move(buffer);
     ASSERT_EQ(42, buffer2.GetSize());
     ASSERT_EQ(256, buffer2.GetCapacity());
-    ASSERT_EQ(0, buffer.GetSize());
-    ASSERT_EQ(0, buffer.GetCapacity());
+    ASSERT_EQ(info, buffer2.GetInfo());
+    ASSERT_EQ(nullptr, buffer.GetView().ptr);
 }

@@ -2,16 +2,26 @@
 
 #include "tau/memory/Allocator.h"
 #include "tau/memory/BufferView.h"
+#include "tau/common/Clock.h"
 #include <utility>
 
 class Buffer {
 public:
-    static Buffer Create(Allocator& allocator, size_t capacity) {
-        return std::move(Buffer(allocator, capacity));
+    struct Info {
+        Timepoint tp = 0;
+
+        bool operator==(const Info& other) const {
+            return tp == other.tp;
+        }
+    };
+
+public:
+    static Buffer Create(Allocator& allocator, size_t capacity, Info info = Info{.tp = 0}) {
+        return std::move(Buffer(allocator, capacity, info));
     }
 
-    static Buffer Create(Allocator& allocator) {
-        return std::move(Buffer(allocator));
+    static Buffer Create(Allocator& allocator, Info info = Info{.tp = 0}) {
+        return std::move(Buffer(allocator, info));
     }
 
     Buffer(const Buffer&) = delete;
@@ -29,9 +39,11 @@ public:
     size_t GetSize() const { return _size; }
     size_t GetCapacity() const { return _capacity; }
 
+    const Info& GetInfo() const { return _info; }
+
 private:
-    Buffer(Allocator& allocator, size_t capacity);
-    Buffer(Allocator& allocator);
+    Buffer(Allocator& allocator, size_t capacity, Info info);
+    Buffer(Allocator& allocator, Info info);
 
 private:
     Allocator& _allocator;
@@ -39,4 +51,5 @@ private:
     size_t _capacity;
     size_t _size;
     size_t _offset = 0; //TODO: impl
+    Info _info;
 };

@@ -1,19 +1,21 @@
 #include "tau/memory/Buffer.h"
 
-Buffer::Buffer(Allocator& allocator, size_t capacity)
+Buffer::Buffer(Allocator& allocator, size_t capacity, Info info)
     : _allocator(allocator)
     , _block(_allocator.Allocate(capacity))
     , _capacity(capacity)
     , _size(0)
     , _offset(0)
+    , _info(info)
 {}
 
-Buffer::Buffer(Allocator& allocator)
+Buffer::Buffer(Allocator& allocator, Info info)
     : _allocator(allocator)
     , _block(_allocator.Allocate())
     , _capacity(_allocator.GetChunkSize())
     , _size(0)
     , _offset(0)
+    , _info(info)
 {}
 
 Buffer::Buffer(Buffer&& other)
@@ -21,11 +23,9 @@ Buffer::Buffer(Buffer&& other)
     , _block(other._block)
     , _capacity(other._capacity)
     , _size(other._size)
-    , _offset(other._offset) {
+    , _offset(other._offset)
+    , _info(other._info) {
     other._block = nullptr;
-    other._capacity = 0;
-    other._size = 0;
-    other._offset = 0;
 }
 
 Buffer::~Buffer() {
