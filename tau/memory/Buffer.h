@@ -6,8 +6,12 @@
 
 class Buffer {
 public:
-    static Buffer Create(Allocator& allocator, size_t size) {
-        return std::move(Buffer(allocator, size));
+    static Buffer Create(Allocator& allocator, size_t capacity) {
+        return std::move(Buffer(allocator, capacity));
+    }
+
+    static Buffer Create(Allocator& allocator) {
+        return std::move(Buffer(allocator));
     }
 
     Buffer(const Buffer&) = delete;
@@ -26,7 +30,8 @@ public:
     size_t GetCapacity() const { return _capacity; }
 
 private:
-    Buffer(Allocator& allocator, size_t size);
+    Buffer(Allocator& allocator, size_t capacity);
+    Buffer(Allocator& allocator);
 
 private:
     Allocator& _allocator;

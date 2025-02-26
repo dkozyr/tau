@@ -29,7 +29,10 @@ int main(int argc, char **argv) {
         }
         LOG_TRACE << "Packet #" << (++packet_count) << ", " << "size: " << header->caplen << " bytes, " << "epoch: " << header->ts.tv_sec << "." << header->ts.tv_usec;
 
-        const BufferViewConst packet_view{.ptr = data + udp_payload_offset, .size = header->caplen - udp_payload_offset};
+        const BufferViewConst packet_view{
+            .ptr = data + udp_payload_offset,
+            .size = header->caplen - udp_payload_offset
+        };
         if(rtp::Reader::Validate(packet_view)) {
             rtp::Reader reader(packet_view);
             if(target_pt == reader.Pt()) {

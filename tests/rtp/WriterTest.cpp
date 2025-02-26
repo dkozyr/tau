@@ -14,8 +14,6 @@ namespace rtp {
 class WriterTest : public ::testing::Test {
 protected:
     static constexpr auto kMtuSize = 1500; //TODO: move to constants file
-    static constexpr std::string_view kTargetPayload = "hello world";
-    static constexpr std::string_view kTargetExtensionPayload = "ext?";
     static constexpr auto kDefaultOptions = Writer::Options{
         .pt = 100,
         .ssrc = 0x01234567,

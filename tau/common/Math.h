@@ -4,6 +4,11 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#include <cstddef>
+
+inline constexpr size_t Align(size_t value, size_t alignment) {
+    return alignment * ((value + alignment - 1) / alignment);
+}
 
 template<typename T>
 bool Near(T a, T b) {

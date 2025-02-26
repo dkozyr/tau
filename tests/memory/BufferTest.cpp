@@ -4,6 +4,7 @@
 
 TEST(BufferTest, Basic) {
     auto buffer = Buffer::Create(g_system_allocator, 256);
+    ASSERT_EQ(SystemAllocator::kDefaultSize, g_system_allocator.GetChunkSize());
 
     auto view = buffer.GetView();
     ASSERT_EQ(0, view.size);

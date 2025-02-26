@@ -1,9 +1,17 @@
 #include "tau/memory/Buffer.h"
 
-Buffer::Buffer(Allocator& allocator, size_t size)
+Buffer::Buffer(Allocator& allocator, size_t capacity)
     : _allocator(allocator)
-    , _block(_allocator.Allocate(size))
-    , _capacity(size)
+    , _block(_allocator.Allocate(capacity))
+    , _capacity(capacity)
+    , _size(0)
+    , _offset(0)
+{}
+
+Buffer::Buffer(Allocator& allocator)
+    : _allocator(allocator)
+    , _block(_allocator.Allocate())
+    , _capacity(_allocator.GetChunkSize())
     , _size(0)
     , _offset(0)
 {}
@@ -21,7 +29,9 @@ Buffer::Buffer(Buffer&& other)
 }
 
 Buffer::~Buffer() {
-    _allocator.Deallocate(_block);
+    if(_block) {
+        _allocator.Deallocate(_block);
+    }
 }
 
 BufferView Buffer::GetView() {
