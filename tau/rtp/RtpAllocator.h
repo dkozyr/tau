@@ -1,9 +1,10 @@
 #pragma once
 
-#include "memory/PoolAllocator.h"
-#include "memory/Buffer.h"
-#include "rtp/Writer.h"
-#include "common/Log.h"
+#include "tau/memory/PoolAllocator.h"
+#include "tau/memory/Buffer.h"
+#include "tau/rtp/Writer.h"
+#include "tau/rtp/Constants.h"
+#include "tau/common/Log.h"
 
 namespace rtp {
 
@@ -38,6 +39,14 @@ public:
 
     void Deallocate(Buffer&& buffer) {
         _pool.Deallocate(buffer.GetView().ptr);
+    }
+
+    size_t MaxRtpPayload() const {
+        //TODO: do we need to subtract TURN header size?
+        constexpr size_t kSrtpMaxAuthSize = 16;
+        return _options.size - kFixedHeaderSize
+               - HeaderExtensionSize(_options.header.extension_length_in_words)
+               - kSrtpMaxAuthSize;
     }
 
 private:

@@ -31,6 +31,7 @@ TEST_F(RtpAllocatorTest, Basic) {
         .clock_rate = kDefaultClockRate,
         .size = 1200
     });
+    ASSERT_EQ(1172, allocator.MaxRtpPayload());
 
     {
         auto packet = allocator.Allocate(start_tp, false);
@@ -68,8 +69,9 @@ TEST_F(RtpAllocatorTest, TsOverflow) {
         .header = _header_options,
         .base_tp = start_tp,
         .clock_rate = kDefaultClockRate,
-        .size = 1200
+        .size = 600
     });
+    ASSERT_EQ(572, allocator.MaxRtpPayload());
 
     auto prev_ts = _header_options.ts;
     const auto max_seconds = 1 + std::numeric_limits<uint32_t>::max() / kDefaultClockRate;
