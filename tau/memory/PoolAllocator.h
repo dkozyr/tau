@@ -7,7 +7,7 @@
 
 class PoolAllocator : public Allocator {
 public:
-    PoolAllocator(size_t block_size)
+    explicit PoolAllocator(size_t block_size)
         : _pool(Align(block_size, sizeof(size_t)))
     {}
 

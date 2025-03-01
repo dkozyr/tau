@@ -28,6 +28,20 @@ Buffer::Buffer(Buffer&& other)
     other._block = nullptr;
 }
 
+Buffer& Buffer::operator=(Buffer&& other) {
+    if(&_allocator != &other._allocator) {
+        throw -1;
+    }
+    _block = other._block;
+    _capacity = other._capacity;
+    _size = other._size;
+    _offset = other._offset;
+    _info = std::move(other._info);
+
+    other._block = nullptr;
+    return *this;
+}
+
 Buffer::~Buffer() {
     if(_block) {
         _allocator.Deallocate(_block);

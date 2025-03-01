@@ -18,7 +18,7 @@ public:
     };
 
 public:
-    RtpAllocator(Options&& options)
+    explicit RtpAllocator(Options&& options)
         : _options(std::move(options))
         , _base_rtp_tp(_options.header.ts)
         , _pool(_options.size)

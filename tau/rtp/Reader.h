@@ -6,7 +6,7 @@ namespace rtp {
 
 class Reader {
 public:
-    Reader(BufferViewConst view);
+    explicit Reader(BufferViewConst view);
 
     uint8_t Pt() const;
     uint32_t Ssrc() const;

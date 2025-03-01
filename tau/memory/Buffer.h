@@ -26,6 +26,8 @@ public:
 
     Buffer(const Buffer&) = delete;
     Buffer(Buffer&&);
+    Buffer& operator=(const Buffer& other) = delete;
+    Buffer& operator=(Buffer&& other);
     ~Buffer();
 
     BufferView GetView();
