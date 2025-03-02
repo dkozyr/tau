@@ -5,15 +5,16 @@
 namespace rtp {
 
 TEST(SnTest, Range) {
-    SnRange range{.left = 65'531, .right = 200};
+    uint16_t left = 65'531;
+    uint16_t right = 200;
     for(uint16_t sn = 0; sn <= 200; ++sn) {
-        ASSERT_TRUE(InRange(range, sn));
+        ASSERT_TRUE(InRange(sn, left, right));
     }
     for(uint16_t sn = 201; sn <= 65'530; ++sn) {
-        ASSERT_FALSE(InRange(range, sn));
+        ASSERT_FALSE(InRange(sn, left, right));
     }
     for(uint16_t sn = 65'531; sn != 0; ++sn) {
-        ASSERT_TRUE(InRange(range, sn));
+        ASSERT_TRUE(InRange(sn, left, right));
     }
 }
 
