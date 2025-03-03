@@ -1,6 +1,7 @@
 #include "tau/memory/Buffer.h"
 #include "tau/memory/SystemAllocator.h"
 #include <gtest/gtest.h>
+#include <cstring>
 
 TEST(BufferTest, Basic) {
     auto buffer = Buffer::Create(g_system_allocator, 256, Buffer::Info{.tp = 42});
@@ -45,4 +46,19 @@ TEST(BufferTest, Move) {
     ASSERT_EQ(256, buffer2.GetCapacity());
     ASSERT_EQ(info, buffer2.GetInfo());
     ASSERT_EQ(nullptr, buffer.GetView().ptr);
+}
+
+TEST(BufferTest, MakeCopy) {
+    const Buffer::Info info{.tp = 1234567890};
+    auto buffer = Buffer::Create(g_system_allocator, 256, info);
+    buffer.SetSize(42);
+    for(size_t i = 0; i < 42; ++i) {
+        buffer.GetView().ptr[i] = i;
+    }
+
+    auto buffer2 = buffer.MakeCopy();
+    ASSERT_EQ(42, buffer2.GetSize());
+    ASSERT_EQ(256, buffer2.GetCapacity());
+    ASSERT_EQ(info, buffer2.GetInfo());
+    ASSERT_EQ(0, std::memcmp(buffer.GetView().ptr, buffer2.GetView().ptr, buffer.GetSize()));
 }

@@ -1,4 +1,5 @@
 #include "tau/memory/Buffer.h"
+#include <cstring>
 
 Buffer::Buffer(Allocator& allocator, size_t capacity, Info info)
     : _allocator(allocator)
@@ -46,6 +47,13 @@ Buffer::~Buffer() {
     if(_block) {
         _allocator.Deallocate(_block);
     }
+}
+
+Buffer Buffer::MakeCopy() const {
+    Buffer buffer_copy(_allocator, _capacity, _info);
+    buffer_copy.SetSize(_size);
+    std::memcpy(buffer_copy.GetView().ptr, _block, _size);
+    return buffer_copy;
 }
 
 BufferView Buffer::GetView() {

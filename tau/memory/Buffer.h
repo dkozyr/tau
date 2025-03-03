@@ -30,6 +30,8 @@ public:
     Buffer& operator=(Buffer&& other);
     ~Buffer();
 
+    Buffer MakeCopy() const;
+
     BufferView GetView();
     BufferViewConst GetView() const;
 
