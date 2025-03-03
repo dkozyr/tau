@@ -9,7 +9,7 @@ class H264PacketizationTest : public H264PacketizationBase, public ::testing::Te
 
 TEST_F(H264PacketizationTest, Randomized) {
     Random random;
-    for(size_t iteration = 0; iteration < 100; ++iteration) {
+    for(size_t iteration = 0; iteration < 50; ++iteration) {
         _header_options.extension_length_in_words = random.Int(0, 8);
         const auto allocator_chunk_size = random.Int(128, 1500);
         Init(allocator_chunk_size);

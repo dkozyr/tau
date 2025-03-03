@@ -4,6 +4,7 @@
 #include <functional>
 #include <vector>
 #include <optional>
+#include <set>
 
 namespace rtp::session {
 
@@ -34,6 +35,7 @@ public:
     PacketType Push(Buffer&& packet, uint16_t sn);
     void Flush();
 
+    const std::set<uint16_t>& GetSnsToRecover() const { return _sns_to_recover; }
     const Stats& GetStats() const { return _stats; }
 
 private:
@@ -47,14 +49,15 @@ private:
     size_t GetIndexBySn(uint16_t sn) const;
 
 private:
-    const uint16_t _size;
+    const size_t _size;
 
     bool _first_packet = true;
     uint16_t _sn_next = 0;
-    uint16_t _sn_end = 0;
+    std::optional<uint16_t> _sn_end;
 
-    uint16_t _index = 0;
+    size_t _index = 0;
     std::vector<std::optional<Buffer>> _packets;
+    std::set<uint16_t> _sns_to_recover;
 
     Callback _callback;
     Stats _stats;
