@@ -12,4 +12,6 @@ TEST(ClockTest, Basic) {
 
     auto tp3 = tp + kSec / 2;
     ASSERT_NEAR(0.5, DurationSec(tp, tp3), std::numeric_limits<double>::epsilon());
+
+    ASSERT_NEAR(0.259, DurationSec(259 * kMs), std::numeric_limits<double>::epsilon());
 }

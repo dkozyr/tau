@@ -43,6 +43,7 @@ public:
     size_t GetSize() const { return _size; }
     size_t GetCapacity() const { return _capacity; }
 
+    Info& GetInfo() { return _info; }
     const Info& GetInfo() const { return _info; }
 
 private:

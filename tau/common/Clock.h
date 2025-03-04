@@ -1,6 +1,7 @@
 #pragma once
 
 #include <chrono>
+#include <cstdint>
 #include <cstdlib>
 #include <string>
 
@@ -29,4 +30,8 @@ private:
 
 inline double DurationSec(Timepoint a, Timepoint b) {
     return static_cast<double>(b - a) * 1e-9;
+}
+
+inline double DurationSec(Timepoint a) {
+    return static_cast<double>(a) * 1e-9;
 }
