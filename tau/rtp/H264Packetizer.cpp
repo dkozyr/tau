@@ -1,6 +1,7 @@
 #include <tau/rtp/H264Packetizer.h>
 #include <tau/video/h264/Nalu.h>
 #include <tau/common/Math.h>
+#include <cstring>
 
 namespace rtp {
 
