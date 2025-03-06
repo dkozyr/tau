@@ -23,6 +23,10 @@ public:
         return Int(std::numeric_limits<T>::min(), std::numeric_limits<T>::max());
     }
 
+    bool Bool() {
+        return Int(0, 1) == 1;
+    }
+
 private:
     std::random_device _rd;
     std::mt19937 _gen;
