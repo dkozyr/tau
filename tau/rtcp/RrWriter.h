@@ -17,10 +17,7 @@ public:
         writer.Write(sender_ssrc);
         for(auto& block : blocks) {
             writer.Write(block.ssrc);
-            writer.Write(block.fraction_lost);
-            writer.Write(block.cumulative_lost[2]);
-            writer.Write(block.cumulative_lost[1]);
-            writer.Write(block.cumulative_lost[0]);
+            writer.Write(block.packet_lost_word);
             writer.Write(block.ext_highest_sn);
             writer.Write(block.jitter);
             writer.Write(block.lsr);

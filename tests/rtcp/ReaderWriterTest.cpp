@@ -47,13 +47,12 @@ protected:
 
     RrBlock CreateRrBlock() {
         return RrBlock{
-            .ssrc            = _random.Int<uint32_t>(),
-            .fraction_lost   = _random.Int<uint8_t>(),
-            .cumulative_lost = {111, 222, 33},
-            .ext_highest_sn  = _random.Int<uint32_t>(),
-            .jitter          = _random.Int<uint32_t>(),
-            .lsr             = _random.Int<uint32_t>(),
-            .dlsr            = _random.Int<uint32_t>()
+            .ssrc             = _random.Int<uint32_t>(),
+            .packet_lost_word = BuildPacketLostWord(_random.Int<uint8_t>(), _random.Int<int32_t>(kCumulativeLostMin, kCumulativeLostMax)),
+            .ext_highest_sn   = _random.Int<uint32_t>(),
+            .jitter           = _random.Int<uint32_t>(),
+            .lsr              = _random.Int<uint32_t>(),
+            .dlsr             = _random.Int<uint32_t>()
         };
     }
 

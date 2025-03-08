@@ -31,17 +31,12 @@ public:
         auto ptr = view.ptr + kHeaderSize + sizeof(uint32_t) + sizeof(SrInfo);
         while(blocks_count != 0) {
             blocks.push_back(RrBlock{
-                .ssrc            = Read32(ptr),
-                .fraction_lost   = ptr[sizeof(uint32_t)],
-                .cumulative_lost = {
-                    ptr[sizeof(uint32_t) + 3],
-                    ptr[sizeof(uint32_t) + 2],
-                    ptr[sizeof(uint32_t) + 1]
-                },
-                .ext_highest_sn  = Read32(ptr + 2 * sizeof(uint32_t)),
-                .jitter          = Read32(ptr + 3 * sizeof(uint32_t)),
-                .lsr             = Read32(ptr + 4 * sizeof(uint32_t)),
-                .dlsr            = Read32(ptr + 5 * sizeof(uint32_t))
+                .ssrc             = Read32(ptr),
+                .packet_lost_word = Read32(ptr + sizeof(uint32_t)),
+                .ext_highest_sn   = Read32(ptr + 2 * sizeof(uint32_t)),
+                .jitter           = Read32(ptr + 3 * sizeof(uint32_t)),
+                .lsr              = Read32(ptr + 4 * sizeof(uint32_t)),
+                .dlsr             = Read32(ptr + 5 * sizeof(uint32_t))
             });
             blocks_count--;
             ptr += sizeof(RrBlock);
