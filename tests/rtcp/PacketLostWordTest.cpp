@@ -1,7 +1,5 @@
 #include "tau/rtcp/PacketLostWord.h"
-#include "tau/common/Random.h"
-#include "tau/common/Log.h"
-#include <gtest/gtest.h>
+#include "tests/Common.h"
 
 namespace rtcp {
 
@@ -36,10 +34,9 @@ TEST(PacketLostWordTest, CumulativeLost_Max) {
 }
 
 TEST(PacketLostWordTest, CumulativeLost_Randomized) {
-    Random random;
     for(size_t i = 0; i < 50'000; ++i) {
-        const auto fraction_lost = random.Int<uint8_t>();
-        const auto cumulative_packet_lost = random.Int<int32_t>(kCumulativeLostMin, kCumulativeLostMax);
+        const auto fraction_lost = g_random.Int<uint8_t>();
+        const auto cumulative_packet_lost = g_random.Int<int32_t>(kCumulativeLostMin, kCumulativeLostMax);
         const PacketLostWord packet_lost_word = BuildPacketLostWord(fraction_lost, cumulative_packet_lost);
         ASSERT_EQ(fraction_lost, GetFractionLost(packet_lost_word));
         ASSERT_EQ(cumulative_packet_lost, GetCumulativePacketLost(packet_lost_word));

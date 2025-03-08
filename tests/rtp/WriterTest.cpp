@@ -2,12 +2,7 @@
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
 #include "tau/memory/Buffer.h"
-#include "tau/memory/SystemAllocator.h"
-#include "tau/common/Random.h"
-#include <gtest/gtest.h>
-#include <vector>
-#include <string_view>
-#include <cstring>
+#include "tests/Common.h"
 
 namespace rtp {
 
@@ -93,17 +88,16 @@ TEST_F(WriterTest, WithExtension) {
 }
 
 TEST_F(WriterTest, Randomized) {
-    Random random;
     for(size_t i = 0; i < 10'000; ++i) {
         auto packet = Buffer::Create(g_system_allocator, kMtuSize);
         auto view = packet.GetViewWithCapacity();
         auto options = Writer::Options{
-            .pt = random.Int<uint8_t>(0, 127),
-            .ssrc = random.Int<uint32_t>(),
-            .ts = random.Int<uint32_t>(),
-            .sn = random.Int<uint16_t>(),
+            .pt = g_random.Int<uint8_t>(0, 127),
+            .ssrc = g_random.Int<uint32_t>(),
+            .ts = g_random.Int<uint32_t>(),
+            .sn = g_random.Int<uint16_t>(),
             .marker = (i % 2 == 1),
-            .extension_length_in_words = random.Int<uint16_t>(0, 16)
+            .extension_length_in_words = g_random.Int<uint16_t>(0, 16)
         };
         auto result = Writer::Write(view, options);
         const auto target_extension_size = HeaderExtensionSize(options.extension_length_in_words);

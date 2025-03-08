@@ -4,11 +4,7 @@
 #include "tau/rtp/Writer.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/common/Container.h"
-#include "tau/common/Random.h"
-#include "tau/common/Log.h"
-#include <gtest/gtest.h>
-#include <vector>
-#include <algorithm>
+#include "tests/Common.h"
 
 namespace rtp::session {
 
@@ -19,6 +15,8 @@ protected:
 protected:
     RecvBufferTest() {
         _recv_buffer.SetCallback([this](Buffer&& packet) {
+            // Reader reader(ToConst(packet.GetView()));
+            // LOG_INFO << "received sn: " << reader.Sn();
             _processed_packets.push_back(std::move(packet));
         });
     }
@@ -195,12 +193,11 @@ TEST_F(RecvBufferTest, ResetOnBigJumpWithOverflow) {
 }
 
 TEST_F(RecvBufferTest, RandomizedWithoutLoss) {
-    Random random;
     size_t total_packets = 0;
-    uint16_t sn = random.Int<uint16_t>();
+    uint16_t sn = g_random.Int<uint16_t>();
     for(size_t iteration = 0; iteration < 1'000; ++iteration) {
         std::vector<uint16_t> sns;
-        const auto packets_count = random.Int<size_t>(1, 50);
+        const auto packets_count = g_random.Int<size_t>(1, 50);
         for(size_t i = 0; i < packets_count; ++i) {
             sns.push_back(sn);
             sn++;

@@ -4,8 +4,6 @@
 
 namespace h264 {
 
-#pragma pack(push,1)
-
 enum NaluType : uint8_t {
     kNone   = 0,
     kNonIdr = 1,
@@ -22,6 +20,8 @@ enum NaluType : uint8_t {
     kFuB    = 29
 };
 
+#pragma pack(push,1)
+
 struct NaluHeader {
     uint8_t type      : 5;
     uint8_t nri       : 2;
@@ -34,6 +34,8 @@ struct FuAHeader {
     uint8_t end      : 1;
     uint8_t start    : 1;
 };
+
+#pragma pack(pop)
 
 using FuAIndicator = NaluHeader;
 
@@ -51,7 +53,5 @@ inline uint8_t CreateFuAHeader(bool start, bool end, uint8_t nalu_header) {
          | (end         ? 0b01000000 : 0)
          | (nalu_header & 0b00011111);
 }
-
-#pragma pack(pop)
 
 }

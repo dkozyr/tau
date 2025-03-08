@@ -3,11 +3,7 @@
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
 #include "tau/video/h264/Nalu.h"
-#include "tau/memory/SystemAllocator.h"
-#include "tau/common/Random.h"
-#include "tau/common/Log.h"
-#include <gtest/gtest.h>
-#include <optional>
+#include "tests/Common.h"
 
 namespace rtp {
 

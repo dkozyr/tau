@@ -13,27 +13,24 @@
 #include "tau/rtcp/NackReader.h"
 #include "tau/rtcp/NackWriter.h"
 #include "tau/memory/Buffer.h"
-#include "tau/memory/SystemAllocator.h"
-#include "tau/common/Random.h"
-#include "tau/common/Log.h"
-#include <gtest/gtest.h>
+#include "tests/Common.h"
 
 namespace rtcp {
 
 class ReaderWriterTest : public ::testing::Test {
 public:
     ReaderWriterTest()
-        : _sender_ssrc(_random.Int<uint32_t>())
-        , _media_ssrc(_random.Int<uint32_t>())
+        : _sender_ssrc(g_random.Int<uint32_t>())
+        , _media_ssrc(g_random.Int<uint32_t>())
     {}
 
 protected:
     SrInfo CreateSrInfo() {
         return SrInfo{
-            .ntp          = _random.Int<uint64_t>(),
-            .ts           = _random.Int<uint32_t>(),
-            .packet_count = _random.Int<uint32_t>(),
-            .octet_count  = _random.Int<uint32_t>()
+            .ntp          = g_random.Int<uint64_t>(),
+            .ts           = g_random.Int<uint32_t>(),
+            .packet_count = g_random.Int<uint32_t>(),
+            .octet_count  = g_random.Int<uint32_t>()
         };
     }
 
@@ -47,19 +44,19 @@ protected:
 
     RrBlock CreateRrBlock() {
         return RrBlock{
-            .ssrc             = _random.Int<uint32_t>(),
-            .packet_lost_word = BuildPacketLostWord(_random.Int<uint8_t>(), _random.Int<int32_t>(kCumulativeLostMin, kCumulativeLostMax)),
-            .ext_highest_sn   = _random.Int<uint32_t>(),
-            .jitter           = _random.Int<uint32_t>(),
-            .lsr              = _random.Int<uint32_t>(),
-            .dlsr             = _random.Int<uint32_t>()
+            .ssrc             = g_random.Int<uint32_t>(),
+            .packet_lost_word = BuildPacketLostWord(g_random.Int<uint8_t>(), g_random.Int<int32_t>(kCumulativeLostMin, kCumulativeLostMax)),
+            .ext_highest_sn   = g_random.Int<uint32_t>(),
+            .jitter           = g_random.Int<uint32_t>(),
+            .lsr              = g_random.Int<uint32_t>(),
+            .dlsr             = g_random.Int<uint32_t>()
         };
     }
 
     NackSns CreateNackSns(size_t count) {
         NackSns sns;
         for(size_t i = 0; i < count; ++i) {
-            sns.insert(_random.Int<uint16_t>());
+            sns.insert(g_random.Int<uint16_t>());
         }
         return sns;
     }
@@ -67,7 +64,7 @@ protected:
     std::vector<uint32_t> ByeSsrcs(size_t count) {
         std::vector<uint32_t> ssrcs;
         for(size_t i = 0; i < count; ++i) {
-            ssrcs.push_back(_random.Int<uint32_t>());
+            ssrcs.push_back(g_random.Int<uint32_t>());
         }
         return ssrcs;
     }
@@ -80,7 +77,6 @@ protected:
     }
 
 protected:
-    Random _random;
     uint32_t _sender_ssrc;
     uint32_t _media_ssrc;
 };
@@ -156,7 +152,7 @@ TEST_F(ReaderWriterTest, Pli) {
 
 TEST_F(ReaderWriterTest, Fir) {
     auto packet = Buffer::Create(g_system_allocator, 1500);
-    const auto sn = _random.Int<uint8_t>();
+    const auto sn = g_random.Int<uint8_t>();
 
     Writer writer(packet.GetViewWithCapacity());
     ASSERT_TRUE(FirWriter::Write(writer, _sender_ssrc, _media_ssrc, sn));
@@ -187,7 +183,7 @@ TEST_F(ReaderWriterTest, Nack) {
 TEST_F(ReaderWriterTest, Nack_Randomized) {
     for(size_t i = 0; i < 100; ++i) {
         auto packet = Buffer::Create(g_system_allocator, 1500);
-        const auto nack_sns = CreateNackSns(_random.Int<size_t>(1, 100));
+        const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 100));
 
         Writer writer(packet.GetViewWithCapacity());
         ASSERT_TRUE(NackWriter::Write(writer, _sender_ssrc, _media_ssrc, nack_sns));
@@ -211,34 +207,34 @@ TEST_F(ReaderWriterTest, Compound_Randomized) {
     for(size_t i = 0; i < 100; ++i) {
         auto packet = Buffer::Create(g_system_allocator, 1500);
         const auto info = CreateSrInfo();
-        const auto rr_blocks = CreateRrBlocks(_random.Int<size_t>(1, 10));
-        const auto bye_ssrcs = ByeSsrcs(_random.Int<size_t>(0, 30));
-        const auto nack_sns = CreateNackSns(_random.Int<size_t>(1, 100));
-        const auto fir_sn = _random.Int<uint8_t>();
+        const auto rr_blocks = CreateRrBlocks(g_random.Int<size_t>(1, 10));
+        const auto bye_ssrcs = ByeSsrcs(g_random.Int<size_t>(0, 30));
+        const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 100));
+        const auto fir_sn = g_random.Int<uint8_t>();
 
         Writer writer(packet.GetViewWithCapacity());
         size_t reports_count = 0;
-        if(_random.Bool())  {
+        if(g_random.Bool())  {
             ASSERT_TRUE(SrWriter::Write(writer, _sender_ssrc, info, rr_blocks));
             reports_count++;
         }
-        if(_random.Bool())  {
+        if(g_random.Bool())  {
             ASSERT_TRUE(RrWriter::Write(writer, _sender_ssrc, rr_blocks));
             reports_count++;
         }
-        if(_random.Bool())  {
+        if(g_random.Bool())  {
             ASSERT_TRUE(ByeWriter::Write(writer, bye_ssrcs));
             reports_count++;
         }
-        if(_random.Bool())  {
+        if(g_random.Bool())  {
             ASSERT_TRUE(NackWriter::Write(writer, _sender_ssrc, _media_ssrc, nack_sns));
             reports_count++;
         }
-        if(_random.Bool())  {
+        if(g_random.Bool())  {
             ASSERT_TRUE(PliWriter::Write(writer, _sender_ssrc, _media_ssrc));
             reports_count++;
         }
-        if(_random.Bool() || (reports_count == 0))  {
+        if(g_random.Bool() || (reports_count == 0))  {
             ASSERT_TRUE(FirWriter::Write(writer, _sender_ssrc, _media_ssrc, fir_sn));
             reports_count++;
         }

@@ -8,14 +8,13 @@ class H264PacketizationTest : public H264PacketizationBase, public ::testing::Te
 };
 
 TEST_F(H264PacketizationTest, Randomized) {
-    Random random;
     for(size_t iteration = 0; iteration < 50; ++iteration) {
-        _header_options.extension_length_in_words = random.Int(0, 8);
-        const auto allocator_chunk_size = random.Int(128, 1500);
+        _header_options.extension_length_in_words = g_random.Int(0, 8);
+        const auto allocator_chunk_size = g_random.Int(128, 1500);
         Init(allocator_chunk_size);
         for(size_t i = 0; i < 10; ++i) {
-            auto nalu = CreateNalu(NaluType::kNonIdr, random.Int(2, 200'000));
-            const auto last = random.Int(0, 1);
+            auto nalu = CreateNalu(NaluType::kNonIdr, g_random.Int(2, 200'000));
+            const auto last = g_random.Int(0, 1);
             ASSERT_TRUE(_ctx->packetizer.Process(nalu, last));
             ASSERT_FALSE(_rtp_packets.empty());
             ASSERT_TRUE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
