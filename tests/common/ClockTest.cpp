@@ -1,6 +1,5 @@
 #include "tau/common/Clock.h"
-#include "tau/common/Log.h"
-#include <gtest/gtest.h>
+#include "tests/Common.h"
 
 TEST(ClockTest, Basic) {
     SteadyClock clock;

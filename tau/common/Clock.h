@@ -28,6 +28,16 @@ private:
     std::chrono::steady_clock _clock;
 };
 
+class SystemClock : public Clock {
+public:
+    Timepoint Now() const override {
+        return std::chrono::duration_cast<std::chrono::nanoseconds>(_clock.now().time_since_epoch()).count();
+    }
+
+private:
+    std::chrono::system_clock _clock;
+};
+
 inline double DurationSec(Timepoint a, Timepoint b) {
     return static_cast<double>(b - a) * 1e-9;
 }
