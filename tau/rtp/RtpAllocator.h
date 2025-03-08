@@ -29,7 +29,7 @@ public:
     {}
 
     Buffer Allocate(Timepoint tp, bool marker = false) {
-        auto packet = Buffer::Create(_pool);
+        auto packet = Buffer::Create(_pool, Buffer::Info{.tp = tp});
         _options.header.ts = _ts_producer.FromTp(tp);
         _options.header.marker = marker;
         auto result = Writer::Write(packet.GetViewWithCapacity(), _options.header);
