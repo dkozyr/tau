@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tests/TestClock.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/common/Random.h"
 #include "tau/common/Log.h"
