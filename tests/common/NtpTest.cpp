@@ -10,11 +10,11 @@ TEST(NtpTest, Basic) {
     auto tp2 = tp + kSec;
     auto ntp2 = ToNtp(tp2);
     ASSERT_EQ(tp2, FromNtp(ntp2));
-    ASSERT_EQ(ntp + 0x1'0000'0000, ntp2);
+    ASSERT_EQ(ntp + kNtpSec, ntp2);
 
     auto tp3 = tp + kMs;
     auto ntp3 = ToNtp(tp3);
     ASSERT_EQ(tp3, FromNtp(ntp3));
-    const auto ntp3_expected = ntp + 0x1'0000'0000 / 1000;
+    const auto ntp3_expected = ntp + kNtpSec / 1000;
     ASSERT_GE(1, ntp3 - ntp3_expected); // 1 nanosecond error is possible because of rounding
 }

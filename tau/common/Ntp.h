@@ -4,7 +4,8 @@
 
 using NtpTimepoint = uint64_t;
 
-inline constexpr uint64_t kUnixTimeToNtpTimeSeconds = 2208988800;
+inline constexpr uint64_t kNtpSec = 0x1'0000'0000;
+inline constexpr uint64_t kUnixTimeToNtpTimeSeconds = 2'208'988'800;
 
 inline NtpTimepoint ToNtp(Timepoint system_clock_tp) {
     const auto div = std::lldiv(system_clock_tp, kSec);
