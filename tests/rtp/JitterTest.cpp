@@ -85,6 +85,20 @@ TEST_P(JitterTest, DecreasingTs) {
     ASSERT_GE(2, kTargetJitter - jitter.Get());
 }
 
+TEST_P(JitterTest, IgnoreOnBigTsJumps) {
+    const auto clock_rate = GetParam().clock_rate;
+    const auto fps = GetParam().fps;
+    constexpr auto kBigDelay = 10 * kMs;
+
+    Jitter jitter(clock_rate, _ts, _clock.Now());
+    for(size_t i = 0; i < 10 * fps; ++i) {
+        _ts += Jitter::kTsBigJump + 12345;
+        _clock.Add(kSec / fps + kBigDelay);
+        jitter.Update(_ts, _clock.Now());
+    }
+    ASSERT_EQ(0, jitter.Get());
+}
+
 TEST_P(JitterTest, RandomDelay) {
     const auto clock_rate = GetParam().clock_rate;
     const auto fps = GetParam().fps;

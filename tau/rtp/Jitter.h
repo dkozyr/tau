@@ -1,12 +1,16 @@
 #pragma once
 
 #include "tau/common/Clock.h"
+#include "tau/common/Math.h"
 #include <cassert>
 
 namespace rtp {
 
 // https://datatracker.ietf.org/doc/html/rfc3550#appendix-A.8
 class Jitter {
+public:
+    static constexpr uint32_t kTsBigJump = 0x4000'0000;
+
 public:
     Jitter(uint32_t clock_rate, uint32_t ts, Timepoint tp)
         : _clock_rate(clock_rate)
@@ -20,17 +24,14 @@ public:
 
     void Update(uint32_t ts, Timepoint tp) {
         assert(_tp <= tp && "Steady clock produces non-decreasing timepoints");
-        const auto dts = Delta(_ts, ts);
-        const auto dtp = (tp - _tp) * _clock_rate / kSec;
-        const auto dt = Delta(dts, static_cast<uint32_t>(dtp));
-        _jitter += dt - ((_jitter + 8) >> 4);
+        const auto dts = AbsDelta(_ts, ts);
+        if(dts < kTsBigJump) {
+            const auto dtp = (tp - _tp) * _clock_rate / kSec;
+            const auto dt = AbsDelta(dts, static_cast<uint32_t>(dtp));
+            _jitter += dt - ((_jitter + 8) >> 4);
+        }
         _ts = ts;
         _tp = tp;
-    }
-
-private:
-    static uint32_t Delta(uint32_t a, uint32_t b) {
-        return (a < b) ? (b - a) : (a - b);
     }
 
 private:

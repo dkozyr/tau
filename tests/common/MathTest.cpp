@@ -9,6 +9,20 @@ TEST(MathTest, Align) {
     ASSERT_EQ(8, Align(5, kAlignment));
 }
 
+TEST(MathTest, AbsDelta) {
+    uint32_t a = 12;
+    uint32_t b = 17;
+    ASSERT_EQ(5, AbsDelta(a, b));
+    ASSERT_EQ(5, AbsDelta(b, a));
+}
+
+TEST(MathTest, AbsDeltaOnOverflow) {
+    uint32_t a = 42;
+    uint32_t b = std::numeric_limits<uint32_t>::max() - 17;
+    ASSERT_LT(0x8000'0000, AbsDelta(a, b));
+    ASSERT_LT(0x8000'0000, AbsDelta(b, a));
+}
+
 TEST(MathTest, Near) {
     double a = 1.0;
     double b = 1.0;

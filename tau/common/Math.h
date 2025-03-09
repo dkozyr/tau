@@ -15,6 +15,11 @@ inline constexpr size_t DivCeil(size_t a, size_t b) {
 }
 
 template<typename T>
+inline T AbsDelta(T a, T b) {
+    return (a < b) ? (b - a) : (a - b);
+}
+
+template<typename T>
 bool Near(T a, T b) {
     return std::abs(a - b) < std::numeric_limits<T>::epsilon();
 }
