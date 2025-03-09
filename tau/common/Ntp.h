@@ -22,3 +22,21 @@ inline Timepoint FromNtp(NtpTimepoint ntp) {
 inline uint32_t NtpToNtp32(NtpTimepoint ntp) {
     return static_cast<uint32_t>((ntp >> 16) & 0xFFFF'FFFF);
 }
+
+namespace ntp32 {
+
+inline uint32_t ToNtp(Timepoint duration) {
+    const auto div = std::lldiv(duration, kSec);
+    const auto seconds = static_cast<uint32_t>(div.quot & 0xFFFF);
+    const auto fractions = static_cast<uint32_t>((div.rem << 16) / kSec);
+    return (seconds << 16) | fractions;
+}
+
+inline Timepoint FromNtp(uint32_t ntp) {
+    const auto seconds = (ntp >> 16);
+    const auto fractions = (ntp & 0xFFFF);
+    constexpr uint32_t kRounding = 0x7FFF;
+    return seconds * kSec + ((fractions * kSec + kRounding) >> 16);
+}
+
+}
