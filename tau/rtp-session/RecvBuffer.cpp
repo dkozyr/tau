@@ -1,4 +1,4 @@
-#include "tau/rtp/session/RecvBuffer.h"
+#include "tau/rtp-session/RecvBuffer.h"
 #include "tau/rtp/Sn.h"
 #include "tau/common/Container.h"
 #include <algorithm>

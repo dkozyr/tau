@@ -3,7 +3,7 @@
 #include "tau/rtp/RtpAllocator.h"
 #include "tests/Common.h"
 
-namespace rtp {
+namespace rtp::session {
 
 class Source {
 public:
@@ -14,7 +14,7 @@ public:
         uint32_t base_ts;
         Timepoint base_tp;
         uint16_t sn;
-        uint16_t extension_length_in_words = 0;
+        uint16_t extension_length_in_words = 0; //TODO: use it
         size_t max_packet_size = 1200;
     };
 
@@ -39,6 +39,11 @@ public:
     {}
 
     void SetCallback(Callback callback) { _callback = std::move(callback); }
+
+    //TODO: impl
+    // void PushH264Frame(const Buffer&) {
+        
+    // }
 
     void PushFrame(Timepoint tp, size_t count) {
         for(size_t i = 1; i <= count; ++i) {

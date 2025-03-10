@@ -1,12 +1,19 @@
-#include "tau/rtp/Session.h"
+#include "tau/rtp-session/Session.h"
+#include "tests/rtp-session/Source.h"
 #include "tau/rtcp/Reader.h"
 #include "tau/rtcp/SrReader.h"
-#include "tests/rtp/Source.h"
+#include "tau/rtcp/RrReader.h"
+#include "tau/rtcp/RrWriter.h"
+#include "tau/common/Ntp.h"
 #include "tests/Common.h"
 
-namespace rtp {
+namespace rtp::session {
 
 class SessionBaseTest {
+public:
+    static constexpr Timepoint kDefaultRtt = 37 * kMs;
+    static constexpr Timepoint kDefaultDlsrDelay = 54 * kMs;
+
 public:
     SessionBaseTest()
         : _rtcp_allocator(512) {
@@ -27,39 +34,12 @@ public:
                 .base_ts = _source_options.base_ts,
                 .rtx = rtx
             });
-
-        _source->SetCallback([&](Buffer&& rtp_packet) {
-            _session->SendRtp(std::move(rtp_packet));
-        });
-
-        _session->SetSendRtpCallback([&](Buffer&& packet) { _output_rtp.push_back(std::move(packet)); });
-        _session->SetRecvRtpCallback([&](Buffer&& rtp_packet) { _input_rtp.push_back(std::move(rtp_packet)); });
-
-        _session->SetSendRtcpCallback([&](Buffer&& packet) {
-            _output_rtcp.push_back(std::move(packet));
-            EXPECT_NO_FATAL_FAILURE(AssertOutputLastRtcpSrReport());
-        });
     }
 
-    void AssertOutputLastRtcpSrReport() const {
-        ASSERT_FALSE(_output_rtcp.empty());
-        const auto view = _output_rtcp.back().GetView();
-        ASSERT_TRUE(rtcp::Reader::Validate(view));
-        bool ok = false;
-        rtcp::Reader::ForEachReport(view, [&](rtcp::Type type, const BufferViewConst& report) {
-            if(type == rtcp::Type::kSr) {
-                EXPECT_EQ(_source_options.ssrc, rtcp::SrReader::GetSenderSsrc(report));
-                const auto sr_info = rtcp::SrReader::GetSrInfo(report);
-                const auto bytes = std::accumulate(_output_rtp.begin(), _output_rtp.end(), 0, [](size_t total, const Buffer& packet) {
-                    return total + packet.GetSize();
-                });
-                EXPECT_EQ(_output_rtp.size(), sr_info.packet_count);
-                EXPECT_EQ(bytes, sr_info.octet_count);
-                ok = true;
-            }
-            return true;
-        });
-        ASSERT_TRUE(ok);
+    void InitCallbacks() {
+        _session->SetSendRtpCallback([&](Buffer&& packet) { _output_rtp.push_back(std::move(packet)); });
+        _session->SetRecvRtpCallback([&](Buffer&& rtp_packet) { _input_rtp.push_back(std::move(rtp_packet)); });
+        _session->SetSendRtcpCallback([&](Buffer&& packet) { _output_rtcp.push_back(std::move(packet)); });
     }
 
 protected:

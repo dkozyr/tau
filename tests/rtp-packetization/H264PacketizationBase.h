@@ -1,5 +1,5 @@
-#include "tau/rtp/H264Packetizer.h"
-#include "tau/rtp/H264Depacketizer.h"
+#include "tau/rtp-packetization/H264Packetizer.h"
+#include "tau/rtp-packetization/H264Depacketizer.h"
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
 #include "tau/video/h264/Nalu.h"

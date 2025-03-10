@@ -8,10 +8,10 @@ namespace rtcp {
 
 //https://datatracker.ietf.org/doc/html/rfc3550#section-6.4.1
 struct SrInfo {
-    uint64_t ntp;
-    uint32_t ts;
-    uint32_t packet_count;
-    uint32_t octet_count;
+    uint64_t ntp = 0;
+    uint32_t ts = 0;
+    uint32_t packet_count = 0;
+    uint32_t octet_count = 0;
 };
 
 #pragma pack(pop)

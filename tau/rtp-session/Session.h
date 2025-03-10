@@ -1,13 +1,14 @@
 #pragma once
 
-#include "tau/rtp/session/SendBuffer.h"
-#include "tau/rtp/session/RecvBuffer.h"
+#include "tau/rtp-session/SendBuffer.h"
+#include "tau/rtp-session/RecvBuffer.h"
+#include "tau/rtp/Jitter.h"
 #include "tau/rtp/TsConverter.h"
 #include "tau/rtcp/SrInfo.h"
 #include "tau/rtcp/RrBlock.h"
 #include "tau/memory/Allocator.h"
 
-namespace rtp {
+namespace rtp::session {
 
 class Session {
 public:
@@ -40,11 +41,19 @@ public:
     void RecvRtp(Buffer&& rtp_packet);
     void RecvRtcp(Buffer&& rtcp_packet);
 
+    float GetLossRate() const;
+    int32_t GetLostPackets() const;
+    Timepoint GetRtt() const { return _rtt; }
+
 private:
     void ProcessSn(uint16_t sn);
     void ProcessTs(Buffer& rtcp_packet, uint32_t rtp_ts);
 
-    void ProcessRtcp(const Buffer& rtp_packet);
+    void ProcessRtcp();
+    void ProcessRtcpSr(const Buffer& rtp_packet);
+
+    void ProcessIncomingRtcpSr(const BufferViewConst& report);
+    void ProcessIncomingRtcpRr(const BufferViewConst& report);
 
 private:
     Dependencies _deps;
@@ -59,12 +68,20 @@ private:
         uint16_t sn_first;
         uint16_t sn_last;
         uint16_t sn_cycles;
+        Jitter jitter;
         TsConverter ts_converter;
     };
     std::optional<RecvContext> _recv_ctx;
 
-    Timepoint _last_rtcp;
+    Timepoint _last_outgoing_rtcp;
+    Timepoint _last_outgoing_rtcp_sr = 0;
     rtcp::SrInfo _sr_info;
+
+    Timepoint _last_incoming_rtcp_sr = 0;
+    uint32_t _lsr = 0;
+
+    rtcp::PacketLostWord _last_packet_lost_word_from_rr = 0;
+    Timepoint _rtt = 100 * kMs; //TODO: name default constant 
 
     Callback _send_rtp_callback;
     Callback _send_rtcp_callback;

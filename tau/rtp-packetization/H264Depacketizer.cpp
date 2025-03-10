@@ -1,5 +1,5 @@
-#include <tau/rtp/H264Depacketizer.h>
-#include <tau/rtp/H264Depacketizer.h>
+#include <tau/rtp-packetization/H264Depacketizer.h>
+#include <tau/rtp-packetization/H264Depacketizer.h>
 #include <tau/rtp/Reader.h>
 #include <tau/common/NetToHost.h>
 #include <cstring>

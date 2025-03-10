@@ -1,4 +1,4 @@
-#include "tests/rtp/H264PacketizationBase.h"
+#include "tests/rtp-packetization/H264PacketizationBase.h"
 
 namespace rtp {
 
