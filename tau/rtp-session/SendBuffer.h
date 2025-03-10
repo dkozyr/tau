@@ -12,9 +12,9 @@ public:
     static constexpr size_t kDefaultSize = 256;
 
     struct Stats {
-        size_t packets = 0;
-        size_t rtx = 0;
-        size_t bytes = 0;
+        uint64_t packets = 0;
+        uint64_t rtx = 0;
+        uint64_t bytes = 0;
     };
 
     using Callback = std::function<void(Buffer&&)>;

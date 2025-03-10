@@ -13,10 +13,10 @@ public:
     static constexpr size_t kDefaultSize = 256;
 
     struct Stats {
-        size_t packets = 0;
-        size_t discarded = 0;
-        size_t lost = 0;
-        size_t bytes = 0;
+        uint64_t packets = 0;
+        uint64_t discarded = 0;
+        uint64_t lost = 0;
+        uint64_t bytes = 0;
     };
 
     enum PacketType {

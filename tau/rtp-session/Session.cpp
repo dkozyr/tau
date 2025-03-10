@@ -48,14 +48,13 @@ void Session::RecvRtp(Buffer&& rtp_packet) {
     }
     Reader reader(view);
     if(_recv_ctx) {
-        if((_recv_ctx->pt != reader.Pt()) || (_recv_ctx->ssrc != reader.Ssrc())) {
+        if((_recv_ctx->pt != reader.Pt()) || (_rr_block.ssrc != reader.Ssrc())) {
             //TODO: stats.discarded++;
             return;
         }
     } else {
         _recv_ctx.emplace(RecvContext{
             .pt = reader.Pt(),
-            .ssrc = reader.Ssrc(),
             .sn_first = reader.Sn(),
             .sn_last = reader.Sn(),
             .sn_cycles = 0,
@@ -65,6 +64,7 @@ void Session::RecvRtp(Buffer&& rtp_packet) {
                 .ts_base = reader.Ts()
             }),
         });
+        _rr_block.ssrc = reader.Ssrc();
     }
     ProcessSn(reader.Sn());
     ProcessTs(rtp_packet, reader.Ts());
@@ -131,15 +131,8 @@ void Session::ProcessRtcp() {
 
     rtcp::RrBlocks rr_blocks;
     if(_recv_ctx) {
-        const auto& ctx = *_recv_ctx;
-        rr_blocks.push_back(rtcp::RrBlock{
-            .ssrc = ctx.ssrc,
-            .packet_lost_word = rtcp::BuildPacketLostWord(0, 0), //TODO: fix it
-            .ext_highest_sn = (static_cast<uint32_t>(ctx.sn_cycles) << 16) | ctx.sn_last,
-            .jitter = ctx.jitter.Get(),
-            .lsr = _lsr,
-            .dlsr = ntp32::ToNtp(_last_incoming_rtcp_sr ? (_deps.media_clock.Now() - _last_incoming_rtcp_sr) : 0)
-        });
+        UpdateRrBlock();
+        rr_blocks.push_back(_rr_block);
     }
 
     auto packet = Buffer::Create(_deps.allocator, Buffer::Info{.tp = now});
@@ -175,11 +168,26 @@ void Session::ProcessRtcpSr(const Buffer& rtp_packet) {
     _sr_info.octet_count = sender_stats.bytes;
 }
 
+void Session::UpdateRrBlock() {
+    auto& ctx = *_recv_ctx;
+    const auto ext_highest_sn = (static_cast<uint32_t>(ctx.sn_cycles) << 16) | ctx.sn_last;
+    const auto received_packets = _recv_buffer.GetStats().packets;
+
+    const auto expected_delta = ext_highest_sn - _rr_block.ext_highest_sn;
+    const auto received_delta = received_packets - ctx.received_packets;
+    ctx.received_packets = received_packets;
+
+    _rr_block.packet_lost_word = rtcp::BuildPacketLostWord(received_delta, expected_delta);
+    _rr_block.ext_highest_sn = ext_highest_sn;
+    _rr_block.jitter = ctx.jitter.Get();
+    _rr_block.dlsr = ntp32::ToNtp(_last_incoming_rtcp_sr ? (_deps.media_clock.Now() - _last_incoming_rtcp_sr) : 0);
+}
+
 void Session::ProcessIncomingRtcpSr(const BufferViewConst& report) {
-    if(_recv_ctx && (_recv_ctx->ssrc == rtcp::SrReader::GetSenderSsrc(report))) {
+    if(_recv_ctx && (_rr_block.ssrc == rtcp::SrReader::GetSenderSsrc(report))) {
         const auto sr_info = rtcp::SrReader::GetSrInfo(report);
         _last_incoming_rtcp_sr = _deps.media_clock.Now();
-        _lsr = NtpToNtp32(sr_info.ntp);
+        _rr_block.lsr = NtpToNtp32(sr_info.ntp);
     }
 }
 

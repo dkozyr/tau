@@ -12,6 +12,8 @@ namespace rtp::session {
 
 class Session {
 public:
+    static constexpr auto kDefaultRtt = 100 * kMs;
+
     struct Dependencies {
         Allocator& allocator;
         Clock& media_clock;
@@ -51,6 +53,7 @@ private:
 
     void ProcessRtcp();
     void ProcessRtcpSr(const Buffer& rtp_packet);
+    void UpdateRrBlock();
 
     void ProcessIncomingRtcpSr(const BufferViewConst& report);
     void ProcessIncomingRtcpRr(const BufferViewConst& report);
@@ -64,12 +67,12 @@ private:
 
     struct RecvContext {
         uint8_t pt;
-        uint32_t ssrc;
         uint16_t sn_first;
         uint16_t sn_last;
         uint16_t sn_cycles;
         Jitter jitter;
         TsConverter ts_converter;
+        uint64_t received_packets = 0;
     };
     std::optional<RecvContext> _recv_ctx;
 
@@ -78,10 +81,10 @@ private:
     rtcp::SrInfo _sr_info;
 
     Timepoint _last_incoming_rtcp_sr = 0;
-    uint32_t _lsr = 0;
+    rtcp::RrBlock _rr_block;
 
     rtcp::PacketLostWord _last_packet_lost_word_from_rr = 0;
-    Timepoint _rtt = 100 * kMs; //TODO: name default constant 
+    Timepoint _rtt = kDefaultRtt;
 
     Callback _send_rtp_callback;
     Callback _send_rtcp_callback;
