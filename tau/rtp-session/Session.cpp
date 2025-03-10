@@ -7,9 +7,9 @@
 #include "tau/rtcp/SrWriter.h"
 #include "tau/rtcp/RrReader.h"
 #include "tau/rtcp/RrWriter.h"
+#include "tau/rtcp/FirReader.h"
+#include "tau/rtcp/PliReader.h"
 #include "tau/common/Ntp.h"
-
-#include "tau/common/Log.h" //TODO: remove it
 
 namespace rtp::session {
 
@@ -80,12 +80,9 @@ void Session::RecvRtcp(Buffer&& rtcp_packet) {
 
     rtcp::Reader::ForEachReport(view, [this](rtcp::Type type, const BufferViewConst& report) {
         switch(type) {
-            case rtcp::Type::kSr:
-                ProcessIncomingRtcpSr(report);
-                break;
-            case rtcp::Type::kRr:
-                ProcessIncomingRtcpRr(report);
-                break;
+            case rtcp::Type::kSr:   ProcessIncomingRtcpSr(report); break;
+            case rtcp::Type::kRr:   ProcessIncomingRtcpRr(report); break;
+            case rtcp::Type::kPsfb: ProcessIncomingRtcpPsfb(report); break;
             default:
                 break;
         }
@@ -201,6 +198,24 @@ void Session::ProcessIncomingRtcpRr(const BufferViewConst& report) {
             _last_packet_lost_word_from_rr = block.packet_lost_word;
             break;
         }
+    }
+}
+
+void Session::ProcessIncomingRtcpPsfb(const BufferViewConst& report) {
+    const auto fmt = rtcp::GetRc(report.ptr[0]);
+    switch(fmt) {
+        case rtcp::PsfbType::kPli:
+            if(rtcp::PliReader::GetMediaSsrc(report) == _options.sender_ssrc) {
+                _event_callback(Event::kPli);
+            }
+            break;
+        case rtcp::PsfbType::kFir:
+            if(rtcp::FirReader::GetMediaSsrc(report) == _options.sender_ssrc) {
+                _event_callback(Event::kFir);
+            }
+            break;
+        default:
+            break;
     }
 }
 

@@ -2,6 +2,7 @@
 
 #include "tau/rtp-session/SendBuffer.h"
 #include "tau/rtp-session/RecvBuffer.h"
+#include "tau/rtp-session/Event.h"
 #include "tau/rtp/Jitter.h"
 #include "tau/rtp/TsConverter.h"
 #include "tau/rtcp/SrInfo.h"
@@ -30,6 +31,7 @@ public:
     };
 
     using Callback = std::function<void(Buffer&& packet)>;
+    using EventCallback = std::function<void(Event&& event)>;
 
 public:
     Session(Dependencies&& deps, Options&& options);
@@ -37,6 +39,7 @@ public:
     void SetSendRtpCallback(Callback callback) { _send_rtp_callback = std::move(callback); }
     void SetSendRtcpCallback(Callback callback) { _send_rtcp_callback = std::move(callback); }
     void SetRecvRtpCallback(Callback callback) { _recv_rtp_callback = std::move(callback); }
+    void SetEventCallback(EventCallback callback) { _event_callback = std::move(callback); }
 
     void SendRtp(Buffer&& rtp_packet);
     void Recv(Buffer&& packet);
@@ -57,6 +60,7 @@ private:
 
     void ProcessIncomingRtcpSr(const BufferViewConst& report);
     void ProcessIncomingRtcpRr(const BufferViewConst& report);
+    void ProcessIncomingRtcpPsfb(const BufferViewConst& report);
 
 private:
     Dependencies _deps;
@@ -89,6 +93,7 @@ private:
     Callback _send_rtp_callback;
     Callback _send_rtcp_callback;
     Callback _recv_rtp_callback;
+    EventCallback _event_callback;
 };
 
 }

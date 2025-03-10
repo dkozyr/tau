@@ -4,6 +4,8 @@
 #include "tau/rtcp/SrReader.h"
 #include "tau/rtcp/RrReader.h"
 #include "tau/rtcp/RrWriter.h"
+#include "tau/rtcp/FirWriter.h"
+#include "tau/rtcp/PliWriter.h"
 #include "tau/common/Ntp.h"
 #include "tests/Common.h"
 
@@ -40,6 +42,7 @@ public:
         _session->SetSendRtpCallback([&](Buffer&& packet) { _output_rtp.push_back(std::move(packet)); });
         _session->SetRecvRtpCallback([&](Buffer&& rtp_packet) { _input_rtp.push_back(std::move(rtp_packet)); });
         _session->SetSendRtcpCallback([&](Buffer&& packet) { _output_rtcp.push_back(std::move(packet)); });
+        _session->SetEventCallback([&](Event&& event) { _events.push_back(std::move(event)); });
     }
 
 protected:
@@ -64,6 +67,7 @@ protected:
     std::vector<Buffer> _input_rtp;
     std::vector<Buffer> _output_rtp;
     std::vector<Buffer> _output_rtcp;
+    std::vector<Event> _events;
 };
 
 }

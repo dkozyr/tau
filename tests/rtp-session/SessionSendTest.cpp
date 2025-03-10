@@ -9,6 +9,7 @@ public:
 
 public:
     SessionSendTest() {
+        InitCallbacks();
         InitSourceCallbacks();
     }
 
@@ -16,9 +17,6 @@ public:
         _source->SetCallback([&](Buffer&& rtp_packet) {
             _session->SendRtp(std::move(rtp_packet));
         });
-
-        _session->SetSendRtpCallback([&](Buffer&& packet) { _output_rtp.push_back(std::move(packet)); });
-        _session->SetRecvRtpCallback([&](Buffer&& rtp_packet) { _input_rtp.push_back(std::move(rtp_packet)); });
 
         _session->SetSendRtcpCallback([&](Buffer&& packet) {
             _output_rtcp.push_back(std::move(packet));
@@ -80,6 +78,7 @@ TEST_F(SessionSendTest, Basic) {
     _source->PushFrame(_media_clock.Now(), kPacketPerFrame);
     ASSERT_EQ((kTestFrames + 1) * kPacketPerFrame, _output_rtp.size());
     ASSERT_EQ(1, _output_rtcp.size());
+    ASSERT_EQ(0, _events.size());
 }
 
 TEST_F(SessionSendTest, IncomingRrReport) {
@@ -96,6 +95,53 @@ TEST_F(SessionSendTest, IncomingRrReport) {
     ASSERT_NEAR(11./256., _session->GetLossRate(), 0.0001);
     ASSERT_EQ(1234, _session->GetLostPackets());
     ASSERT_GE(100 * kMicro, AbsDelta(_session->GetRtt(), kDefaultRtt));
+    ASSERT_EQ(0, _events.size());
+}
+
+TEST_F(SessionSendTest, IncomingRtcpFir) {
+    auto rtcp_packet = Buffer::Create(_rtcp_allocator, Buffer::Info{.tp = _media_clock.Now()});
+    rtcp::Writer writer(rtcp_packet.GetViewWithCapacity());
+    ASSERT_TRUE(rtcp::FirWriter::Write(writer, _receiver_ssrc, _source_options.ssrc, 1));
+    rtcp_packet.SetSize(writer.GetSize());
+
+    _session->Recv(std::move(rtcp_packet));
+    ASSERT_EQ(0, _output_rtcp.size());
+    ASSERT_EQ(1, _events.size());
+    ASSERT_EQ(Event::kFir, _events[0]);
+}
+
+TEST_F(SessionSendTest, IncomingRtcpPli) {
+    auto rtcp_packet = Buffer::Create(_rtcp_allocator, Buffer::Info{.tp = _media_clock.Now()});
+    rtcp::Writer writer(rtcp_packet.GetViewWithCapacity());
+    ASSERT_TRUE(rtcp::PliWriter::Write(writer, _receiver_ssrc, _source_options.ssrc));
+    rtcp_packet.SetSize(writer.GetSize());
+
+    _session->Recv(std::move(rtcp_packet));
+    ASSERT_EQ(0, _output_rtcp.size());
+    ASSERT_EQ(1, _events.size());
+    ASSERT_EQ(Event::kPli, _events[0]);
+}
+
+TEST_F(SessionSendTest, IncomingRtcpFir_WrongSsrc) {
+    auto rtcp_packet = Buffer::Create(_rtcp_allocator, Buffer::Info{.tp = _media_clock.Now()});
+    rtcp::Writer writer(rtcp_packet.GetViewWithCapacity());
+    ASSERT_TRUE(rtcp::FirWriter::Write(writer, _receiver_ssrc, _source_options.ssrc + 1, 1));
+    rtcp_packet.SetSize(writer.GetSize());
+
+    _session->Recv(std::move(rtcp_packet));
+    ASSERT_EQ(0, _output_rtcp.size());
+    ASSERT_EQ(0, _events.size());
+}
+
+TEST_F(SessionSendTest, IncomingRtcpPli_WrongSsrc) {
+    auto rtcp_packet = Buffer::Create(_rtcp_allocator, Buffer::Info{.tp = _media_clock.Now()});
+    rtcp::Writer writer(rtcp_packet.GetViewWithCapacity());
+    ASSERT_TRUE(rtcp::PliWriter::Write(writer, _receiver_ssrc, _source_options.ssrc + 1));
+    rtcp_packet.SetSize(writer.GetSize());
+
+    _session->Recv(std::move(rtcp_packet));
+    ASSERT_EQ(0, _output_rtcp.size());
+    ASSERT_EQ(0, _events.size());
 }
 
 }
