@@ -33,6 +33,56 @@ TEST(PacketLostWordTest, CumulativeLost_Max) {
     ASSERT_EQ(kCumulativeLostMax, GetCumulativePacketLost(packet_lost_word));
 }
 
+TEST(PacketLostWordTest, Build_ZeroLoss) {
+    const uint32_t received = 123;
+    const uint32_t expected = 123;
+    const auto packet_lost_word = BuildPacketLostWord(received, expected);
+    ASSERT_EQ(0, GetFractionLost(packet_lost_word));
+    ASSERT_EQ(0, GetCumulativePacketLost(packet_lost_word));
+}
+
+TEST(PacketLostWordTest, Build_PositiveLoss) {
+    const uint32_t received = 123;
+    const uint32_t expected = 150;
+    const auto packet_lost_word = BuildPacketLostWord(received, expected);
+    constexpr auto kTargetFractionLost = (150 - 123) * 256 / 150;
+    ASSERT_EQ(kTargetFractionLost, GetFractionLost(packet_lost_word));
+    ASSERT_EQ(150 - 123, GetCumulativePacketLost(packet_lost_word));
+}
+
+TEST(PacketLostWordTest, Build_NegativeLoss) {
+    const uint32_t received = 150;
+    const uint32_t expected = 123;
+    const auto packet_lost_word = BuildPacketLostWord(received, expected);
+    ASSERT_EQ(0, GetFractionLost(packet_lost_word));
+    ASSERT_EQ(-27, GetCumulativePacketLost(packet_lost_word));
+}
+
+TEST(PacketLostWordTest, Build_ZeroExpected) {
+    const uint32_t received = 123;
+    const uint32_t expected = 0;
+    const auto packet_lost_word = BuildPacketLostWord(received, expected);
+    ASSERT_EQ(0, GetFractionLost(packet_lost_word));
+    ASSERT_EQ(-123, GetCumulativePacketLost(packet_lost_word));
+}
+
+TEST(PacketLostWordTest, Build_HugeFractionLost) {
+    const uint32_t received = 1;
+    const uint32_t expected = 123;
+    const auto packet_lost_word = BuildPacketLostWord(received, expected);
+    constexpr auto kTargetFractionLost = (123 - 1) * 256 / 123;
+    ASSERT_EQ(kTargetFractionLost, GetFractionLost(packet_lost_word));
+    ASSERT_EQ(122, GetCumulativePacketLost(packet_lost_word));
+}
+
+TEST(PacketLostWordTest, Build_ZeroReceived_ImpossibleCase_WeHaveToReceiveAtLeastOnePacketToEstimateExpected) {
+    const uint32_t received = 0;
+    const uint32_t expected = 123;
+    const auto packet_lost_word = BuildPacketLostWord(received, expected);
+    ASSERT_EQ(0, GetFractionLost(packet_lost_word));
+    ASSERT_EQ(123, GetCumulativePacketLost(packet_lost_word));
+}
+
 TEST(PacketLostWordTest, CumulativeLost_Randomized) {
     for(size_t i = 0; i < 50'000; ++i) {
         const auto fraction_lost = g_random.Int<uint8_t>();

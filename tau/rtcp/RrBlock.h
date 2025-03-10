@@ -9,12 +9,12 @@ namespace rtcp {
 
 //https://datatracker.ietf.org/doc/html/rfc3550#section-6.4.1
 struct RrBlock {
-    uint32_t ssrc;
-    PacketLostWord packet_lost_word;
-    uint32_t ext_highest_sn;
-    uint32_t jitter;
-    uint32_t lsr;
-    uint32_t dlsr;
+    uint32_t ssrc = 0;
+    PacketLostWord packet_lost_word = 0;
+    uint32_t ext_highest_sn = 0;
+    uint32_t jitter = 0;
+    uint32_t lsr = 0;
+    uint32_t dlsr = 0;
 };
 
 #pragma pack(pop)

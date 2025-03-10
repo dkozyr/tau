@@ -187,11 +187,10 @@ void Session::ProcessIncomingRtcpRr(const BufferViewConst& report) {
     const auto rr_blocks = rtcp::RrReader::GetBlocks(report);
     for(auto& block : rr_blocks) {
         if(block.ssrc == _options.sender_ssrc) {
-            _last_packet_lost_word_from_rr = block.packet_lost_word;
-
             const auto now_ntp32 = NtpToNtp32(ToNtp(_deps.system_clock.Now()));
             const auto rtt_ntp32 = now_ntp32 - block.lsr - block.dlsr;
             _rtt = ntp32::FromNtp(rtt_ntp32);
+            _last_packet_lost_word_from_rr = block.packet_lost_word;
             break;
         }
     }
