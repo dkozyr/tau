@@ -43,7 +43,7 @@ inline PacketLostWord BuildPacketLostWord(uint32_t received_packets, uint32_t ex
     uint8_t fraction_lost = 0;
     if(lost_packets > 0) {
         const auto lost_packets_mul_256 = static_cast<uint32_t>(lost_packets) << 8;
-        fraction_lost = static_cast<uint32_t>(lost_packets_mul_256 / expected_packets);
+        fraction_lost = static_cast<uint8_t>(lost_packets_mul_256 / expected_packets);
     }
 
     return BuildPacketLostWord(fraction_lost, lost_packets);
