@@ -17,8 +17,8 @@ class SessionBaseTest {
 public:
     static constexpr auto kTestFrames = 30;
     static constexpr auto kPacketPerFrame = 5;
-    static constexpr Timepoint kDefaultRtt = 37 * kMs;
-    static constexpr Timepoint kDefaultDlsrDelay = 54 * kMs;
+    static constexpr Timepoint kTestRtt = 37 * kMs;
+    static constexpr Timepoint kTestDlsrDelay = 54 * kMs;
 
 public:
     SessionBaseTest()

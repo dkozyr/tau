@@ -13,7 +13,7 @@ namespace rtp::session {
 
 class Session {
 public:
-    static constexpr auto kDefaultRtt = 100 * kMs;
+    static constexpr Timepoint kDefaultRtt = 100 * kMs;
 
     struct Dependencies {
         Allocator& allocator;
@@ -28,6 +28,25 @@ public:
         bool rtx = true;
         size_t send_buffer_size = session::SendBuffer::kDefaultSize;
         size_t recv_buffer_size = session::RecvBuffer::kDefaultSize;
+    };
+
+    struct Stats {
+        struct Incoming {
+            uint64_t rtp = 0;
+            uint64_t discarded = 0;
+            int32_t lost_packets = 0;
+            float loss_rate = 0;
+        };
+        Incoming incoming = {};
+
+        struct Outgoing {
+            uint64_t rtp = 0;
+            int32_t lost_packets = 0;
+            float loss_rate = 0;
+        };
+        Outgoing outgoing = {};
+
+        Timepoint rtt = kDefaultRtt;
     };
 
     using Callback = std::function<void(Buffer&& packet)>;
@@ -48,9 +67,7 @@ public:
 
     void PushEvent(Event&& event);
 
-    float GetLossRate() const;
-    int32_t GetLostPackets() const;
-    Timepoint GetRtt() const { return _rtt; }
+    const Stats& GetStats() const { return _stats; }
 
 private:
     void ProcessSn(uint16_t sn);
@@ -89,13 +106,12 @@ private:
     Timepoint _last_incoming_rtcp_sr = 0;
     rtcp::RrBlock _rr_block;
 
-    rtcp::PacketLostWord _last_packet_lost_word_from_rr = 0;
-    Timepoint _rtt = kDefaultRtt;
-
     Callback _send_rtp_callback;
     Callback _send_rtcp_callback;
     Callback _recv_rtp_callback;
     EventCallback _event_callback;
+
+    Stats _stats;
 };
 
 }

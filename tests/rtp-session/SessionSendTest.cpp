@@ -30,8 +30,8 @@ public:
             .packet_lost_word = packet_lost_word,
             .ext_highest_sn = 0,
             .jitter = 0,
-            .lsr = NtpToNtp32(ToNtp(_system_clock.Now() - kDefaultRtt - kDefaultDlsrDelay)),
-            .dlsr = ntp32::ToNtp(kDefaultDlsrDelay)
+            .lsr = NtpToNtp32(ToNtp(_system_clock.Now() - kTestRtt - kTestDlsrDelay)),
+            .dlsr = ntp32::ToNtp(kTestDlsrDelay)
         };
         auto packet = Buffer::Create(_rtcp_allocator, Buffer::Info{.tp = _media_clock.Now()});
         rtcp::Writer writer(packet.GetViewWithCapacity());
@@ -76,6 +76,11 @@ TEST_F(SessionSendTest, Basic) {
     ASSERT_EQ((kTestFrames + 1) * kPacketPerFrame, _output_rtp.size());
     ASSERT_EQ(1, _output_rtcp.size());
     ASSERT_EQ(0, _events.size());
+
+    const auto& stats = _session->GetStats();
+    ASSERT_NEAR(0, stats.outgoing.loss_rate, 0.0001);
+    ASSERT_EQ(0, stats.outgoing.lost_packets);
+    ASSERT_EQ(Session::kDefaultRtt, stats.rtt);
 }
 
 TEST_F(SessionSendTest, IncomingRrReport) {
@@ -89,10 +94,12 @@ TEST_F(SessionSendTest, IncomingRrReport) {
     _session->Recv(std::move(rtcp_rr));
     ASSERT_EQ(2 * kPacketPerFrame, _output_rtp.size());
     ASSERT_EQ(1, _output_rtcp.size());
-    ASSERT_NEAR(11./256., _session->GetLossRate(), 0.0001);
-    ASSERT_EQ(1234, _session->GetLostPackets());
-    ASSERT_GE(100 * kMicro, AbsDelta(_session->GetRtt(), kDefaultRtt));
     ASSERT_EQ(0, _events.size());
+
+    const auto& stats = _session->GetStats();
+    ASSERT_NEAR(11./256., stats.outgoing.loss_rate, 0.0001);
+    ASSERT_EQ(1234, stats.outgoing.lost_packets);
+    ASSERT_GE(100 * kMicro, AbsDelta(stats.rtt, kTestRtt));
 }
 
 TEST_F(SessionSendTest, IncomingRtcpFir) {

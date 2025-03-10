@@ -44,13 +44,15 @@ void Session::Recv(Buffer&& packet) {
 void Session::RecvRtp(Buffer&& rtp_packet) {
     const auto view = ToConst(rtp_packet.GetView());
     if(!Reader::Validate(view)) {
-        //TODO: stats.discarded++;
+        _stats.incoming.discarded++;
         return;
     }
+    _stats.incoming.rtp++;
+
     Reader reader(view);
     if(_recv_ctx) {
         if((_recv_ctx->pt != reader.Pt()) || (_rr_block.ssrc != reader.Ssrc())) {
-            //TODO: stats.discarded++;
+            _stats.incoming.discarded++;
             return;
         }
     } else {
@@ -66,6 +68,7 @@ void Session::RecvRtp(Buffer&& rtp_packet) {
             }),
         });
         _rr_block.ssrc = reader.Ssrc();
+        _rr_block.ext_highest_sn = SnBackward(reader.Sn(), 1);
     }
     ProcessSn(reader.Sn());
     ProcessTs(rtp_packet, reader.Ts());
@@ -76,7 +79,7 @@ void Session::RecvRtp(Buffer&& rtp_packet) {
 void Session::RecvRtcp(Buffer&& rtcp_packet) {
     const auto view = ToConst(rtcp_packet.GetView());
     if(!rtcp::Reader::Validate(view)) {
-        //TODO: stats.discarded++;
+        _stats.incoming.discarded++;
         return;
     }
 
@@ -116,15 +119,6 @@ void Session::PushEvent(Event&& event) {
     }
     rtcp_packet.SetSize(writer.GetSize());
     _send_rtcp_callback(std::move(rtcp_packet));
-}
-
-float Session::GetLossRate() const {
-    const auto fraction_lost = rtcp::GetFractionLost(_last_packet_lost_word_from_rr);
-    return static_cast<float>(fraction_lost) / 256.0f;
-}
-
-int32_t Session::GetLostPackets() const {
-    return rtcp::GetCumulativePacketLost(_last_packet_lost_word_from_rr);
 }
 
 void Session::ProcessSn(uint16_t sn) {
@@ -206,6 +200,9 @@ void Session::UpdateRrBlock() {
     _rr_block.ext_highest_sn = ext_highest_sn;
     _rr_block.jitter = ctx.jitter.Get();
     _rr_block.dlsr = ntp32::ToNtp(_last_incoming_rtcp_sr ? (_deps.media_clock.Now() - _last_incoming_rtcp_sr) : 0);
+
+    _stats.incoming.loss_rate = static_cast<float>(rtcp::GetFractionLost(_rr_block.packet_lost_word)) / 256.0f;
+    _stats.incoming.lost_packets = rtcp::GetCumulativePacketLost(_rr_block.packet_lost_word);
 }
 
 void Session::ProcessIncomingRtcpSr(const BufferViewConst& report) {
@@ -222,8 +219,9 @@ void Session::ProcessIncomingRtcpRr(const BufferViewConst& report) {
         if(block.ssrc == _options.sender_ssrc) {
             const auto now_ntp32 = NtpToNtp32(ToNtp(_deps.system_clock.Now()));
             const auto rtt_ntp32 = now_ntp32 - block.lsr - block.dlsr;
-            _rtt = ntp32::FromNtp(rtt_ntp32);
-            _last_packet_lost_word_from_rr = block.packet_lost_word;
+            _stats.rtt = ntp32::FromNtp(rtt_ntp32);
+            _stats.outgoing.loss_rate = static_cast<float>(rtcp::GetFractionLost(block.packet_lost_word)) / 256.0;
+            _stats.outgoing.lost_packets = rtcp::GetCumulativePacketLost(block.packet_lost_word);
             break;
         }
     }
