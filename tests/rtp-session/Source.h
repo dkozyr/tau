@@ -53,7 +53,7 @@ public:
 
     void PushPacket(Timepoint tp, bool marker = false) {
         auto packet = _allocator.Allocate(tp, marker);
-        packet.SetSize(g_random.Int<size_t>(1, packet.GetCapacity()));
+        packet.SetSize(g_random.Int<size_t>(packet.GetSize(), packet.GetCapacity()));
         _callback(std::move(packet));
     }
 

@@ -8,7 +8,9 @@
 #include "tau/rtcp/RrReader.h"
 #include "tau/rtcp/RrWriter.h"
 #include "tau/rtcp/FirReader.h"
+#include "tau/rtcp/FirWriter.h"
 #include "tau/rtcp/PliReader.h"
+#include "tau/rtcp/PliWriter.h"
 #include "tau/common/Ntp.h"
 
 namespace rtp::session {
@@ -40,7 +42,6 @@ void Session::Recv(Buffer&& packet) {
 }
 
 void Session::RecvRtp(Buffer&& rtp_packet) {
-    ProcessRtcp();
     const auto view = ToConst(rtp_packet.GetView());
     if(!Reader::Validate(view)) {
         //TODO: stats.discarded++;
@@ -69,6 +70,7 @@ void Session::RecvRtp(Buffer&& rtp_packet) {
     ProcessSn(reader.Sn());
     ProcessTs(rtp_packet, reader.Ts());
     _recv_buffer.Push(std::move(rtp_packet), reader.Sn());
+    ProcessRtcp();
 }
 
 void Session::RecvRtcp(Buffer&& rtcp_packet) {
@@ -88,6 +90,32 @@ void Session::RecvRtcp(Buffer&& rtcp_packet) {
         }
         return true;
     });
+}
+
+void Session::PushEvent(Event&& event) {
+    if(!_recv_ctx) {
+        return;
+    }
+    auto rtcp_packet = Buffer::Create(_deps.allocator, Buffer::Info{.tp = _deps.media_clock.Now()});
+    rtcp::Writer writer(rtcp_packet.GetViewWithCapacity());
+    UpdateRrBlock();
+    if(!rtcp::RrWriter::Write(writer, _options.sender_ssrc, {_rr_block})) {
+        return;
+    }
+    switch(event) {
+        case Event::kFir:
+            if(!rtcp::FirWriter::Write(writer, _options.sender_ssrc, _rr_block.ssrc, 1)) {
+                return;
+            }
+            break;
+        case Event::kPli:
+            if(!rtcp::PliWriter::Write(writer, _options.sender_ssrc, _rr_block.ssrc)) {
+                return;
+            }
+            break;
+    }
+    rtcp_packet.SetSize(writer.GetSize());
+    _send_rtcp_callback(std::move(rtcp_packet));
 }
 
 float Session::GetLossRate() const {

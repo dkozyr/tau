@@ -4,11 +4,9 @@ namespace rtp::session {
 
 class SessionSendTest : public SessionBaseTest, public ::testing::Test {
 public:
-    static constexpr auto kTestFrames = 30;
-    static constexpr auto kPacketPerFrame = 5;
-
-public:
     SessionSendTest() {
+        _source_options.ssrc = _sender_ssrc;
+        Init(_sender_ssrc);
         InitCallbacks();
         InitSourceCallbacks();
     }
@@ -19,6 +17,8 @@ public:
         });
 
         _session->SetSendRtcpCallback([&](Buffer&& packet) {
+            const auto view = ToConst(packet.GetView());
+            EXPECT_TRUE(rtcp::Reader::Validate(view));
             _output_rtcp.push_back(std::move(packet));
             EXPECT_NO_FATAL_FAILURE(AssertOutputRtcpLastSrReport());
         });
@@ -61,9 +61,6 @@ public:
         });
         ASSERT_TRUE(ok);
     }
-
-protected:
-    const uint32_t _receiver_ssrc = g_random.Int<uint32_t>();
 };
 
 TEST_F(SessionSendTest, Basic) {
@@ -120,6 +117,18 @@ TEST_F(SessionSendTest, IncomingRtcpPli) {
     ASSERT_EQ(0, _output_rtcp.size());
     ASSERT_EQ(1, _events.size());
     ASSERT_EQ(Event::kPli, _events[0]);
+}
+
+TEST_F(SessionSendTest, IgnoreOutgoingEventFir) {
+    _session->PushEvent(Event::kFir);
+    ASSERT_EQ(0, _output_rtcp.size());
+    ASSERT_EQ(0, _events.size());
+}
+
+TEST_F(SessionSendTest, IgnoreOutgoingEventPli) {
+    _session->PushEvent(Event::kPli);
+    ASSERT_EQ(0, _output_rtcp.size());
+    ASSERT_EQ(0, _events.size());
 }
 
 TEST_F(SessionSendTest, IncomingRtcpFir_WrongSsrc) {

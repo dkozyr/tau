@@ -4,7 +4,9 @@
 #include "tau/rtcp/SrReader.h"
 #include "tau/rtcp/RrReader.h"
 #include "tau/rtcp/RrWriter.h"
+#include "tau/rtcp/FirReader.h"
 #include "tau/rtcp/FirWriter.h"
+#include "tau/rtcp/PliReader.h"
 #include "tau/rtcp/PliWriter.h"
 #include "tau/common/Ntp.h"
 #include "tests/Common.h"
@@ -13,16 +15,17 @@ namespace rtp::session {
 
 class SessionBaseTest {
 public:
+    static constexpr auto kTestFrames = 30;
+    static constexpr auto kPacketPerFrame = 5;
     static constexpr Timepoint kDefaultRtt = 37 * kMs;
     static constexpr Timepoint kDefaultDlsrDelay = 54 * kMs;
 
 public:
     SessionBaseTest()
         : _rtcp_allocator(512) {
-        Init();
     }
 
-    void Init(bool rtx = false) {
+    void Init(uint32_t session_ssrc, bool rtx = false) {
         _source.emplace(Source::Options{_source_options});
         _session.emplace(
             Session::Dependencies{
@@ -32,7 +35,7 @@ public:
             }, 
             Session::Options{
                 .rate = _source_options.clock_rate,
-                .sender_ssrc = _source_options.ssrc,
+                .sender_ssrc = session_ssrc,
                 .base_ts = _source_options.base_ts,
                 .rtx = rtx
             });
@@ -48,6 +51,9 @@ public:
 protected:
     TestClock _media_clock;
     SystemClock _system_clock;
+
+    const uint32_t _sender_ssrc   = g_random.Int<uint32_t>();
+    const uint32_t _receiver_ssrc = g_random.Int<uint32_t>();
 
     Source::Options _source_options = {
         .pt = g_random.Int<uint8_t>(96, 127),

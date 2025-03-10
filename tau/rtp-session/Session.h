@@ -46,6 +46,8 @@ public:
     void RecvRtp(Buffer&& rtp_packet);
     void RecvRtcp(Buffer&& rtcp_packet);
 
+    void PushEvent(Event&& event);
+
     float GetLossRate() const;
     int32_t GetLostPackets() const;
     Timepoint GetRtt() const { return _rtt; }
