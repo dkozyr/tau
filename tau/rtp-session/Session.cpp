@@ -220,7 +220,7 @@ void Session::ProcessIncomingRtcpRr(const BufferViewConst& report) {
             const auto now_ntp32 = NtpToNtp32(ToNtp(_deps.system_clock.Now()));
             const auto rtt_ntp32 = now_ntp32 - block.lsr - block.dlsr;
             _stats.rtt = ntp32::FromNtp(rtt_ntp32);
-            _stats.outgoing.loss_rate = static_cast<float>(rtcp::GetFractionLost(block.packet_lost_word)) / 256.0;
+            _stats.outgoing.loss_rate = static_cast<float>(rtcp::GetFractionLost(block.packet_lost_word)) / 256.0f;
             _stats.outgoing.lost_packets = rtcp::GetCumulativePacketLost(block.packet_lost_word);
             break;
         }
