@@ -8,7 +8,6 @@ namespace rtp {
 
 class WriterTest : public ::testing::Test {
 protected:
-    static constexpr auto kMtuSize = 1500; //TODO: move to constants file
     static constexpr auto kDefaultOptions = Writer::Options{
         .pt = 100,
         .ssrc = 0x01234567,
@@ -39,7 +38,7 @@ protected:
 };
 
 TEST_F(WriterTest, Basic) {
-    auto packet = Buffer::Create(g_system_allocator, kMtuSize);
+    auto packet = Buffer::Create(g_udp_allocator);
     auto view = packet.GetViewWithCapacity();
     auto result = Writer::Write(view, kDefaultOptions);
     ASSERT_EQ(kFixedHeaderSize, result.size);
@@ -60,7 +59,7 @@ TEST_F(WriterTest, Basic) {
 }
 
 TEST_F(WriterTest, WithExtension) {
-    auto packet = Buffer::Create(g_system_allocator, kMtuSize);
+    auto packet = Buffer::Create(g_udp_allocator);
     auto view = packet.GetViewWithCapacity();
     auto options = kDefaultOptions;
     options.extension_length_in_words = 1;
@@ -89,7 +88,7 @@ TEST_F(WriterTest, WithExtension) {
 
 TEST_F(WriterTest, Randomized) {
     for(size_t i = 0; i < 10'000; ++i) {
-        auto packet = Buffer::Create(g_system_allocator, kMtuSize);
+        auto packet = Buffer::Create(g_udp_allocator);
         auto view = packet.GetViewWithCapacity();
         auto options = Writer::Options{
             .pt = g_random.Int<uint8_t>(0, 127),
@@ -124,7 +123,7 @@ TEST_F(WriterTest, Randomized) {
 }
 
 TEST_F(WriterTest, WrongSize) {
-    auto packet = Buffer::Create(g_system_allocator, kFixedHeaderSize - 1);
+    auto packet = Buffer::Create(g_udp_allocator, kFixedHeaderSize - 1);
     auto view = packet.GetViewWithCapacity();
     auto result = Writer::Write(view, kDefaultOptions);
     ASSERT_EQ(0, result.size);
@@ -133,7 +132,7 @@ TEST_F(WriterTest, WrongSize) {
 }
 
 TEST_F(WriterTest, WrongSizeWithExtension) {
-    auto packet = Buffer::Create(g_system_allocator, kFixedHeaderSize + kExtensionHeaderSize + sizeof(uint32_t) - 1);
+    auto packet = Buffer::Create(g_udp_allocator, kFixedHeaderSize + kExtensionHeaderSize + sizeof(uint32_t) - 1);
     auto view = packet.GetViewWithCapacity();
     auto options = kDefaultOptions;
     options.extension_length_in_words = 1;

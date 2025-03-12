@@ -9,12 +9,8 @@ namespace net {
 
 class UdpSocketTest : public ::testing::Test {
 public:
-    static constexpr auto kMtuSize = 1500; //TODO: move to constants file
-
-public:
     UdpSocketTest()
         : _io(std::thread::hardware_concurrency())
-        , _allocator(kMtuSize)
     {}
 
     ~UdpSocketTest() {
@@ -23,7 +19,7 @@ public:
 
 protected:
     Buffer CreatePacket(size_t size) {
-        auto packet = Buffer::Create(_allocator);
+        auto packet = Buffer::Create(g_udp_allocator);
         packet.SetSize(size);
         auto view = packet.GetView();
         for(size_t i = 0; i < size; ++i) {
@@ -42,7 +38,6 @@ protected:
 
 protected:
     ThreadPool _io;
-    PoolAllocator _allocator;
 };
 
 TEST_F(UdpSocketTest, Basic) {
@@ -51,7 +46,7 @@ TEST_F(UdpSocketTest, Basic) {
 
     auto socket1 = UdpSocket::Create(
         UdpSocket::Options{
-            .allocator = _allocator,
+            .allocator = g_udp_allocator,
             .executor = _io.GetExecutor(),
             .local_address = IpAddress{.address = kLocalHost}
         });
@@ -64,7 +59,7 @@ TEST_F(UdpSocketTest, Basic) {
 
     auto socket2 = UdpSocket::Create(
         UdpSocket::Options{
-            .allocator = _allocator,
+            .allocator = g_udp_allocator,
             .executor = _io.GetExecutor(),
             .local_address = IpAddress{.address = kLocalHost}
         });
@@ -84,7 +79,7 @@ TEST_F(UdpSocketTest, Basic) {
 
 TEST_F(UdpSocketTest, PortsPair) {
     auto [socket1, socket2] = CreateUdpSocketsPair(UdpSocket::Options{
-        .allocator = _allocator,
+        .allocator = g_udp_allocator,
         .executor = _io.GetExecutor(),
         .local_address = IpAddress{.address = kLocalHost}
     });
@@ -101,7 +96,7 @@ TEST_F(UdpSocketTest, DISABLED_MANUAL_Load) {
 
     for(size_t i = 0; i < 10'000; ++i) {
         auto [socket1, socket2] = CreateUdpSocketsPair(UdpSocket::Options{
-            .allocator = _allocator,
+            .allocator = g_udp_allocator,
             .executor = _io.GetExecutor(),
             .local_address = IpAddress{.address = kLocalHost}
         });

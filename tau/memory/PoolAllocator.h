@@ -1,9 +1,11 @@
 #pragma once
 
-#include "memory/Allocator.h"
-#include "common/Math.h"
+#include "tau/memory/Allocator.h"
+#include "tau/common/Math.h"
 #include <boost/pool/pool.hpp>
 #include <mutex>
+
+inline constexpr size_t kUdpMtuSize = 1500;
 
 class PoolAllocator : public Allocator {
 public:
@@ -40,3 +42,5 @@ private:
     mutable std::mutex _mutex;
     boost::pool<> _pool;
 };
+
+inline PoolAllocator g_udp_allocator(kUdpMtuSize);
