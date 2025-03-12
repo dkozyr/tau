@@ -15,4 +15,6 @@
 #include <string_view>
 #include <cstring>
 
+using namespace std::chrono_literals;
+
 inline Random g_random;
