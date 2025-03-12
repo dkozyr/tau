@@ -35,6 +35,7 @@ public:
 private:
     UdpSocket(Options&& options);
 
+    void ReceiveAvailable();
     void ReceiveAsync();
     void OnReceiveAsync(const boost_ec& ec, size_t bytes);
 

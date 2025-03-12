@@ -38,7 +38,22 @@ void UdpSocket::Send(const BufferViewConst& view, asio_udp::endpoint remote_endp
     }
 }
 
+void UdpSocket::ReceiveAvailable() {
+    boost_ec ec;
+    while(_socket.available(ec)) {
+        if(!ec) {
+            break;
+        }
+        auto view = _ctx.buffer.GetViewWithCapacity();
+        auto bytes = _socket.receive_from(asio::buffer(view.ptr, view.size), _ctx.remote_endpoint);
+        _ctx.buffer.SetSize(bytes);
+        _recv_callback(std::move(_ctx.buffer), _ctx.remote_endpoint);
+        _ctx.buffer = Buffer::Create(_allocator);
+    }
+}
+
 void UdpSocket::ReceiveAsync() {
+    ReceiveAvailable();
     auto view = _ctx.buffer.GetViewWithCapacity();
     _socket.async_receive_from(asio::buffer(view.ptr, view.size), _ctx.remote_endpoint,
         [weak_self = weak_from_this()](const boost_ec& ec, size_t bytes) mutable {
