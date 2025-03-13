@@ -3,6 +3,7 @@
 #include "tests/TestClock.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/memory/PoolAllocator.h"
+#include "tau/common/String.h"
 #include "tau/common/Container.h"
 #include "tau/common/Random.h"
 #include "tau/common/Log.h"

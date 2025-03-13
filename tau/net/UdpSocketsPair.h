@@ -10,7 +10,6 @@ using UdpSocketsPair = std::pair<UdpSocketPtr, UdpSocketPtr>;
 inline UdpSocketsPair CreateUdpSocketsPair(UdpSocket::Options&& options, size_t attempts_count = 4) {
     for(size_t i = 0; i < attempts_count; ++i) {
         try {
-            options.local_address.port.reset();
             auto socket1 = UdpSocket::Create(UdpSocket::Options{options});
             const auto port1 = socket1->GetLocalEndpoint().port();
 
@@ -23,6 +22,7 @@ inline UdpSocketsPair CreateUdpSocketsPair(UdpSocket::Options&& options, size_t 
             return {std::move(socket1), std::move(socket2)};
         } catch(const std::exception&) {
             // perhaps next attempt will be successful
+            options.local_address.port.reset();
         }
     }
     return {nullptr, nullptr};

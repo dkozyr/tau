@@ -31,7 +31,7 @@ std::string ToHexString(T value) {
     return result.empty() ? "0" : result;
 }
 
-std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first = false) {
+inline std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first = false) {
     size_t prev = 0, pos = 0;
     std::vector<std::string_view> data;
     while((pos = str.find(marker, prev)) != std::string::npos) {
@@ -46,6 +46,15 @@ std::vector<std::string_view> Split(std::string_view str, std::string_view marke
     return data;
 }
 
-std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first = false) {
+inline std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first = false) {
     return Split(std::string_view(str), marker, ignore_first);
+}
+
+inline bool IsPrefix(std::string_view str, std::string_view prefix) {
+    return str.find(prefix) == 0;
+}
+
+inline bool IsSuffix(std::string_view str, std::string_view prefix) {
+    const auto pos = str.find(prefix);
+    return (pos != std::string::npos) && (pos + prefix.size() == str.size());
 }
