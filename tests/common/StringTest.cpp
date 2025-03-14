@@ -71,3 +71,23 @@ TEST(StringTest, Split_Empty) {
         ASSERT_EQ(std::string_view{}, tokens[0]);
     }
 }
+
+TEST(StringTest, Split_Empty2) {
+    const std::string_view a = "::token:";
+    auto tokens = Split(a, ":");
+    ASSERT_EQ(4, tokens.size());
+    ASSERT_EQ(std::string_view{}, tokens[0]);
+    ASSERT_EQ(std::string_view{}, tokens[1]);
+    ASSERT_EQ("token", tokens[2]);
+    ASSERT_EQ(std::string_view{}, tokens[3]);
+}
+
+TEST(StringTest, Prefix) {
+    ASSERT_TRUE(IsPrefix("Hello world", "He"));
+    ASSERT_FALSE(IsPrefix("Hello world", "wo"));
+}
+
+TEST(StringTest, PrefixCaseInsensitive) {
+    ASSERT_TRUE(IsPrefix("Hello world", "hElLo", true));
+    ASSERT_FALSE(IsPrefix("Hello world", "hElLo"));
+}

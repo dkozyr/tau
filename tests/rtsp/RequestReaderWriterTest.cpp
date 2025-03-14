@@ -11,7 +11,6 @@ protected:
         ASSERT_TRUE(parsed.has_value());
         const auto& actual = *parsed;
         ASSERT_EQ(target.method, actual.method);
-        ASSERT_EQ(target.cseq, actual.cseq);
         ASSERT_EQ(target.uri, actual.uri);
         ASSERT_EQ(target.headers.size(), actual.headers.size());
         for(size_t i = 0; i < target.headers.size(); ++i) {
@@ -25,7 +24,9 @@ TEST_F(RequestReaderWriterTest, Options) {
     Request request{
         .uri = "*",
         .method = Method::kOptions,
-        .cseq = g_random.Int<size_t>(1, 1234)
+        .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
+        }
     };
     auto message = RequestWriter::Write(request);
     LOG_INFO << std::endl << message;
@@ -36,8 +37,8 @@ TEST_F(RequestReaderWriterTest, Describe) {
     Request request{
         .uri = "rtsp://127.0.0.1/stream",
         .method = Method::kDescribe,
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kAccept, .value = "application/sdp"}
         }
     };
@@ -50,8 +51,8 @@ TEST_F(RequestReaderWriterTest, Setup) {
     Request request{
         .uri = "rtsp://127.0.0.1/stream",
         .method = Method::kSetup,
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kTransport, .value = "RTP/AVP;unicast;client_port=12345-12346"}
         }
     };
@@ -64,8 +65,8 @@ TEST_F(RequestReaderWriterTest, Play) {
     Request request{
         .uri = "rtsp://127.0.0.1/stream",
         .method = Method::kPlay,
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kSession, .value = ToHexString(g_random.Int<uint32_t>())}
         }
     };
@@ -78,8 +79,8 @@ TEST_F(RequestReaderWriterTest, Teardown) {
     Request request{
         .uri = "rtsp://127.0.0.1/stream",
         .method = Method::kTeardown,
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kSession, .value = ToHexString(g_random.Int<uint32_t>())}
         }
     };

@@ -4,6 +4,7 @@
 namespace rtsp {
 
 const std::vector<Header> kNameToPrefix = {
+    Header{.name = HeaderName::kCSeq,          .value = "CSeq: "},
     Header{.name = HeaderName::kPublic,        .value = "Public: "},
     Header{.name = HeaderName::kAccept,        .value = "Accept: "},
     Header{.name = HeaderName::kTransport,     .value = "Transport: "},
@@ -14,9 +15,9 @@ const std::vector<Header> kNameToPrefix = {
     Header{.name = HeaderName::kContentLength, .value = "Content-Length: "},
 };
 
-std::vector<Header> GetHeaders(const std::vector<std::string_view>& lines) {
-    std::vector<Header> headers;
-    for(size_t i = 2; i < lines.size(); ++i) { // skip first two lines
+Headers GetHeaders(const std::vector<std::string_view>& lines) {
+    Headers headers;
+    for(size_t i = 1; i < lines.size(); ++i) { // skip first line
         const auto& line = lines[i];
         if(line == kClRf) {
             break;
@@ -36,8 +37,17 @@ std::vector<Header> GetHeaders(const std::vector<std::string_view>& lines) {
 }
 
 std::string_view GetHeaderValue(std::string_view line, std::string_view prefix) {
-    if(IsPrefix(line, prefix)) {
+    if(IsPrefix(line, prefix, true)) {
         return line.substr(prefix.size());
+    }
+    return {};
+}
+
+std::string_view GetHeaderValue(HeaderName name, const Headers& headers) {
+    for(auto& header : headers) {
+        if(header.name == name) {
+            return header.value;
+        }
     }
     return {};
 }

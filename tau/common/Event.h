@@ -5,8 +5,13 @@
 
 class Event {
 public:
-    void Set();
-    bool IsSet();
+    void Set() {
+        _done.set_value();
+    }
+
+    bool IsSet() {
+        return _done.get_future().valid();
+    }
 
     template<typename Rep, typename Period>
     bool WaitFor(const std::chrono::duration<Rep, Period>& timeout) {

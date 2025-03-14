@@ -15,8 +15,7 @@ enum Method {
 struct Request {
     std::string uri;
     Method method;
-    size_t cseq;
-    std::vector<Header> headers = {};
+    Headers headers = {};
 };
 
 }

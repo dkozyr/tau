@@ -12,7 +12,6 @@ protected:
         const auto& actual = *parsed;
         ASSERT_EQ(target.status_code, actual.status_code);
         ASSERT_EQ(target.reason_phrase, actual.reason_phrase);
-        ASSERT_EQ(target.cseq, actual.cseq);
         ASSERT_EQ(target.headers.size(), actual.headers.size());
         for(size_t i = 0; i < target.headers.size(); ++i) {
             ASSERT_EQ(target.headers[i].name, actual.headers[i].name);
@@ -26,8 +25,8 @@ TEST_F(ResponseReaderWriterTest, Options) {
     Response response{
         .status_code = 200,
         .reason_phrase = "OK",
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kPublic, .value = "OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE, GET_PARAMETER, SET_PARAMETER"}
         }
     };
@@ -40,8 +39,8 @@ TEST_F(ResponseReaderWriterTest, Describe) {
     Response response{
         .status_code = 200,
         .reason_phrase = "OK",
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kContentBase, .value = "rtsp://192.168.0.1/stream.h264/"},
             {.name = HeaderName::kContentType, .value = "application/sdp"},
             {.name = HeaderName::kContentLength, .value = "495"},
@@ -57,8 +56,8 @@ TEST_F(ResponseReaderWriterTest, Setup) {
     Response response{
         .status_code = 200,
         .reason_phrase = "OK",
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kTransport, .value = "RTP/AVP;unicast;destination=192.168.0.1;source=192.168.0.1;client_port=59882-59883;server_port=12345-12346"},
             {.name = HeaderName::kSession, .value = "E0E094D0;timeout=65"},
         },
@@ -72,8 +71,8 @@ TEST_F(ResponseReaderWriterTest, Play) {
     Response response{
         .status_code = 200,
         .reason_phrase = "OK",
-        .cseq = g_random.Int<size_t>(1, 1234),
         .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
             {.name = HeaderName::kSession, .value = "E0E094D0;timeout=65"},
             {.name = HeaderName::kRtpInfo, .value = "url=rtsp://192.168.0.1/stream.h264/track1;seq=926;rtptime=810886235"},
         },
@@ -87,12 +86,30 @@ TEST_F(ResponseReaderWriterTest, Teardown) {
     Response response{
         .status_code = 200,
         .reason_phrase = "OK",
-        .cseq = g_random.Int<size_t>(1, 1234),
-        .headers = {},
+        .headers = {
+            {.name = HeaderName::kCSeq, .value = ToHexString(g_random.Int<size_t>(1, 1234))},
+        },
     };
     auto message = ResponseWriter::Write(response);
     LOG_INFO << std::endl << message;
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertResponse(response, message));
+}
+
+TEST_F(ResponseReaderWriterTest, ReadCaseInsensitivePrefixes) {
+    std::stringstream ss;
+    ss << "RTSP/1.0 200 OK" << kClRf
+       << "PUBLIC: OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY" << kClRf
+       << "cSeQ: 313" << kClRf
+       << kClRf;
+    auto message = ss.str();
+    auto response = ResponseReader::Read(message);
+    ASSERT_TRUE(response.has_value());
+    const auto& headers = response->headers;
+    ASSERT_EQ(2, headers.size());
+    ASSERT_EQ(HeaderName::kPublic, headers[0].name);
+    ASSERT_EQ("OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY", headers[0].value);
+    ASSERT_EQ(HeaderName::kCSeq, headers[1].name);
+    ASSERT_EQ("313", headers[1].value);
 }
 
 }

@@ -10,9 +10,9 @@ public:
     static std::string Write(const Response& response) {
         std::stringstream ss;
         ss << kRtspVersion << " " << response.status_code << " " << response.reason_phrase << kClRf;
-        ss << "CSeq: " << response.cseq << kClRf;
         for(auto& header : response.headers) {
             switch(header.name) {
+                case HeaderName::kCSeq:          ss << "CSeq"; break;
                 case HeaderName::kTransport:     ss << "Transport"; break;
                 case HeaderName::kSession:       ss << "Session"; break;
                 case HeaderName::kRtpInfo:       ss << "RTP-Info"; break;

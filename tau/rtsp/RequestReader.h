@@ -18,15 +18,17 @@ public:
             return std::nullopt;
         }
         auto method = GetMethod(tokens[0]);
-        auto cseq = StringToUnsigned<size_t>(GetHeaderValue(lines[1], "CSeq: "));
-        if(!method || !cseq) {
+        if(!method) {
+            return std::nullopt;
+        }
+        auto headers = GetHeaders(lines);
+        if(GetHeaderValue(HeaderName::kCSeq, headers).empty()) {
             return std::nullopt;
         }
         return Request{
             .uri = std::string{tokens[1]},
             .method = *method,
-            .cseq = *cseq,
-            .headers = GetHeaders(lines)
+            .headers = std::move(headers)
         };
     }
 

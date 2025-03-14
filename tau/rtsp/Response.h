@@ -7,8 +7,7 @@ namespace rtsp {
 struct Response {
     size_t status_code;
     std::string reason_phrase;
-    size_t cseq;
-    std::vector<Header> headers = {};
+    Headers headers = {};
     std::string body = {};
 };
 

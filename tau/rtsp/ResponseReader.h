@@ -18,8 +18,11 @@ public:
             return std::nullopt;
         }
         auto status_code = StringToUnsigned<size_t>(tokens[1]);
-        auto cseq = StringToUnsigned<size_t>(GetHeaderValue(lines[1], "CSeq: "));
-        if(!status_code || !cseq) {
+        if(!status_code) {
+            return std::nullopt;
+        }
+        auto headers = GetHeaders(lines);
+        if(GetHeaderValue(HeaderName::kCSeq, headers).empty()) {
             return std::nullopt;
         }
 
@@ -27,8 +30,7 @@ public:
         return Response{
             .status_code = *status_code,
             .reason_phrase = std::string(tokens[2]),
-            .cseq = *cseq,
-            .headers = GetHeaders(lines),
+            .headers = std::move(headers),
             .body = (body_offset != std::string::npos)
                   ? std::string{str.substr(body_offset + kClRfClRf.size())}
                   : std::string{}
