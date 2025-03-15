@@ -1,6 +1,6 @@
 #include "tau/net/UdpSocket.h"
 
-namespace net {
+namespace tau::net {
 
 UdpSocket::UdpSocket(Options&& options)
     : _allocator(options.allocator)

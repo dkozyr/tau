@@ -1,6 +1,8 @@
 #include "tau/memory/SystemAllocator.h"
 #include <gtest/gtest.h>
 
+namespace tau {
+
 TEST(SystemAllocatorTest, Basic) {
     constexpr auto kTestSize = 4096;
     auto block = g_system_allocator.Allocate(kTestSize);
@@ -8,4 +10,6 @@ TEST(SystemAllocatorTest, Basic) {
         block[i] = i;
     }
     g_system_allocator.Deallocate(block);
+}
+
 }

@@ -17,6 +17,11 @@
 #include <string_view>
 #include <cstring>
 
+namespace tau {
+
 using namespace std::chrono_literals;
 
 inline Random g_random;
+inline PoolAllocator g_udp_allocator(kUdpMtuSize);
+
+}

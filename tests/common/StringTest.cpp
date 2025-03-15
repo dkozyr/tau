@@ -1,6 +1,8 @@
 #include "tau/common/String.h"
 #include "tests/Common.h"
 
+namespace tau {
+
 TEST(StringTest, StringToUnsigned) {
     ASSERT_EQ(1234567890, StringToUnsigned(std::string_view{"1234567890"}));
     ASSERT_EQ(12345, StringToUnsigned(std::string_view{"012345-67890"}));
@@ -91,4 +93,6 @@ TEST(StringTest, Prefix) {
 TEST(StringTest, PrefixCaseInsensitive) {
     ASSERT_TRUE(IsPrefix("Hello world", "hElLo", true));
     ASSERT_FALSE(IsPrefix("Hello world", "hElLo"));
+}
+
 }

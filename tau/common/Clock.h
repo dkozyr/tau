@@ -5,6 +5,8 @@
 #include <cstdlib>
 #include <string>
 
+namespace tau {
+
 using Timepoint = uint64_t; // nanoseconds
 
 constexpr Timepoint kSec   = 1'000'000'000;
@@ -37,4 +39,6 @@ inline double DurationSec(Timepoint a, Timepoint b) {
 
 inline double DurationSec(Timepoint a) {
     return static_cast<double>(a) * 1e-9;
+}
+
 }

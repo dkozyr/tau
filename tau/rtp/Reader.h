@@ -2,7 +2,7 @@
 
 #include "tau/memory/BufferView.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 class Reader {
 public:

@@ -5,7 +5,7 @@
 #include <vector>
 #include <optional>
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class SendBuffer {
 public:

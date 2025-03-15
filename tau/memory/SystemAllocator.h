@@ -3,6 +3,8 @@
 #include "tau/memory/Allocator.h"
 #include <cstdlib>
 
+namespace tau {
+
 class SystemAllocator : public Allocator {
 public:
     static constexpr auto kDefaultSize = 0x1'0000;
@@ -28,3 +30,5 @@ public:
 };
 
 inline SystemAllocator g_system_allocator;
+
+}

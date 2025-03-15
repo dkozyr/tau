@@ -5,6 +5,8 @@
 #include "tau/common/Clock.h"
 #include <utility>
 
+namespace tau {
+
 class Buffer {
 public:
     struct Info {
@@ -58,3 +60,5 @@ private:
     size_t _offset = 0; //TODO: impl
     Info _info;
 };
+
+}

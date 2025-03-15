@@ -1,7 +1,7 @@
 #include "tau/rtp/TsConverter.h"
 #include "tests/Common.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 TEST(TsConverterTest, Basic) {
     const auto ts_base = g_random.Int<uint32_t>();

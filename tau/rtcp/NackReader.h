@@ -4,7 +4,7 @@
 #include "tau/rtcp/NackMessage.h"
 #include "tau/common/NetToHost.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class NackReader {
 public:

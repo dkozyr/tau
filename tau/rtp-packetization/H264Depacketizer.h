@@ -5,7 +5,7 @@
 #include <functional>
 #include <optional>
 
-namespace rtp {
+namespace tau::rtp {
 
 class H264Depacketizer {
 public:

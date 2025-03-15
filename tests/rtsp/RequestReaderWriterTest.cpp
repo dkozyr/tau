@@ -2,7 +2,7 @@
 #include "tau/rtsp/RequestReader.h"
 #include "tests/Common.h"
 
-namespace rtsp {
+namespace tau::rtsp {
 
 class RequestReaderWriterTest : public ::testing::Test {
 protected:

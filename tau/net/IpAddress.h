@@ -4,7 +4,7 @@
 #include <optional>
 #include <cstdint>
 
-namespace net {
+namespace tau::net {
 
 inline const std::string kLocalHost = "127.0.0.1";
 

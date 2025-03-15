@@ -2,6 +2,8 @@
 #include "tau/common/Log.h"
 #include <pcap.h>
 
+using namespace tau;
+
 constexpr auto kEthernetHeaderSize = 14;
 constexpr auto kIpHeaderSize = 20;
 constexpr auto kUdpHeaderSize = 8;

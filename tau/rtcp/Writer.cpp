@@ -2,7 +2,7 @@
 #include "tau/common/NetToHost.h"
 #include <cassert>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 Writer::Writer(BufferView view)
     : _view(view)

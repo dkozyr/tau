@@ -3,7 +3,7 @@
 #include <tau/rtp/RtpAllocator.h>
 #include <functional>
 
-namespace rtp {
+namespace tau::rtp {
 
 class H264Packetizer {
 public:

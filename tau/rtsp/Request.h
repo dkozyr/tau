@@ -2,7 +2,7 @@
 
 #include "tau/rtsp/Header.h"
 
-namespace rtsp {
+namespace tau::rtsp {
 
 enum Method {
     kOptions,

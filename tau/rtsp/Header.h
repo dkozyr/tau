@@ -6,7 +6,7 @@
 #include <cstdint>
 #include <cstddef>
 
-namespace rtsp {
+namespace tau::rtsp {
 
 inline constexpr std::string_view kRtspVersion = "RTSP/1.0";
 inline constexpr std::string_view kUserAgent = "tau";

@@ -2,7 +2,7 @@
 
 #include "tau/memory/BufferView.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 inline constexpr size_t kHeaderSize = sizeof(uint32_t);
 inline constexpr uint8_t kVersion2          = 0b10000000;

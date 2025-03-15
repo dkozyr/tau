@@ -1,5 +1,7 @@
 #include "tau/asio/ThreadPool.h"
 
+namespace tau {
+
 ThreadPool::ThreadPool(size_t threads_count)
     : _io(threads_count)
 {}
@@ -20,4 +22,6 @@ Executor ThreadPool::GetExecutor() {
 
 Executor ThreadPool::GetStrand() {
     return asio::strand<Executor>(_io.get_executor());
+}
+
 }

@@ -4,6 +4,8 @@
 #include <atomic>
 #include <cstddef>
 
+namespace tau {
+
 class ThreadPool {
 public:
     ThreadPool(size_t threads_count);
@@ -18,3 +20,5 @@ private:
     asio::thread_pool _io;
     std::atomic_bool _is_joined = {false};
 };
+
+}

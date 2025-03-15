@@ -3,7 +3,7 @@
 #include "tau/rtp/details/FixedHeader.h"
 #include "tau/common/NetToHost.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 Writer::Result Writer::Write(BufferView view_with_capacity, const Options& options) {
     const auto extension_size = HeaderExtensionSize(options.extension_length_in_words);

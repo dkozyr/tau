@@ -6,7 +6,7 @@
 #include <functional>
 #include <optional>
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 // Group RTP packets to Frames by TS, detect losses by SN
 class FrameProcessor {

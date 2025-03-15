@@ -2,6 +2,8 @@
 
 #include "tau/common/Clock.h"
 
+namespace tau {
+
 class TestClock : public Clock {
 public:
     TestClock()
@@ -19,3 +21,5 @@ public:
 private:
     Timepoint _now;
 };
+
+}

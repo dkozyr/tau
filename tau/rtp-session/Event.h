@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 enum Event {
     kFir,

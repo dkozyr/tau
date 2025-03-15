@@ -6,7 +6,7 @@
 #include "tau/rtp/TsConverter.h"
 #include "tau/rtp/Constants.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 class RtpAllocator {
 public:

@@ -4,7 +4,7 @@
 #include "tau/rtp/Writer.h"
 #include "tests/Common.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class SendBufferTest : public ::testing::Test {
 protected:

@@ -7,6 +7,8 @@
 #include <optional>
 #include <type_traits>
 
+namespace tau {
+
 template<typename R = size_t, typename T>
 std::optional<R> StringToUnsigned(const T& str) {
     std::optional<R> result;
@@ -35,3 +37,5 @@ std::string ToHexString(T value) {
 std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first = false);
 std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first = false);
 bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensitive = false);
+
+}

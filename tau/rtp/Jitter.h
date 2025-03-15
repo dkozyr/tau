@@ -4,7 +4,7 @@
 #include "tau/common/Math.h"
 #include <cassert>
 
-namespace rtp {
+namespace tau::rtp {
 
 // https://datatracker.ietf.org/doc/html/rfc3550#appendix-A.8
 class Jitter {

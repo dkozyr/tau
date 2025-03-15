@@ -1,6 +1,8 @@
 #include "tau/asio/ThreadPool.h"
 #include "tests/Common.h"
 
+namespace tau {
+
 class ThreadPoolTest : public ::testing::Test {
 public:
     struct Output {
@@ -69,4 +71,6 @@ TEST_F(ThreadPoolTest, Strand) {
     io.Join();
     ASSERT_EQ(kTestValues, output.GetSize());
     ASSERT_NO_FATAL_FAILURE(AssertReordering(output.data, false));
+}
+
 }

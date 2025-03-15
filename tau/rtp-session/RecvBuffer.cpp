@@ -3,7 +3,7 @@
 #include "tau/common/Container.h"
 #include <algorithm>
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 RecvBuffer::RecvBuffer(size_t size)
     : _size(std::clamp<size_t>(size, 4, 4096))

@@ -6,7 +6,7 @@
 #include <optional>
 #include <set>
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class RecvBuffer {
 public:

@@ -1,6 +1,6 @@
 #include "tau/video/h264/Avc1NaluProcessor.h"
 
-namespace h264 {
+namespace tau::h264 {
 
 Avc1NaluProcessor::Avc1NaluProcessor(Options&& options)
     : _sps(std::move(options.sps))

@@ -3,7 +3,7 @@
 #include "tau/rtcp/Header.h"
 #include "tau/memory/BufferView.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 // Writer is unsafe, need to control available size yourself 
 class Writer {

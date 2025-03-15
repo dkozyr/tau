@@ -3,7 +3,7 @@
 #include <tau/common/Math.h>
 #include <cstring>
 
-namespace rtp {
+namespace tau::rtp {
 
 using namespace h264;
 

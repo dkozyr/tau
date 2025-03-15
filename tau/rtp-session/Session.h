@@ -9,7 +9,7 @@
 #include "tau/rtcp/RrBlock.h"
 #include "tau/memory/Allocator.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class Session {
 public:
@@ -116,6 +116,6 @@ private:
 
 }
 
-namespace rtp {
+namespace tau::rtp {
 using Session = session::Session;
 }

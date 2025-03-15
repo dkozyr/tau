@@ -1,7 +1,7 @@
 #include "tau/rtsp/Header.h"
 #include "tau/common/String.h"
 
-namespace rtsp {
+namespace tau::rtsp {
 
 const std::vector<Header> kNameToPrefix = {
     Header{.name = HeaderName::kCSeq,          .value = "CSeq: "},

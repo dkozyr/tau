@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
+namespace tau {
+
 struct BufferView {
     uint8_t* ptr;
     size_t size;
@@ -30,4 +32,6 @@ inline BufferViewConst ToConst(BufferView view) {
         .ptr = view.ptr,
         .size = view.size
     };
+}
+
 }

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 #pragma pack(push,1)
 

@@ -5,7 +5,7 @@
 #include "tau/common/Event.h"
 #include "tests/Common.h"
 
-namespace net {
+namespace tau::net {
 
 class UdpSocketTest : public ::testing::Test {
 public:

@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <set>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 // https://datatracker.ietf.org/doc/html/rfc4585#section-6.2.1
 // The Generic NACK message is identified by PT=RTPFB and FMT=1

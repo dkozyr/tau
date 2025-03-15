@@ -2,6 +2,8 @@
 
 #include "tau/common/Clock.h"
 
+namespace tau {
+
 using NtpTimepoint = uint64_t;
 
 inline constexpr uint64_t kNtpSec = 0x1'0000'0000;
@@ -37,6 +39,8 @@ inline Timepoint FromNtp(uint32_t ntp) {
     const auto fractions = (ntp & 0xFFFF);
     constexpr uint32_t kRounding = 0x7FFF;
     return seconds * kSec + ((fractions * kSec + kRounding) >> 16);
+}
+
 }
 
 }

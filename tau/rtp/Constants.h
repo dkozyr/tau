@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <cstddef>
 
-namespace rtp {
+namespace tau::rtp {
 
 inline constexpr size_t kFixedHeaderSize = 3 * sizeof(uint32_t);
 inline constexpr size_t kExtensionHeaderSize = sizeof(uint32_t);

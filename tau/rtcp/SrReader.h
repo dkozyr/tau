@@ -6,7 +6,7 @@
 #include "tau/common/NetToHost.h"
 #include <cassert>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class SrReader {
 public:

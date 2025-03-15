@@ -1,5 +1,7 @@
 #include "tau/common/String.h"
 
+namespace tau {
+
 std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first) {
     size_t prev = 0, pos = 0;
     std::vector<std::string_view> data;
@@ -33,4 +35,6 @@ bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensiti
     } else {
         return str.find(prefix) == 0;
     }
+}
+
 }

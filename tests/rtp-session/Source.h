@@ -3,7 +3,7 @@
 #include "tau/rtp/RtpAllocator.h"
 #include "tests/Common.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class Source {
 public:

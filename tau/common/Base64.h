@@ -7,6 +7,8 @@
 #include <boost/algorithm/string.hpp>
 #include <string_view>
 
+namespace tau {
+
 // Idea from StackOverflow: https://stackoverflow.com/a/28471421/2210772
 inline std::string Base64Decode(std::string_view str) {
     using namespace boost::archive::iterators;
@@ -26,4 +28,6 @@ inline std::string Base64Encode(std::string_view data) {
 
 inline std::string Base64Encode(void* data, size_t size) {
     return Base64Encode(std::string_view{reinterpret_cast<const char*>(data), size});
+}
+
 }

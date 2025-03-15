@@ -3,7 +3,7 @@
 #include "tau/rtcp/Header.h"
 #include <functional>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class Reader {
 public:

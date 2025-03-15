@@ -3,7 +3,7 @@
 #include "tau/rtcp/Header.h"
 #include "tau/common/NetToHost.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class PliReader {
 public:

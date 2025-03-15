@@ -2,7 +2,7 @@
 #include "tau/rtsp/ResponseReader.h"
 #include "tests/Common.h"
 
-namespace rtsp {
+namespace tau::rtsp {
 
 class ResponseReaderWriterTest : public ::testing::Test {
 protected:

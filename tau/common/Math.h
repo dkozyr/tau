@@ -6,6 +6,8 @@
 #include <utility>
 #include <cstddef>
 
+namespace tau {
+
 inline constexpr size_t Align(size_t value, size_t alignment) {
     return alignment * ((value + alignment - 1) / alignment);
 }
@@ -22,4 +24,6 @@ inline T AbsDelta(T a, T b) {
 template<typename T>
 bool Near(T a, T b) {
     return std::abs(a - b) < std::numeric_limits<T>::epsilon();
+}
+
 }

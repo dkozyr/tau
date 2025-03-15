@@ -4,7 +4,7 @@
 #include "tau/memory/Buffer.h"
 #include "tau/asio/Common.h"
 
-namespace net {
+namespace tau::net {
 
 class UdpSocket : public std::enable_shared_from_this<UdpSocket> {
 public:

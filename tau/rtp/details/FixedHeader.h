@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace rtp::detail {
+namespace tau::rtp::detail {
 
 // Fixed header first byte only. https://datatracker.ietf.org/doc/html/rfc3550#section-5.1
 struct FixedHeader {

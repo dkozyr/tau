@@ -7,7 +7,7 @@
 #include "tau/rtcp/NackReader.h"
 #include "tau/common/NetToHost.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 bool Reader::ForEachReport(const BufferViewConst& view, ReportCallback callback) {
     auto begin = view.ptr;

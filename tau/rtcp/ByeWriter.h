@@ -3,7 +3,7 @@
 #include "tau/rtcp/Writer.h"
 #include <vector>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class ByeWriter {
 public:

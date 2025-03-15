@@ -1,6 +1,8 @@
 #include "tau/common/Base64.h"
 #include "tests/Common.h"
 
+namespace tau {
+
 TEST(Base64Test, Randomized) {
     for(size_t iteration = 0; iteration < 200; ++iteration) {
         std::vector<uint8_t> data;
@@ -45,4 +47,6 @@ TEST(Base64Test, DecodeToHex) {
 TEST(Base64Test, Malformed) {
     const std::string encoded = "aO48sA%";
     ASSERT_ANY_THROW(Base64Decode(encoded));
+}
+
 }

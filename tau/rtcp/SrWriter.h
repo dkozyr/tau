@@ -4,7 +4,7 @@
 #include "tau/rtcp/SrInfo.h"
 #include "tau/rtcp/RrBlock.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class SrWriter {
 public:

@@ -1,7 +1,7 @@
 #include "tau/rtp/Jitter.h"
 #include "tests/Common.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 struct JitterTestParams {
     uint32_t clock_rate;

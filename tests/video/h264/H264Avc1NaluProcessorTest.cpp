@@ -1,7 +1,7 @@
 #include "tau/video/h264/Avc1NaluProcessor.h"
 #include "tests/Common.h"
 
-namespace h264 {
+namespace tau::h264 {
 
 class H264Avc1NaluProcessorTest : public ::testing::Test {
 public:

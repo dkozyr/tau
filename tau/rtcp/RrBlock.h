@@ -3,7 +3,7 @@
 #include "tau/rtcp/PacketLostWord.h"
 #include <vector>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 #pragma pack(push,1)
 

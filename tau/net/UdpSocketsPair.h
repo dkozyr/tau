@@ -3,7 +3,7 @@
 #include "tau/net/UdpSocket.h"
 #include <utility>
 
-namespace net {
+namespace tau::net {
 
 using UdpSocketsPair = std::pair<UdpSocketPtr, UdpSocketPtr>;
 

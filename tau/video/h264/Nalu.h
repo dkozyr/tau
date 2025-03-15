@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace h264 {
+namespace tau::h264 {
 
 enum NaluType : uint8_t {
     kNone   = 0,

@@ -2,7 +2,7 @@
 
 #include "tau/memory/BufferView.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 class Writer {
 public:
@@ -11,7 +11,7 @@ public:
         uint32_t ssrc;
         uint32_t ts;
         uint16_t sn;
-        bool marker;
+        bool marker; //TODO: false by default?
         uint16_t extension_length_in_words = 0;
     };
 

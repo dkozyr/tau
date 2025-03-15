@@ -11,7 +11,7 @@
 #include "tau/common/Ntp.h"
 #include "tests/Common.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class SessionBaseTest {
 public:

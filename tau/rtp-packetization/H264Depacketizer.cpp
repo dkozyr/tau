@@ -5,7 +5,7 @@
 #include <cstring>
 #include <numeric>
 
-namespace rtp {
+namespace tau::rtp {
 
 using namespace h264;
 

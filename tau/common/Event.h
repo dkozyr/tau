@@ -3,6 +3,8 @@
 #include <future>
 #include <chrono>
 
+namespace tau {
+
 class Event {
 public:
     void Set() {
@@ -21,3 +23,5 @@ public:
 private:
     std::promise<void> _done;
 };
+
+}

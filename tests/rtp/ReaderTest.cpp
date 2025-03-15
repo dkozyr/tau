@@ -8,7 +8,7 @@
 #include <cstring>
 #include <iostream>
 
-namespace rtp {
+namespace tau::rtp {
 
 class ReaderTest : public ::testing::Test {
 protected:

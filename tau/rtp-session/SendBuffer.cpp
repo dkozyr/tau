@@ -1,7 +1,7 @@
 #include "tau/rtp-session/SendBuffer.h"
 #include "tau/rtp/Sn.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 SendBuffer::SendBuffer(size_t size)
     : _size(std::clamp<size_t>(size, 4, 4096)) {

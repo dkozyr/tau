@@ -2,7 +2,7 @@
 #include "tau/rtp/Writer.h"
 #include "tests/Common.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class FrameProcessorTest : public ::testing::Test {
 public:

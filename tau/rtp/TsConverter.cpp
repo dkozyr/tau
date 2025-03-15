@@ -1,6 +1,6 @@
 #include "tau/rtp/TsConverter.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 TsConverter::TsConverter(Options&& options)
     : _rate(options.rate)

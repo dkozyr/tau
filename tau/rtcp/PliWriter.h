@@ -2,7 +2,7 @@
 
 #include "tau/rtcp/Writer.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class PliWriter {
 public:

@@ -13,7 +13,7 @@
 #include "tau/rtcp/PliWriter.h"
 #include "tau/common/Ntp.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 Session::Session(Dependencies&& deps, Options&& options)
     : _deps(std::move(deps))

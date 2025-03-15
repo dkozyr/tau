@@ -7,7 +7,7 @@
 #include <vector>
 #include <thread>
 
-namespace rtp {
+namespace tau::rtp {
 
 class RtpAllocatorTest : public ::testing::Test {
 protected:

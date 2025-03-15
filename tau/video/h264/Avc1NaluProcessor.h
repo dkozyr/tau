@@ -5,7 +5,7 @@
 #include <functional>
 #include <optional>
 
-namespace h264 {
+namespace tau::h264 {
 
 // It processes input NAL units to output decodable AVC1 stream (same SPS/PPS for the whole stream)
 class Avc1NaluProcessor{

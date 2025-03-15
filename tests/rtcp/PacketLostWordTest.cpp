@@ -1,7 +1,7 @@
 #include "tau/rtcp/PacketLostWord.h"
 #include "tests/Common.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 TEST(PacketLostWordTest, CumulativeLost) {
     const PacketLostWord packet_lost_word = 0x77123456;

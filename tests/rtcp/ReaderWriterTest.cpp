@@ -15,7 +15,7 @@
 #include "tau/memory/Buffer.h"
 #include "tests/Common.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class ReaderWriterTest : public ::testing::Test {
 public:

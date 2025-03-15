@@ -3,6 +3,8 @@
 #include <cstddef>
 #include <cstdint>
 
+namespace tau {
+
 class Allocator {
 public:
     virtual ~Allocator() = default;
@@ -13,3 +15,5 @@ public:
 
     virtual size_t GetChunkSize() const = 0;
 };
+
+}

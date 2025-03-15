@@ -3,7 +3,7 @@
 #include "tau/common/Clock.h"
 #include <limits>
 
-namespace rtp {
+namespace tau::rtp {
 
 class TsConverter {
 public:

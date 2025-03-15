@@ -4,7 +4,7 @@
 #include <tau/common/NetToHost.h>
 #include <algorithm>
 
-namespace rtp {
+namespace tau::rtp {
 
 using namespace detail;
 

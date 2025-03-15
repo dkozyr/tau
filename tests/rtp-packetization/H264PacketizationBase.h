@@ -5,7 +5,7 @@
 #include "tau/video/h264/Nalu.h"
 #include "tests/Common.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 using namespace h264;
 
@@ -35,6 +35,7 @@ protected:
         });
     }
 
+    //TODO: move to test Utils file
     static Buffer CreateNalu(NaluType type, size_t size) {
         auto nalu = Buffer::Create(g_system_allocator, size);
         auto view = nalu.GetViewWithCapacity();

@@ -4,7 +4,7 @@
 #include "tau/common/NetToHost.h"
 #include <vector>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class ByeReader {
 public:

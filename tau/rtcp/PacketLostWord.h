@@ -3,7 +3,7 @@
 #include <cstdint>
 #include <algorithm>
 
-namespace rtcp {
+namespace tau::rtcp {
 
 // https://datatracker.ietf.org/doc/html/rfc3550#section-6.4.1
 // | fraction lost |       cumulative number of packets lost       |

@@ -2,7 +2,7 @@
 
 #include <cstdint>
 
-namespace rtp {
+namespace tau::rtp {
 
 inline constexpr uint16_t kSnNegativeThreshold = 0x8000;
 

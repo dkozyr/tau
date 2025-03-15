@@ -3,7 +3,7 @@
 #include "tau/rtsp/Response.h"
 #include <sstream>
 
-namespace rtsp {
+namespace tau::rtsp {
 
 class ResponseWriter {
 public:

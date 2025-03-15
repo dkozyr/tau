@@ -2,6 +2,8 @@
 
 #include <cstdint>
 
+namespace tau {
+
 inline uint16_t Read16(const uint8_t* ptr) {
     return (static_cast<uint16_t>(ptr[0]) << 8) | ptr[1];
 }
@@ -35,4 +37,6 @@ inline void Write64(uint8_t* ptr, uint64_t value) {
     ptr[5] = (value >> 16) & 0xFF;
     ptr[6] = (value >> 8 ) & 0xFF;
     ptr[7] = (value      ) & 0xFF;
+}
+
 }

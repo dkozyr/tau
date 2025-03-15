@@ -3,6 +3,8 @@
 #include <gtest/gtest.h>
 #include <cstring>
 
+namespace tau {
+
 TEST(BufferTest, Basic) {
     auto buffer = Buffer::Create(g_system_allocator, 256, Buffer::Info{.tp = 42});
     ASSERT_EQ(SystemAllocator::kDefaultSize, g_system_allocator.GetChunkSize());
@@ -61,4 +63,6 @@ TEST(BufferTest, MakeCopy) {
     ASSERT_EQ(256, buffer2.GetCapacity());
     ASSERT_EQ(info, buffer2.GetInfo());
     ASSERT_EQ(0, std::memcmp(buffer.GetView().ptr, buffer2.GetView().ptr, buffer.GetSize()));
+}
+
 }

@@ -3,7 +3,7 @@
 #include "tau/rtsp/Request.h"
 #include <sstream>
 
-namespace rtsp {
+namespace tau::rtsp {
 
 class RequestWriter {
 public:

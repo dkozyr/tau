@@ -1,6 +1,6 @@
 #include "tests/rtp-packetization/H264PacketizationBase.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 using namespace h264;
 

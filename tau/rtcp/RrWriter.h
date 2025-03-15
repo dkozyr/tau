@@ -3,7 +3,7 @@
 #include "tau/rtcp/Writer.h"
 #include "tau/rtcp/RrBlock.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class RrWriter {
 public:

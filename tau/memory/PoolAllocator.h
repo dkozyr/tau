@@ -5,6 +5,8 @@
 #include <boost/pool/pool.hpp>
 #include <mutex>
 
+namespace tau {
+
 inline constexpr size_t kUdpMtuSize = 1500;
 
 class PoolAllocator : public Allocator {
@@ -43,4 +45,4 @@ private:
     boost::pool<> _pool;
 };
 
-inline PoolAllocator g_udp_allocator(kUdpMtuSize);
+}

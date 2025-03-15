@@ -4,7 +4,7 @@
 #include "tau/rtcp/NackMessage.h"
 #include "tau/rtp/Sn.h"
 
-namespace rtcp {
+namespace tau::rtcp {
 
 class NackWriter {
 public:

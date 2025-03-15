@@ -5,6 +5,8 @@
 #include <vector>
 #include <thread>
 
+namespace tau {
+
 TEST(PoolAllocatorTest, Basic) {
     PoolAllocator allocator(1500);
     ASSERT_EQ(1504, allocator.GetChunkSize());
@@ -64,4 +66,6 @@ TEST(PoolAllocatorTest, FailOnBigSize) {
     PoolAllocator allocator(1500);
     ASSERT_EQ(1504, allocator.GetChunkSize());
     ASSERT_EQ(nullptr, allocator.Allocate(1504 + 1));
+}
+
 }

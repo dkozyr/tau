@@ -4,7 +4,7 @@
 #include "tau/memory/Buffer.h"
 #include "tests/Common.h"
 
-namespace rtp {
+namespace tau::rtp {
 
 class WriterTest : public ::testing::Test {
 protected:

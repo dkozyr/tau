@@ -4,7 +4,7 @@
 #include "tau/common/String.h"
 #include <optional>
 
-namespace rtsp {
+namespace tau::rtsp {
 
 class ResponseReader {
 public:

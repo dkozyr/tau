@@ -1,6 +1,8 @@
 #include "tau/common/Ntp.h"
 #include "tests/Common.h"
 
+namespace tau {
+
 TEST(NtpTest, Basic) {
     const auto tp = SystemClock().Now();
     const auto ntp = ToNtp(tp);
@@ -34,4 +36,6 @@ TEST(NtpTest, DurationToNtp32) {
     auto ntp3 = ntp32::ToNtp(tp3);
     ASSERT_EQ(tp3, ntp32::FromNtp(ntp3));
     ASSERT_EQ(ntp + 0x4000, ntp3);
+}
+
 }

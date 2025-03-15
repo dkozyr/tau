@@ -8,6 +8,8 @@
 #include <boost/log/utility/setup/console.hpp>
 #include <array>
 
+namespace tau {
+
 inline void InitLogging(const std::string& file_name = "log", bool console = false) {
     namespace logging = boost::log;
     namespace keywords = boost::log::keywords;
@@ -49,3 +51,5 @@ inline constexpr std::string_view TruncateFileName(std::string_view path) {
 #define LOG_WARNING BOOST_LOG_TRIVIAL(warning) DETAIL_LOG_CONTEXT
 #define LOG_ERROR BOOST_LOG_TRIVIAL(error) DETAIL_LOG_CONTEXT
 #define LOG_FATAL BOOST_LOG_TRIVIAL(fatal) DETAIL_LOG_CONTEXT
+
+}

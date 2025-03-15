@@ -2,7 +2,7 @@
 #include "tau/common/Log.h"
 #include <gtest/gtest.h>
 
-namespace rtp {
+namespace tau::rtp {
 
 TEST(SnTest, Range) {
     uint16_t left = 65'531;

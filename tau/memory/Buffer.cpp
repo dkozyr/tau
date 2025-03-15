@@ -1,6 +1,8 @@
 #include "tau/memory/Buffer.h"
 #include <cstring>
 
+namespace tau {
+
 Buffer::Buffer(Allocator& allocator, size_t capacity, Info info)
     : _allocator(allocator)
     , _block(_allocator.Allocate(capacity))
@@ -90,4 +92,6 @@ void Buffer::SetSize(size_t size) {
         size = _capacity;
     }
     _size = size;
+}
+
 }

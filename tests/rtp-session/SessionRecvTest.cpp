@@ -1,6 +1,6 @@
 #include "tests/rtp-session/SessionBaseTest.h"
 
-namespace rtp::session {
+namespace tau::rtp::session {
 
 class SessionRecvTest : public SessionBaseTest, public ::testing::Test {
 public:

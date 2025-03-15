@@ -2,6 +2,8 @@
 
 #include <random>
 
+namespace tau {
+
 class Random {
 public:
     Random() : _gen(_rd()) {}
@@ -31,3 +33,5 @@ private:
     std::random_device _rd;
     std::mt19937 _gen;
 };
+
+}
