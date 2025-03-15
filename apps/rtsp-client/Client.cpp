@@ -10,12 +10,10 @@ namespace tau::rtsp {
 
 Client::Client(Executor executor, Options&& options)
     : _executor(std::move(executor))
-    , _options(std::move(options)) {
-    asio_tcp::resolver resolver(_executor);
-    _endpoints = resolver.resolve(_options.host, std::to_string(_options.port));
-
+    , _options(std::move(options))
+    , _endpoints(asio_tcp::resolver(_executor).resolve(_options.host, std::to_string(_options.port))) {
     for(auto& endpoint : _endpoints) {
-        LOG_INFO << endpoint.endpoint();
+        LOG_INFO << "RTSP endpoint: " << endpoint.endpoint();
     }
 }
 

@@ -1,27 +1,14 @@
 #include "apps/rtsp-client/Client.h"
-#include "apps/rtsp-client/Utils.h"
-#include "tau/rtp-session/Session.h"
-#include "tau/rtp-session/FrameProcessor.h"
-#include "tau/rtp-packetization/H264Depacketizer.h"
-#include "tau/video/h264/Avc1NaluProcessor.h"
-#include "tau/rtsp/Request.h"
-#include "tau/rtsp/RequestWriter.h"
-#include "tau/rtp/Reader.h"
-#include "tau/net/UdpSocketsPair.h"
-#include "tau/memory/PoolAllocator.h"
-#include "tau/memory/SystemAllocator.h"
 #include "tau/asio/ThreadPool.h"
-#include "tau/common/File.h"
-#include "tau/common/Ntp.h"
 #include "tau/common/Event.h"
-#include "tau/common/Random.h"
+#include "tau/common/Log.h"
 
 using namespace tau;
 using namespace tau::rtsp;
 using namespace std::chrono_literals;
 
 int main(int /*argc*/, char** /*argv*/) {
-    ThreadPool io(1); // +50 Kb
+    ThreadPool io(1);
 
     try {
         Client client(io.GetExecutor(),
@@ -35,7 +22,7 @@ int main(int /*argc*/, char** /*argv*/) {
         client.SendRequestSetup();
         client.SendRequestPlay();
 
-        Event().WaitFor(10s);
+        Event().WaitFor(60s);
 
         client.SendRequestTeardown();
     } catch(const std::exception& e) {
