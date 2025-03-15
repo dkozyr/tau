@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+set -e
+
+cd build
+cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DGCC_SANITIZER=ON ..
+ninja -j 4
+
+./bin/common-test-app
+./bin/asio-test-app
+./bin/net-test-app
+./bin/rtp-test-app
+./bin/rtcp-test-app
+./bin/rtp-packetization-test-app
+./bin/rtp-session-test-app
+./bin/rtsp-test-app
+./bin/video-test-app
