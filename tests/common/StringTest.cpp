@@ -11,11 +11,12 @@ TEST(StringTest, StringToUnsigned) {
 }
 
 TEST(StringTest, ToHexString) {
-    ASSERT_EQ("1", ToHexString(1));
-    ASSERT_EQ("FF", ToHexString(255));
-    ASSERT_EQ("807F", ToHexString(127 + 32768));
+    ASSERT_EQ("00000001", ToHexString(1));
+    ASSERT_EQ("FFFFFFFF", ToHexString(-1));
+    ASSERT_EQ("0A", ToHexString(static_cast<uint8_t>(10)));
+    ASSERT_EQ("FF", ToHexString(static_cast<uint8_t>(255)));
+    ASSERT_EQ("807F", ToHexString(static_cast<uint16_t>(127 + 32768)));
     ASSERT_EQ("7FFF1234567890FF", ToHexString(0x7FFF'1234'5678'90FF));
-    ASSERT_EQ("0", ToHexString(-1));
 }
 
 TEST(StringTest, Split) {

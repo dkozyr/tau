@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <optional>
+#include <type_traits>
 
 template<typename R = size_t, typename T>
 std::optional<R> StringToUnsigned(const T& str) {
@@ -20,14 +21,15 @@ std::optional<R> StringToUnsigned(const T& str) {
 
 template<typename T = size_t>
 std::string ToHexString(T value) {
+    static_assert(std::is_integral_v<T>);
     const std::string_view kHexData = "0123456789ABCDEF";
-    std::string result;
-    result.reserve(16);
-    while(value > 0) {
-        result = kHexData[value & 0x0F] + result;
+    constexpr size_t kStringSize = 2 * sizeof(T);
+    std::string result(kStringSize, '0');
+    for(size_t i = 0; (i < kStringSize) && value; ++i) {
+        result[kStringSize - 1 - i] = kHexData[value & 0x0F];
         value >>= 4;
     }
-    return result.empty() ? "0" : result;
+    return result;
 }
 
 std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first = false);
