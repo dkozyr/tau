@@ -63,6 +63,27 @@ TEST_F(H264Avc1NaluProcessorTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(AssertProcessedNalUnits({kSps, kPps, kIdr, kNonIdr, kNonIdr, kIdr}));
 }
 
+TEST_F(H264Avc1NaluProcessorTest, Options) {
+    _avc1_nalu_processor.emplace(Avc1NaluProcessor::Options{
+        .sps = CreateNalu(kSps),
+        .pps = CreateNalu(kPps)
+    });
+    InitCallback();
+    ASSERT_NO_FATAL_FAILURE(AssertProcessedNalUnits({}));
+
+    _avc1_nalu_processor->Push(CreateNalu(kIdr));
+    ASSERT_NO_FATAL_FAILURE(AssertProcessedNalUnits({kSps, kPps, kIdr}));
+
+    _avc1_nalu_processor->Push(CreateNalu(kNonIdr));
+    _avc1_nalu_processor->Push(CreateNalu(kNonIdr));
+    ASSERT_NO_FATAL_FAILURE(AssertProcessedNalUnits({kSps, kPps, kIdr, kNonIdr, kNonIdr}));
+
+    _avc1_nalu_processor->Push(CreateNalu(kSps));
+    _avc1_nalu_processor->Push(CreateNalu(kPps));
+    _avc1_nalu_processor->Push(CreateNalu(kIdr));
+    ASSERT_NO_FATAL_FAILURE(AssertProcessedNalUnits({kSps, kPps, kIdr, kNonIdr, kNonIdr, kIdr}));
+}
+
 TEST_F(H264Avc1NaluProcessorTest, LostSps) {
     _avc1_nalu_processor->Push(CreateNalu(kSps));
     ASSERT_NO_FATAL_FAILURE(AssertProcessedNalUnits({}));
