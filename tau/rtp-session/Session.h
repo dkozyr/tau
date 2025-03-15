@@ -115,3 +115,7 @@ private:
 };
 
 }
+
+namespace rtp {
+using Session = session::Session;
+}
