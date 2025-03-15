@@ -3,7 +3,6 @@
 #include "tau/rtsp/RequestWriter.h"
 #include "tau/rtsp/ResponseReader.h"
 #include "tau/common/Log.h"
-#include <sstream>
 #include <array>
 
 namespace tau::rtsp {
@@ -49,7 +48,7 @@ void Client::SendRequestDescribe() {
 void Client::SendRequestSetup() {
     _session.emplace(_executor, Session::Options{});
     const auto rtp_port = _session->GetRtpPort();
-    const auto rtcp_port = _session->GetRtcpPort();
+    const auto rtcp_port = rtp_port + 1;
     LOG_INFO << "Rtp port: " << rtp_port << ", rtcp port: " << rtcp_port;
 
     _cseq++;

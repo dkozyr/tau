@@ -7,7 +7,6 @@
 #include "tau/net/UdpSocket.h"
 #include "tau/memory/PoolAllocator.h"
 #include "tau/common/File.h"
-#include <optional>
 
 namespace tau::rtsp {
 
@@ -21,7 +20,6 @@ public:
     ~Session();
 
     uint16_t GetRtpPort() const;
-    uint16_t GetRtcpPort() const;
 
 private:
     void InitPipeline();

@@ -3,8 +3,6 @@
 #include "apps/rtsp-client/Session.h"
 #include "tau/rtsp/Request.h"
 #include "tau/rtsp/Response.h"
-#include "tau/asio/Common.h"
-#include <optional>
 
 namespace tau::rtsp {
 

@@ -1,5 +1,6 @@
 #include "apps/rtsp-client/Session.h"
 #include "tau/net/UdpSocketsPair.h"
+#include "tau/video/h264/AnnexB.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/common/Ntp.h"
 #include "tau/common/Random.h"
@@ -40,10 +41,6 @@ uint16_t Session::GetRtpPort() const {
     return _socket_rtp->GetLocalEndpoint().port();
 }
 
-uint16_t Session::GetRtcpPort() const {
-    return _socket_rtcp->GetLocalEndpoint().port();
-}
-
 void Session::InitPipeline() {
     _rtp_session.SetRecvRtpCallback([this](Buffer&& rtp_packet) {
         _frame_processor.PushRtp(std::move(rtp_packet));
@@ -67,9 +64,8 @@ void Session::InitPipeline() {
         const auto header = reinterpret_cast<const h264::NaluHeader*>(&nal_unit.GetView().ptr[0]);
         LOG_INFO << "[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << nal_unit.GetInfo().tp << ", size: " << nal_unit.GetSize();
         auto view = nal_unit.GetView();
-        std::array<uint8_t, 4> annex_b = {0, 0, 0, 1}; //TODO: move to h264 directory
         //TODO: ToStringView
-        WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(annex_b.data()), annex_b.size()}, true);
+        WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(h264::kAnnexB.data()), h264::kAnnexB.size()}, true);
         WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(view.ptr), view.size}, true);
     });
 }
