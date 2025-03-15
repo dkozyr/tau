@@ -8,7 +8,7 @@ constexpr auto kEthernetHeaderSize = 14;
 constexpr auto kIpHeaderSize = 20;
 constexpr auto kUdpHeaderSize = 8;
 
-int main(int argc, char **argv) {
+int main(int /*argc*/, char** /*argv*/) {
     InitLogging("pcap-parser", true);
 
     const uint8_t target_pt = 96;

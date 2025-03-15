@@ -7,6 +7,5 @@ find_package(GTest REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} net)
 target_link_libraries(${PROJECT_NAME} rtsp)
 target_link_libraries(${PROJECT_NAME} GTest::GTest)
