@@ -9,8 +9,8 @@ namespace tau::rtsp {
 
 Client::Client(Executor executor, Options&& options)
     : _executor(std::move(executor))
-    , _options(std::move(options))
-    , _endpoints(asio_tcp::resolver(_executor).resolve(_options.host, std::to_string(_options.port))) {
+    , _uri("rtsp://" + options.uri.host + "/" + options.uri.path)
+    , _endpoints(asio_tcp::resolver(_executor).resolve(options.uri.host, std::to_string(options.uri.port))) {
     for(auto& endpoint : _endpoints) {
         LOG_INFO << "RTSP endpoint: " << endpoint.endpoint();
     }
@@ -21,7 +21,7 @@ void Client::SendRequestOptions() {
     const auto cseq = std::to_string(_cseq);
     SendRequestAndValidateResponse(
         Request{
-            .uri = _options.uri,
+            .uri = _uri,
             .method = Method::kOptions,
             .headers {
                 {.name = HeaderName::kCSeq, .value = cseq},
@@ -35,7 +35,7 @@ void Client::SendRequestDescribe() {
     const auto cseq = std::to_string(_cseq);
     const auto response = SendRequestAndValidateResponse(
         Request{
-            .uri = _options.uri,
+            .uri = _uri,
             .method = Method::kDescribe,
             .headers {
                 {.name = HeaderName::kCSeq, .value = cseq},
@@ -55,7 +55,7 @@ void Client::SendRequestSetup() {
     const auto cseq = std::to_string(_cseq);
     auto response = SendRequestAndValidateResponse(
         Request{
-            .uri = _options.uri,
+            .uri = _uri,
             .method = Method::kSetup,
             .headers {
                 {.name = HeaderName::kCSeq, .value = cseq},
@@ -76,7 +76,7 @@ void Client::SendRequestPlay() {
     const auto cseq = std::to_string(_cseq);
     SendRequestAndValidateResponse(
         Request{
-            .uri = _options.uri,
+            .uri = _uri,
             .method = Method::kPlay,
             .headers {
                 {.name = HeaderName::kCSeq, .value = cseq},
@@ -91,7 +91,7 @@ void Client::SendRequestTeardown() {
     const auto cseq = std::to_string(_cseq);
     SendRequestAndValidateResponse(
         Request{
-            .uri = _options.uri,
+            .uri = _uri,
             .method = Method::kTeardown,
             .headers {
                 {.name = HeaderName::kCSeq, .value = cseq},

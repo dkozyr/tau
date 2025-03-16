@@ -3,6 +3,7 @@
 #include "apps/rtsp-client/Session.h"
 #include "tau/rtsp/Request.h"
 #include "tau/rtsp/Response.h"
+#include "tau/net/Uri.h"
 
 namespace tau::rtsp {
 
@@ -10,9 +11,7 @@ namespace tau::rtsp {
 class Client {
 public:
     struct Options {
-        std::string uri;
-        std::string host; 
-        uint16_t port = 554;
+        net::Uri uri;
     };
 
 public:
@@ -30,7 +29,7 @@ private:
 
 private:
     Executor _executor;
-    const Options _options;
+    const std::string _uri;
     asio_tcp::resolver::results_type _endpoints;
     size_t _cseq = 0;
 
