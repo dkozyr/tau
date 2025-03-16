@@ -88,7 +88,7 @@ void Session::InitSockets() {
         _remote_endpoint_rtcp = remote_endpoint;
         _rtp_session.RecvRtcp(std::move(packet));
         const auto& stats = _rtp_session.GetStats().incoming;
-        LOG_INFO << "[rtp stats] packets: " << stats.rtp << ", lost: " << stats.loss_rate << ", loss_rate: " << stats.loss_rate << ", discarded: " << stats.discarded;
+        LOG_INFO << "[rtp stats] packets: " << stats.rtp << ", jitter: " << stats.jitter << ", lost: " << stats.lost_packets << ", loss_rate: " << stats.loss_rate << ", discarded: " << stats.discarded;
     });
 }
 

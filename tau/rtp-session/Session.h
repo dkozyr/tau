@@ -34,6 +34,7 @@ public:
         struct Incoming {
             uint64_t rtp = 0;
             uint64_t discarded = 0;
+            uint32_t jitter = 0;
             int32_t lost_packets = 0;
             float loss_rate = 0;
         };

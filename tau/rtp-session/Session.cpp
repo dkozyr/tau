@@ -201,6 +201,7 @@ void Session::UpdateRrBlock() {
     _rr_block.jitter = ctx.jitter.Get();
     _rr_block.dlsr = ntp32::ToNtp(_last_incoming_rtcp_sr ? (_deps.media_clock.Now() - _last_incoming_rtcp_sr) : 0);
 
+    _stats.incoming.jitter = _rr_block.jitter;
     _stats.incoming.loss_rate = static_cast<float>(rtcp::GetFractionLost(_rr_block.packet_lost_word)) / 256.0f;
     _stats.incoming.lost_packets = rtcp::GetCumulativePacketLost(_rr_block.packet_lost_word);
 }
