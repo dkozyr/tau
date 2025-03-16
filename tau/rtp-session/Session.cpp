@@ -191,19 +191,22 @@ void Session::UpdateRrBlock() {
     auto& ctx = *_recv_ctx;
     const auto ext_highest_sn = (static_cast<uint32_t>(ctx.sn_cycles) << 16) | ctx.sn_last;
     const auto received_packets = _recv_buffer.GetStats().packets;
+    const auto expected_packets = 1u + ext_highest_sn - static_cast<uint32_t>(ctx.sn_first);
 
     const auto expected_delta = ext_highest_sn - _rr_block.ext_highest_sn;
     const auto received_delta = received_packets - ctx.received_packets;
     ctx.received_packets = received_packets;
 
-    _rr_block.packet_lost_word = rtcp::BuildPacketLostWord(received_delta, expected_delta);
+    const auto fraction_lost = rtcp::BuildFractionLost(received_delta, expected_delta);
+    const auto cumulative_packet_lost = rtcp::BuildCumulativePacketLost(ctx.received_packets, expected_packets);
+    _rr_block.packet_lost_word = rtcp::BuildPacketLostWord(fraction_lost, cumulative_packet_lost);
     _rr_block.ext_highest_sn = ext_highest_sn;
     _rr_block.jitter = ctx.jitter.Get();
     _rr_block.dlsr = ntp32::ToNtp(_last_incoming_rtcp_sr ? (_deps.media_clock.Now() - _last_incoming_rtcp_sr) : 0);
 
     _stats.incoming.jitter = _rr_block.jitter;
-    _stats.incoming.loss_rate = static_cast<float>(rtcp::GetFractionLost(_rr_block.packet_lost_word)) / 256.0f;
-    _stats.incoming.lost_packets = rtcp::GetCumulativePacketLost(_rr_block.packet_lost_word);
+    _stats.incoming.loss_rate = static_cast<float>(cumulative_packet_lost) / expected_packets;
+    _stats.incoming.lost_packets = cumulative_packet_lost;
 }
 
 void Session::ProcessIncomingRtcpSr(const BufferViewConst& report) {

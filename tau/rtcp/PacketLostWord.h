@@ -37,16 +37,21 @@ inline PacketLostWord BuildPacketLostWord(uint8_t fraction_lost, int32_t cumulat
     }
 }
 
-inline PacketLostWord BuildPacketLostWord(uint32_t received_packets, uint32_t expected_packets) {
+inline uint8_t BuildFractionLost(uint32_t received_packets, uint32_t expected_packets) {
     const auto lost_packets = static_cast<int32_t>(expected_packets) - static_cast<int32_t>(received_packets);
-
-    uint8_t fraction_lost = 0;
     if(lost_packets > 0) {
         const auto lost_packets_mul_256 = static_cast<uint32_t>(lost_packets) << 8;
-        fraction_lost = static_cast<uint8_t>(lost_packets_mul_256 / expected_packets);
+        return static_cast<uint8_t>(lost_packets_mul_256 / expected_packets);
     }
+    return 0;
+}
 
-    return BuildPacketLostWord(fraction_lost, lost_packets);
+inline int32_t BuildCumulativePacketLost(uint32_t received_packets, uint32_t expected_packets) {
+    if(expected_packets >= received_packets) {
+        return static_cast<int32_t>(expected_packets - received_packets);
+    } else {
+        return -static_cast<int32_t>(received_packets - expected_packets);
+    }
 }
 
 }

@@ -53,7 +53,7 @@ void Session::InitPipeline() {
     _frame_processor.SetCallback([this](rtp::Frame&& frame, bool losses) {
         const auto ok = !losses && _h264_depacketizer.Process(std::move(frame));
         if(!ok) {
-            LOG_INFO << "Drop until key-frame, frame rtp packets: " << frame.size() << (losses ? " losses" : "");
+            LOG_INFO << "Drop until key-frame, frame rtp packets: " << frame.size() << (losses ? ", losses" : "");
             _avc1_nalu_processor.DropUntilKeyFrame();
         }
     });
