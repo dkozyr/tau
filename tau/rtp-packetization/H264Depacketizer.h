@@ -21,10 +21,10 @@ public:
     bool Process(Frame&& frame);
 
 private:
-    bool Process(BufferViewConst rtp_payload_view);
-    bool ProcessSingle(BufferViewConst rtp_payload_view);
-    bool ProcessFuA(BufferViewConst rtp_payload_view);
-    bool ProcessStapA(BufferViewConst rtp_payload_view);
+    bool Process(BufferViewConst rtp_payload_view, Timepoint tp);
+    bool ProcessSingle(BufferViewConst rtp_payload_view, Timepoint tp);
+    bool ProcessFuA(BufferViewConst rtp_payload_view, Timepoint tp);
+    bool ProcessStapA(BufferViewConst rtp_payload_view, Timepoint tp);
 
     bool ValidateFuA(BufferViewConst payload_view) const;
 

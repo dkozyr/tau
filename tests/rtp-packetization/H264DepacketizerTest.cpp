@@ -7,8 +7,7 @@ using namespace h264;
 class H264DepacketizerTest : public H264PacketizationBase, public ::testing::Test {
 protected:
     Buffer CreateRtpPacket(const std::vector<uint8_t>& rtp_payload) {
-        Timepoint tp = 1234567890;
-        auto packet = _ctx->allocator.Allocate(tp, false);
+        auto packet = _ctx->allocator.Allocate(g_random.Int<Timepoint>(), false);
         auto header_size = packet.GetSize();
         auto payload_ptr = packet.GetView().ptr + header_size;
         memcpy(payload_ptr, rtp_payload.data(), rtp_payload.size());
@@ -16,7 +15,7 @@ protected:
         return packet;
     }
 
-    static void AssertNalUnit(const Buffer& nal_unit, NaluType target_type, size_t target_size) {
+    static void AssertNalUnit(const Buffer& nal_unit, NaluType target_type, size_t target_size, Timepoint target_tp) {
         ASSERT_EQ(target_size, nal_unit.GetSize());
         auto view = nal_unit.GetView();
         const auto header = reinterpret_cast<const NaluHeader*>(&view.ptr[0]);
@@ -24,6 +23,7 @@ protected:
         for(size_t i = 1; i < target_size; ++i) {
             ASSERT_EQ(static_cast<uint8_t>(i), view.ptr[i]);
         }
+        ASSERT_EQ(target_tp, nal_unit.GetInfo().tp);
     }
 };
 
@@ -43,12 +43,13 @@ TEST_F(H264DepacketizerTest, StapA) {
             0, 4,
             CreateNalUnitHeader(NaluType::kIdr, 0b11), 1, 2, 3
         }));
+    const auto tp = _rtp_packets.front().GetInfo().tp;
 
     ASSERT_TRUE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
     ASSERT_EQ(3, _nal_units.size());
-    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[0], NaluType::kSps, 2));
-    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[1], NaluType::kPps, 3));
-    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[2], NaluType::kIdr, 4));
+    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[0], NaluType::kSps, 2, tp));
+    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[1], NaluType::kPps, 3, tp));
+    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[2], NaluType::kIdr, 4, tp));
 }
 
 TEST_F(H264DepacketizerTest, StapA_Incomplete) {
@@ -72,9 +73,10 @@ TEST_F(H264DepacketizerTest, StapA_ZeroSize) {
             0, 4,
             CreateNalUnitHeader(NaluType::kIdr, 0b11), 1, 2, 3
         }));
+    const auto tp = _rtp_packets.front().GetInfo().tp;
     ASSERT_FALSE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
     ASSERT_EQ(1, _nal_units.size());
-    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[0], NaluType::kSps, 2));
+    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[0], NaluType::kSps, 2, tp));
 }
 
 TEST_F(H264DepacketizerTest, StapA_MalformedSize) {
@@ -88,9 +90,10 @@ TEST_F(H264DepacketizerTest, StapA_MalformedSize) {
             0, 4,
             CreateNalUnitHeader(NaluType::kIdr, 0b11), 1, 2, 3
         }));
+    const auto tp = _rtp_packets.front().GetInfo().tp;
     ASSERT_FALSE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
     ASSERT_EQ(1, _nal_units.size());
-    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[0], NaluType::kSps, 2));
+    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[0], NaluType::kSps, 2, tp));
 }
 
 TEST_F(H264DepacketizerTest, SkipFuAWithoutEnd) {

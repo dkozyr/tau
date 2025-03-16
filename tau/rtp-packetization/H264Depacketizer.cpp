@@ -18,12 +18,12 @@ bool H264Depacketizer::Process(Frame&& frame) {
     _nalu_max_size = GetNaluMaxSize(frame);
     for(const auto& packet : frame) {
         Reader reader(packet.GetView());
-        ok &= Process(reader.Payload());
+        ok &= Process(reader.Payload(), packet.GetInfo().tp);
     }
     return ok;
 }
 
-bool H264Depacketizer::Process(BufferViewConst rtp_payload_view) {
+bool H264Depacketizer::Process(BufferViewConst rtp_payload_view, Timepoint tp) {
     if(rtp_payload_view.size == 0) {
         return false;
     }
@@ -33,35 +33,35 @@ bool H264Depacketizer::Process(BufferViewConst rtp_payload_view) {
     }
 
     if(header->type == NaluType::kFuA) {
-        return ProcessFuA(rtp_payload_view);
+        return ProcessFuA(rtp_payload_view, tp);
     }
     _fua_nal_unit.reset();
 
     if(header->type == NaluType::kStapA) {
-        return ProcessStapA(rtp_payload_view);
+        return ProcessStapA(rtp_payload_view, tp);
     }
     if(header->type < NaluType::kStapA) {
-        return ProcessSingle(rtp_payload_view);
+        return ProcessSingle(rtp_payload_view, tp);
     }
     return false;
 }
 
-bool H264Depacketizer::ProcessSingle(BufferViewConst rtp_payload_view) {
-    auto nalu = Buffer::Create(_allocator, rtp_payload_view.size, Buffer::Info{.tp = 0});
+bool H264Depacketizer::ProcessSingle(BufferViewConst rtp_payload_view, Timepoint tp) {
+    auto nalu = Buffer::Create(_allocator, rtp_payload_view.size, Buffer::Info{.tp = tp});
     std::memcpy(nalu.GetView().ptr, rtp_payload_view.ptr, rtp_payload_view.size);
     nalu.SetSize(rtp_payload_view.size);
     _callback(std::move(nalu));
     return true;
 }
 
-bool H264Depacketizer::ProcessFuA(BufferViewConst rtp_payload_view) {
+bool H264Depacketizer::ProcessFuA(BufferViewConst rtp_payload_view, Timepoint tp) {
     if(!ValidateFuA(rtp_payload_view)) {
         _fua_nal_unit.reset();
         return false;
     }
     const auto fua_header = reinterpret_cast<const FuAHeader*>(&rtp_payload_view.ptr[1]);
     if(fua_header->start) {
-        _fua_nal_unit.emplace(Buffer::Create(_allocator, _nalu_max_size, Buffer::Info{.tp = 0}));
+        _fua_nal_unit.emplace(Buffer::Create(_allocator, _nalu_max_size, Buffer::Info{.tp = tp}));
 
         const auto fua_indicator = reinterpret_cast<const FuAIndicator*>(&rtp_payload_view.ptr[0]);
         _fua_nal_unit->GetView().ptr[0] = CreateNalUnitHeader(fua_header->type, fua_indicator->nri);
@@ -81,7 +81,7 @@ bool H264Depacketizer::ProcessFuA(BufferViewConst rtp_payload_view) {
     return true;
 }
 
-bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view) {
+bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view, Timepoint tp) {
     rtp_payload_view.ForwardPtrUnsafe(sizeof(NaluHeader));
     while(rtp_payload_view.size > sizeof(uint16_t)) {
         const auto nalu_size = Read16(rtp_payload_view.ptr);
@@ -90,7 +90,7 @@ bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view) {
         }
         rtp_payload_view.ForwardPtrUnsafe(sizeof(uint16_t));
 
-        auto nalu = Buffer::Create(_allocator, nalu_size, Buffer::Info{.tp = 0});
+        auto nalu = Buffer::Create(_allocator, nalu_size, Buffer::Info{.tp = tp});
         std::memcpy(nalu.GetView().ptr, rtp_payload_view.ptr, nalu_size);
         nalu.SetSize(nalu_size);
         _callback(std::move(nalu));

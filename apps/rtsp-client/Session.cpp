@@ -62,7 +62,7 @@ void Session::InitPipeline() {
     });
     _avc1_nalu_processor.SetCallback([this](Buffer&& nal_unit) {
         const auto header = reinterpret_cast<const h264::NaluHeader*>(&nal_unit.GetView().ptr[0]);
-        LOG_INFO << "[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << nal_unit.GetInfo().tp << ", size: " << nal_unit.GetSize();
+        LOG_INFO << "[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << DurationSec(nal_unit.GetInfo().tp) << ", size: " << nal_unit.GetSize();
         auto view = nal_unit.GetView();
         //TODO: ToStringView
         WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(h264::kAnnexB.data()), h264::kAnnexB.size()}, true);
