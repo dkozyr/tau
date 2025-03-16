@@ -5,6 +5,7 @@
 #include <sstream>
 #include <vector>
 #include <optional>
+#include <cctype>
 #include <type_traits>
 
 namespace tau {
