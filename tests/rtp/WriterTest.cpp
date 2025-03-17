@@ -35,6 +35,13 @@ protected:
         const auto payload = reader.Payload();
         ASSERT_EQ(0, payload.size);
     }
+
+    static void AssertZeroPayload(const BufferView& payload) {
+        ASSERT_NE(0, payload.size);
+        for(size_t i = 0; i < payload.size; ++i) {
+            ASSERT_EQ(0, payload.ptr[0]);
+        }
+    }
 };
 
 TEST_F(WriterTest, Basic) {
@@ -68,6 +75,7 @@ TEST_F(WriterTest, WithExtension) {
     const auto target_extension_payload_size = target_extension_size - kExtensionHeaderSize;
     ASSERT_EQ(kFixedHeaderSize + target_extension_size, result.size);
     ASSERT_EQ(target_extension_payload_size, result.extension.size);
+    ASSERT_NO_FATAL_FAILURE(AssertZeroPayload(result.extension));
     ASSERT_EQ(view.ptr + kFixedHeaderSize + target_extension_size, result.payload.ptr);
     ASSERT_EQ(0, result.payload.size);
 
@@ -103,6 +111,9 @@ TEST_F(WriterTest, Randomized) {
         const auto target_extension_payload_size = (options.extension_length_in_words > 0) ? target_extension_size - kExtensionHeaderSize : 0;
         ASSERT_EQ(kFixedHeaderSize + target_extension_size, result.size);
         ASSERT_EQ(target_extension_payload_size, result.extension.size);
+        if(target_extension_payload_size > 0) {
+            ASSERT_NO_FATAL_FAILURE(AssertZeroPayload(result.extension));
+        }
         ASSERT_EQ(view.ptr + kFixedHeaderSize + target_extension_size, result.payload.ptr);
         ASSERT_EQ(0, result.payload.size);
 

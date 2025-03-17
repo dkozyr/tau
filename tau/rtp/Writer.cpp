@@ -2,6 +2,7 @@
 #include "tau/rtp/Constants.h"
 #include "tau/rtp/details/FixedHeader.h"
 #include "tau/common/NetToHost.h"
+#include <cstring>
 
 namespace tau::rtp {
 
@@ -28,6 +29,7 @@ Writer::Result Writer::Write(BufferView view_with_capacity, const Options& optio
         };
         Write16(ptr + kFixedHeaderSize, 0xBEDE);
         Write16(ptr + kFixedHeaderSize + sizeof(uint16_t), options.extension_length_in_words);
+        std::memset(result.extension.ptr, 0, result.extension.size);
     }
     result.payload = BufferView{
         .ptr = ptr + kFixedHeaderSize + extension_size,
