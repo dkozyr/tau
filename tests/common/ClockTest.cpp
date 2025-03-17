@@ -1,5 +1,5 @@
 #include "tau/common/Clock.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau {
 

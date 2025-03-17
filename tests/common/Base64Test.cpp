@@ -1,5 +1,5 @@
 #include "tau/common/Base64.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau {
 

@@ -3,7 +3,8 @@
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
 #include "tau/video/h264/Nalu.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
+#include "tests/lib/H264Utils.h"
 
 namespace tau::rtp {
 
@@ -33,18 +34,6 @@ protected:
         _ctx->depacketizer.SetCallback([this](Buffer&& nalu) {
             _nal_units.push_back(std::move(nalu));
         });
-    }
-
-    //TODO: move to test Utils file
-    static Buffer CreateNalu(NaluType type, size_t size) {
-        auto nalu = Buffer::Create(g_system_allocator, size);
-        auto view = nalu.GetViewWithCapacity();
-        view.ptr[0] = CreateNalUnitHeader(type, 0b11);
-        for(size_t i = 1; i < size; ++i) {
-            view.ptr[i] = i;
-        }
-        nalu.SetSize(size);
-        return nalu;
     }
 
     static void AssertBufferView(const BufferView& target, const BufferView& actual) {

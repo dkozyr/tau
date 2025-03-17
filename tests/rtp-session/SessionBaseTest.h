@@ -9,7 +9,7 @@
 #include "tau/rtcp/PliReader.h"
 #include "tau/rtcp/PliWriter.h"
 #include "tau/common/Ntp.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau::rtp::session {
 

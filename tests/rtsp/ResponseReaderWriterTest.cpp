@@ -1,6 +1,6 @@
 #include "tau/rtsp/ResponseWriter.h"
 #include "tau/rtsp/ResponseReader.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau::rtsp {
 

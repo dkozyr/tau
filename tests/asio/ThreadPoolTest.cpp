@@ -1,5 +1,5 @@
 #include "tau/asio/ThreadPool.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau {
 

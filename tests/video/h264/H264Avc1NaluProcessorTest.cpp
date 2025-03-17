@@ -1,5 +1,6 @@
 #include "tau/video/h264/Avc1NaluProcessor.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
+#include "tests/lib/H264Utils.h"
 
 namespace tau::h264 {
 
@@ -17,18 +18,6 @@ public:
     }
 
 protected:
-    //TODO: move to test Utils file
-    static Buffer CreateNalu(NaluType type, size_t size = 256) {
-        auto nalu = Buffer::Create(g_system_allocator, size);
-        auto view = nalu.GetViewWithCapacity();
-        view.ptr[0] = CreateNalUnitHeader(type, 0b11);
-        for(size_t i = 1; i < size; ++i) {
-            view.ptr[i] = i;
-        }
-        nalu.SetSize(size);
-        return nalu;
-    }
-
     void AssertProcessedNalUnits(const std::vector<NaluType>& target_nalu_types) {
         ASSERT_EQ(target_nalu_types.size(), _processed_nalu_units.size());
         for(size_t i = 0; i < target_nalu_types.size(); ++i) {

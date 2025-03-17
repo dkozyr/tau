@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tests/TestClock.h"
+#include "tests/lib/TestClock.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/memory/PoolAllocator.h"
 #include "tau/common/String.h"

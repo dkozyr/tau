@@ -13,7 +13,7 @@
 #include "tau/rtcp/NackReader.h"
 #include "tau/rtcp/NackWriter.h"
 #include "tau/memory/Buffer.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau::rtcp {
 

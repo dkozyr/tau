@@ -1,6 +1,7 @@
 #include "tau/rtp-session/FrameProcessor.h"
 #include "tau/rtp/Writer.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
+#include "tests/lib/RtpUtils.h"
 
 namespace tau::rtp::session {
 
@@ -21,20 +22,6 @@ protected:
             auto packet = CreatePacket(ts, sn, sn == sn_with_marker);
             _frame_processor.PushRtp(std::move(packet));
         }
-    }
-
-    //TODO: move to test Utils file
-    Buffer CreatePacket(uint32_t ts, uint16_t sn, bool marker) {
-        auto packet = Buffer::Create(g_system_allocator, 1200);
-        Writer::Write(packet.GetViewWithCapacity(), Writer::Options{
-            .pt = 96,
-            .ssrc = 0x11223344,
-            .ts = ts,
-            .sn = sn,
-            .marker = marker
-        });
-        packet.SetSize(1200);
-        return packet;
     }
 
     void AssertFrame(size_t idx, size_t packets, bool losses) const {

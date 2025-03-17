@@ -2,7 +2,7 @@
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
 #include "tau/memory/Buffer.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau::rtp {
 

@@ -3,7 +3,7 @@
 #include "tau/memory/PoolAllocator.h"
 #include "tau/asio/ThreadPool.h"
 #include "tau/common/Event.h"
-#include "tests/Common.h"
+#include "tests/lib/Common.h"
 
 namespace tau::net {
 
