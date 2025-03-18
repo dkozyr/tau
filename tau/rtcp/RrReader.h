@@ -13,10 +13,10 @@ public:
         return Read32(view.ptr + kHeaderSize);
     }
 
-    static RrBlocks GetBlocks(const BufferViewConst& view) {
+    static RrBlocks GetBlocks(const BufferViewConst& view, size_t rr_blocks_offset = 0) {
         RrBlocks blocks;
         auto blocks_count = GetRc(view.ptr[0]);
-        auto ptr = view.ptr + kHeaderSize + sizeof(uint32_t);
+        auto ptr = view.ptr + kHeaderSize + sizeof(uint32_t) + rr_blocks_offset;
         while(blocks_count != 0) {
             blocks.push_back(RrBlock{
                 .ssrc             = Read32(ptr),
