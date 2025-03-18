@@ -4,12 +4,28 @@
 namespace tau {
 
 TEST(StringTest, StringToUnsigned) {
-    ASSERT_EQ(1234567890, StringToUnsigned(std::string_view{"1234567890"}));
-    ASSERT_EQ(12345, StringToUnsigned(std::string_view{"012345-67890"}));
+    ASSERT_EQ(1234567890, StringToUnsigned(std::string_view{"01234567890"}));
     ASSERT_EQ(0, StringToUnsigned(std::string_view{"0"}));
+    ASSERT_FALSE(StringToUnsigned(std::string_view{"012345-67890"}).has_value());
     ASSERT_FALSE(StringToUnsigned(std::string_view{"-12345"}).has_value());
     ASSERT_FALSE(StringToUnsigned(std::string_view{}).has_value());
     ASSERT_FALSE(StringToUnsigned(std::string_view{"a"}).has_value());
+}
+
+TEST(StringTest, StringToUnsigned_DifferentType) {
+    ASSERT_EQ(18446744073709551615ull, StringToUnsigned<uint64_t>(std::string_view{"18446744073709551615"}).value());
+    ASSERT_EQ(4294967296ull, StringToUnsigned<uint64_t>(std::string_view{"4294967296"}).value());
+    ASSERT_EQ(4294967295u, StringToUnsigned<uint32_t>(std::string_view{"4294967295"}).value());
+    ASSERT_FALSE(StringToUnsigned<uint32_t>(std::string_view{"4294967296"}).has_value());
+
+    ASSERT_EQ(65536, StringToUnsigned<uint64_t>(std::string_view{"65536"}).value());
+    ASSERT_EQ(65536, StringToUnsigned<uint32_t>(std::string_view{"65536"}).value());
+    ASSERT_FALSE(StringToUnsigned<uint16_t>(std::string_view{"65536"}).has_value());
+    ASSERT_FALSE(StringToUnsigned<uint8_t>(std::string_view{"65536"}).has_value());
+
+    ASSERT_EQ(256, StringToUnsigned<uint16_t>(std::string_view{"256"}).value());
+    ASSERT_EQ(255, StringToUnsigned<uint8_t>(std::string_view{"255"}).value());
+    ASSERT_FALSE(StringToUnsigned<uint8_t>(std::string_view{"256"}).has_value());
 }
 
 TEST(StringTest, ToHexString) {

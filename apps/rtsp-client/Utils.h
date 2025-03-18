@@ -13,7 +13,9 @@ inline std::optional<uint16_t> ParseServerRtpPort(const rtsp::Response& response
             auto tokens = Split(header.value, ";");
             for(auto& token : tokens) {
                 if(IsPrefix(token, kServerPortStr)) {
-                    return StringToUnsigned<uint16_t>(token.substr(kServerPortStr.size()));
+                    auto ports = token.substr(kServerPortStr.size());
+                    ports = ports.substr(0, ports.find('-'));
+                    return StringToUnsigned<uint16_t>(ports);
                 }
             }
             break;

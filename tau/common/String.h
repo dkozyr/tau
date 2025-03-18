@@ -5,21 +5,30 @@
 #include <sstream>
 #include <vector>
 #include <optional>
+#include <limits>
 #include <cctype>
+#include <cstdint>
+#include <cstddef>
 #include <type_traits>
 
 namespace tau {
 
 template<typename R = size_t, typename T>
 std::optional<R> StringToUnsigned(const T& str) {
-    std::optional<R> result;
+    if(str.empty()) {
+        return std::nullopt;
+    }
+    uint64_t value = 0;
     for(auto& c : str) {
         if(!std::isdigit(c)) {
-            break;
+            return std::nullopt;
         }
-        result = result.value_or(0) * 10 + (c - '0');
+        value = value * 10 + (c - '0');
     }
-    return result;
+    if(value > std::numeric_limits<R>::max()) {
+        return std::nullopt;
+    }
+    return static_cast<R>(value);
 }
 
 template<typename T = size_t>
