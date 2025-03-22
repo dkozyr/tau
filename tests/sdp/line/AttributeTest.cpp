@@ -12,11 +12,13 @@ TEST(AttributeReaderTest, Validate) {
     ASSERT_TRUE(AttributeReader::Validate("sendrecv"));
     ASSERT_TRUE(AttributeReader::Validate("rtcp-mux"));
     ASSERT_TRUE(AttributeReader::Validate("rtpmap 96 malformed/but-valid-for-attribute-reader"));
+    ASSERT_TRUE(AttributeReader::Validate("candidate:1521601408 1 udp 1686052607 1.1.1.1 63955 typ srflx raddr 192.168.0.1 rport 63955 generation 0"));
 
     ASSERT_FALSE(AttributeReader::Validate("extmap:1:malformed"));
     ASSERT_FALSE(AttributeReader::Validate("rtpmap:96:H264/90000"));
     ASSERT_FALSE(AttributeReader::Validate("rtcp-fb:128 wrong-pt"));
     ASSERT_FALSE(AttributeReader::Validate("fmtp:128 wrong-pt"));
+    ASSERT_FALSE(AttributeReader::Validate("candidate:2896278100 2 udp 2122260222 1.2.3.4 59844 type host"));
 }
 
 TEST(AttributeReaderTest, Basic) {

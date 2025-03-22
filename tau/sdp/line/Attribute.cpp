@@ -3,6 +3,7 @@
 #include "tau/sdp/line/attribute/Fmtp.h"
 #include "tau/sdp/line/attribute/Extmap.h"
 #include "tau/sdp/line/attribute/RtcpFb.h"
+#include "tau/sdp/line/attribute/Candidate.h"
 
 namespace tau::sdp {
     
@@ -26,10 +27,11 @@ std::string_view AttributeReader::GetValue(const std::string_view& value) {
 
 bool AttributeReader::Validate(const std::string_view& value) {
     const auto type = GetType(value);
-    if(type == "rtpmap")  { return attribute::RtpmapReader::Validate(GetValue(value)); }
-    if(type == "fmtp")    { return attribute::FmtpReader::Validate(GetValue(value)); }
-    if(type == "extmap")  { return attribute::ExtmapReader::Validate(GetValue(value)); }
-    if(type == "rtcp-fb") { return attribute::RtcpFbReader::Validate(GetValue(value)); }
+    if(type == "rtpmap")    { return attribute::RtpmapReader::Validate(GetValue(value)); }
+    if(type == "fmtp")      { return attribute::FmtpReader::Validate(GetValue(value)); }
+    if(type == "extmap")    { return attribute::ExtmapReader::Validate(GetValue(value)); }
+    if(type == "rtcp-fb")   { return attribute::RtcpFbReader::Validate(GetValue(value)); }
+    if(type == "candidate") { return attribute::CandidateReader::Validate(GetValue(value)); }
     return true;
 }
 
