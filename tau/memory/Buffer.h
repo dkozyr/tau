@@ -61,4 +61,6 @@ private:
     Info _info;
 };
 
+Buffer CreateBufferFromBase64(Allocator& allocator, std::string_view str, Buffer::Info info = Buffer::Info{.tp = 0});
+
 }

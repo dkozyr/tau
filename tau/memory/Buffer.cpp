@@ -1,4 +1,5 @@
 #include "tau/memory/Buffer.h"
+#include "tau/common/Base64.h"
 #include <cstring>
 
 namespace tau {
@@ -92,6 +93,15 @@ void Buffer::SetSize(size_t size) {
         size = _capacity;
     }
     _size = size;
+}
+
+Buffer CreateBufferFromBase64(Allocator& allocator, std::string_view str, Buffer::Info info) {
+    const auto expected_size = DivCeil(str.size() * 6, 8);
+    auto buffer = Buffer::Create(allocator, expected_size, info);
+    auto data = Base64Decode(str);
+    std::memcpy(buffer.GetView().ptr, data.data(), data.size());
+    buffer.SetSize(data.size());
+    return buffer;
 }
 
 }

@@ -1,7 +1,4 @@
-#include "tau/memory/Buffer.h"
-#include "tau/memory/SystemAllocator.h"
-#include <gtest/gtest.h>
-#include <cstring>
+#include "tests/lib/Common.h"
 
 namespace tau {
 
@@ -63,6 +60,25 @@ TEST(BufferTest, MakeCopy) {
     ASSERT_EQ(256, buffer2.GetCapacity());
     ASSERT_EQ(info, buffer2.GetInfo());
     ASSERT_EQ(0, std::memcmp(buffer.GetView().ptr, buffer2.GetView().ptr, buffer.GetSize()));
+}
+
+TEST(BufferTest, FromBase64_Randomized) {
+    for(size_t iteration = 0; iteration < 100; ++iteration) {
+        std::vector<uint8_t> data(g_random.Int(1, 1024));
+        for(size_t i = 0; i < data.size() - 1; ++i) {
+            data[i] = g_random.Int<uint8_t>();
+        }
+        data.back() = g_random.Int<uint8_t>(1, 255);
+        const auto encoded = Base64Encode(data.data(), data.size());
+
+        Buffer::Info info{.tp = g_random.Int<Timepoint>()};
+        auto buffer = CreateBufferFromBase64(g_system_allocator, encoded, info);
+        ASSERT_EQ(data.size(), buffer.GetSize());
+        for(size_t i = 0; i < data.size(); ++i) {
+            ASSERT_EQ(data[i], buffer.GetView().ptr[i]);
+        }
+        ASSERT_EQ(info, buffer.GetInfo());
+    }
 }
 
 }
