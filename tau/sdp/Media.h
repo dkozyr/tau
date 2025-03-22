@@ -26,6 +26,7 @@ struct Codec {
 
 struct Media {
     MediaType type;
+    std::string mid = {};
     Direction direction = Direction::kSendRecv;
     std::unordered_map<uint8_t, Codec> codecs = {};
 };

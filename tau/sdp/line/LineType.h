@@ -1,10 +1,8 @@
 #pragma once
 
-#include "tau/common/String.h"
-
 namespace tau::sdp {
 
-// https://datatracker.ietf.org/doc/html/rfc4566#section-5
+// https://www.rfc-editor.org/rfc/rfc4566.html#section-5
 enum LineType : char {
     kVersion     = 'v',
     kOriginator  = 'o',

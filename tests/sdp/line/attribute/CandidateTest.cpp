@@ -8,6 +8,7 @@ TEST(CandidateReaderTest, Validate) {
     ASSERT_TRUE(CandidateReader::Validate("3793899172 1 tcp 1518280447 192.168.1.1 0 typ host tcptype active generation 0"));
     ASSERT_TRUE(CandidateReader::Validate("3793899172 2 tcp 1518280446 192.168.1.1 0 typ host tcptype active generation 0"));
     ASSERT_TRUE(CandidateReader::Validate("1521601408 1 udp 1686052607 1.1.1.1 63955 typ srflx raddr 192.168.0.1 rport 63955 generation 0"));
+    ASSERT_TRUE(CandidateReader::Validate("1521601408 1 UDP 1686052607 1.1.1.1 63955 typ srflx"));
 
     ASSERT_FALSE(CandidateReader::Validate("2896278100 2 udp 2122260222 1.2.3.4 59844 type host"));
     ASSERT_FALSE(CandidateReader::Validate("2896278100 2 udp 2122260222 1.2.3.4 59844 typ "));

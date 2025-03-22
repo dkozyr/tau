@@ -9,9 +9,12 @@
 namespace tau::sdp {
 
 struct Sdp {
-    // std::optional<Ice> ice = std::nullopt;
-    // std::optional<Dtls> dtls = std::nullopt;
+    std::vector<std::string> bundle_mids = {};
+    std::optional<Ice> ice = std::nullopt;
+    std::optional<Dtls> dtls = std::nullopt;
     std::vector<Media> medias = {};
 };
+
+std::optional<Sdp> ParseSdp(std::string_view sdp_str);
 
 }
