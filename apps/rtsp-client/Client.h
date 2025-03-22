@@ -3,6 +3,7 @@
 #include "apps/rtsp-client/Session.h"
 #include "tau/rtsp/Request.h"
 #include "tau/rtsp/Response.h"
+#include "tau/sdp/Sdp.h"
 #include "tau/net/Uri.h"
 
 namespace tau::rtsp {
@@ -27,6 +28,9 @@ private:
     Response SendRequestAndValidateResponse(Request&& request, const std::string& cseq);
     std::optional<Response> SendRequest(Request&& request);
 
+    void ParseAndValidateSdp(const std::string_view& sdp_str);
+    Session::Options CreateSessionOptions() const;
+
 private:
     Executor _executor;
     const std::string _uri;
@@ -36,6 +40,7 @@ private:
     std::optional<Session> _session;
     std::optional<uint16_t> _server_rtp_port;
     std::string _session_id;
+    std::optional<sdp::Sdp> _sdp;
 };
 
 }

@@ -13,6 +13,9 @@ namespace tau::rtsp {
 class Session {
 public:
     struct Options {
+        uint32_t clock_rate = 90000;
+        std::optional<Buffer> sps = std::nullopt;
+        std::optional<Buffer> pps = std::nullopt;
     };
 
 public:

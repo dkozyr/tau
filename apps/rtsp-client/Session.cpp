@@ -18,7 +18,7 @@ Session::Session(Executor executor, Options&& options)
             .system_clock = _system_clock
         },
         rtp::Session::Options{
-            .rate = 90000, //TODO: parse it from SDP
+            .rate = options.clock_rate,
             .sender_ssrc = Random{}.Int<uint32_t>(),
             .base_ts = 0,
             .rtx = false,
@@ -26,7 +26,10 @@ Session::Session(Executor executor, Options&& options)
             .recv_buffer_size = 4
         })
     , _h264_depacketizer(g_system_allocator)
-    , _avc1_nalu_processor(h264::Avc1NaluProcessor::Options{})
+    , _avc1_nalu_processor(h264::Avc1NaluProcessor::Options{
+        .sps = std::move(options.sps),
+        .pps = std::move(options.pps)
+    })
     , _output_path(std::to_string(ToNtp(_system_clock.Now())) + ".h264")
 {
     InitSockets();

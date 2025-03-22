@@ -2,6 +2,7 @@
 #include "apps/rtsp-client/Utils.h"
 #include "tau/rtsp/RequestWriter.h"
 #include "tau/rtsp/ResponseReader.h"
+#include "tau/memory/SystemAllocator.h"
 #include "tau/common/Log.h"
 #include <array>
 
@@ -42,11 +43,12 @@ void Client::SendRequestDescribe() {
             }
         },
         cseq);
-    LOG_INFO << "RTSP SDP:" << std::endl << response.body; //TODO: store/parse SDP
+    LOG_INFO << "RTSP SDP:" << std::endl << response.body;
+    ParseAndValidateSdp(response.body);
 }
 
 void Client::SendRequestSetup() {
-    _session.emplace(_executor, Session::Options{});
+    _session.emplace(_executor, CreateSessionOptions());
     const auto rtp_port = _session->GetRtpPort();
     const auto rtcp_port = rtp_port + 1;
     LOG_INFO << "Rtp port: " << rtp_port << ", rtcp port: " << rtcp_port;
@@ -146,6 +148,48 @@ std::optional<Response> Client::SendRequest(Request&& request) {
 
     LOG_INFO << "Response: " << std::endl << response;
     return ResponseReader::Read(response);
+}
+
+void Client::ParseAndValidateSdp(const std::string_view& sdp_str) {
+    _sdp = sdp::ParseSdp(sdp_str);
+    if(!_sdp) {
+        throw std::runtime_error("Sdp parsing failed");
+    }
+    if(_sdp->medias.size() != 1) {
+        throw std::runtime_error("Sdp processing failed: expected only 1 media");
+    }
+    const auto& video = _sdp->medias[0];
+    if(video.type != sdp::MediaType::kVideo) {
+        throw std::runtime_error("Sdp processing failed: expected video media");
+    }
+    const auto& [_, codec] = *video.codecs.begin();
+    if(codec.name != "H264") {
+        throw std::runtime_error("Sdp processing failed: expected H264 video media");
+    }
+}
+
+Session::Options Client::CreateSessionOptions() const {
+    const auto& video = _sdp->medias[0];
+    const auto& [_, codec] = *video.codecs.begin();
+    if(!codec.format.empty()) {
+        const auto tokens = Split(codec.format, ";");
+        for(auto& token : tokens) {
+            const std::string_view kPrefix = "sprop-parameter-sets="; //TODO: name and move to h264 or sdp namespace?
+            if(IsPrefix(token, kPrefix)) {
+                const auto params = Split(token.substr(kPrefix.size()), ",");
+                if(params.size() == 2) {
+                    return Session::Options{
+                        .clock_rate = codec.clock_rate,
+                        .sps = CreateBufferFromBase64(g_system_allocator, params[0]),
+                        .pps = CreateBufferFromBase64(g_system_allocator, params[1])
+                    };
+                }
+            }
+        }
+    }
+    return Session::Options{
+        .clock_rate = codec.clock_rate,
+    };
 }
 
 }
