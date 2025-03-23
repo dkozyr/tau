@@ -4,6 +4,7 @@
 #include "tau/stun/attribute/IceControlled.h"
 #include "tau/stun/attribute/IceControlling.h"
 #include "tau/stun/attribute/UserName.h"
+#include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tau/common/NetToHost.h"
 #include "tau/common/Math.h"
@@ -36,6 +37,7 @@ bool Reader::Validate(const BufferViewConst& view) {
             case AttributeType::kIceControlling:   return attribute::IceControllingReader::Validate(attr);
             case AttributeType::kFingerprint:      return attribute::FingerprintReader::Validate(attr, view);
             case AttributeType::kUserName:         return attribute::UserNameReader::Validate(attr);
+            case AttributeType::kMessageIntegrity: return attribute::MessageIntegrityReader::Validate(attr);
             default:
                 break;
         }

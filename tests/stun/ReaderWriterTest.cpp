@@ -6,6 +6,7 @@
 #include "tau/stun/attribute/IceControlled.h"
 #include "tau/stun/attribute/IceControlling.h"
 #include "tau/stun/attribute/UserName.h"
+#include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tests/lib/Common.h"
 
@@ -52,6 +53,10 @@ TEST_F(ReaderWriterTest, Basic) {
     target_size += kAttributeHeaderSize + Align(5 + 5 + 1, sizeof(uint32_t));
     ASSERT_EQ(target_size, writer.GetSize());
 
+    MessageIntegrityWriter::Write(writer, "pas$word");
+    target_size += kAttributeHeaderSize + MessageIntegrityPayloadSize;
+    ASSERT_EQ(target_size, writer.GetSize());
+
     FingerprintWriter::Write(writer);
     target_size += kAttributeHeaderSize + sizeof(uint32_t);
     ASSERT_EQ(target_size, writer.GetSize());
@@ -81,6 +86,9 @@ TEST_F(ReaderWriterTest, Basic) {
                 break;
             case AttributeType::kUserName:
                 EXPECT_EQ("world:hello",      UserNameReader::GetUserName(attr));
+                break;
+            case AttributeType::kMessageIntegrity:
+                EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, "pas$word"));
                 break;
             case AttributeType::kFingerprint:
                 EXPECT_EQ(true,               FingerprintReader::Validate(attr, view));
