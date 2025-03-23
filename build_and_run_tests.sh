@@ -7,10 +7,13 @@ ninja -j 4
 
 ./bin/common-test-app
 ./bin/asio-test-app
+./bin/crypto-test-app
 ./bin/net-test-app
 ./bin/rtp-test-app
 ./bin/rtcp-test-app
 ./bin/rtp-packetization-test-app
 ./bin/rtp-session-test-app
+./bin/sdp-test-app
+./bin/stun-test-app
 ./bin/rtsp-test-app
 ./bin/video-test-app
