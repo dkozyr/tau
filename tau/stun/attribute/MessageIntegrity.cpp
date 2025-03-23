@@ -21,7 +21,7 @@ bool MessageIntegrityReader::Validate(const BufferViewConst& attr, const BufferV
     std::vector<uint8_t> hash(MessageIntegrityPayloadSize);
     std::vector<uint8_t> message_copy(static_cast<size_t>(attr.ptr - message.ptr));
     std::memcpy(message_copy.data(), message.ptr, message_copy.size());
-    Write16(message_copy.data() + 2, message_copy.size() - kSizeAdjustment);
+    Write16(message_copy.data() + 2, message_copy.size() + kSizeAdjustment);
     BufferViewConst message_view{.ptr = message_copy.data(), .size = message_copy.size()};
     if(!crypto::HmacSha1(message_view, password, hash.data())) {
         return false;
@@ -33,7 +33,7 @@ bool MessageIntegrityWriter::Write(Writer& writer, std::string_view password) {
     if(writer.GetAvailableSize() < kAttributeHeaderSize + MessageIntegrityPayloadSize) {
         return false;
     }
-    writer.SetHeaderLength(writer.GetSize() - kSizeAdjustment);
+    writer.SetHeaderLength(writer.GetSize() + kSizeAdjustment);
     std::vector<uint8_t> hash(MessageIntegrityPayloadSize);
     if(!crypto::HmacSha1(writer.GetView(), password, hash.data())) {
         return false;

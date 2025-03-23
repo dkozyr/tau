@@ -106,4 +106,63 @@ TEST_F(ReaderWriterTest, Basic) {
     ASSERT_EQ(target_attributes, attributes);
 }
 
+TEST_F(ReaderWriterTest, Wireshark_Request) {
+    std::vector<uint8_t> incoming_stun_request = {
+        0x00, 0x01, 0x00, 0x50,                                                                         // header
+          0x21, 0x12, 0xA4, 0x42,                                                                       // magic number
+          0x71, 0x78, 0x6C, 0x58, 0x76, 0x62, 0x50, 0x4E, 0x6D, 0x59, 0x35, 0x52,                       // transcation id
+        0x00, 0x06, 0x00, 0x09, 0x43, 0x30, 0x4F, 0x66, 0x3A, 0x61, 0x49, 0x5A, 0x43, 0x00, 0x00, 0x00, // user name
+        0xC0, 0x57, 0x00, 0x04, 0x00, 0x00, 0x03, 0xE7,                                                 // network cost
+        0x80, 0x2A, 0x00, 0x08, 0xE2, 0x13, 0xAC, 0xB5, 0x0F, 0xA9, 0xC4, 0xCA,                         // ice controlling
+        0x00, 0x25, 0x00, 0x00,                                                                         // use candidate
+        0x00, 0x24, 0x00, 0x04, 0x6E, 0x00, 0x1E, 0xFF,                                                 // priority
+        0x00, 0x08, 0x00, 0x14,                                                                         // message integrity
+          0x00, 0x6B, 0x59, 0x93, 0x53, 0x84, 0xEB, 0x53, 0x0F, 0x9F, 0x3E, 0xBC, 0x1C, 0xD8, 0x1A, 0x7E, 0xD7, 0x28, 0x48, 0x69,
+        0x80, 0x28, 0x00, 0x04, 0x32, 0x19, 0x78, 0x64                                                  // fingerprint
+    };
+
+    BufferViewConst view{.ptr = incoming_stun_request.data(), .size = incoming_stun_request.size()};
+    ASSERT_TRUE(Reader::Validate(view));
+
+    ASSERT_EQ(BindingType::kRequest, HeaderReader::GetType(view));
+    ASSERT_EQ(80, HeaderReader::GetLength(view));
+    ASSERT_EQ(0x6A430944, HeaderReader::GetTransactionIdHash(view));
+
+    std::vector<AttributeType> attributes;
+    auto ok = Reader::ForEachAttribute(view, [&](AttributeType type, const BufferViewConst& attr) {
+        attributes.push_back(type);
+        switch(type) {
+            case AttributeType::kPriority:
+                EXPECT_EQ(0x6E001EFF,         PriorityReader::GetPriority(attr));
+                break;
+            case AttributeType::kIceControlling:
+                EXPECT_EQ(0xE213ACB50FA9C4CA, IceControllingReader::GetTiebreaker(attr));
+                break;
+            case AttributeType::kUseCandidate:
+                break;
+            case AttributeType::kUserName:
+                EXPECT_EQ("C0Of:aIZC",        UserNameReader::GetUserName(attr));
+                break;
+            case AttributeType::kMessageIntegrity:
+                EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, "ZN4ykLX1bRr+BzKwm2/ZAdCV"));
+                break;
+            case AttributeType::kFingerprint:
+                EXPECT_EQ(true,               FingerprintReader::Validate(attr, view));
+                break;
+            case AttributeType::kNetworkCost:
+                break;
+            default:
+                EXPECT_TRUE(false);
+                return false;
+        }
+        return true;
+    });
+    ASSERT_TRUE(ok);
+    std::vector<AttributeType> target_attributes = {AttributeType::kUserName, AttributeType::kNetworkCost,
+        AttributeType::kIceControlling, AttributeType::kUseCandidate, AttributeType::kPriority,
+        AttributeType::kMessageIntegrity, AttributeType::kFingerprint};
+    ASSERT_EQ(7, attributes.size());
+    ASSERT_EQ(target_attributes, attributes);
+}
+
 }
