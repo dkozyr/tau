@@ -18,4 +18,6 @@ public:
     static bool Validate(const BufferViewConst& view);
 };
 
+uint32_t GenerateTransactionId(uint8_t* transaction_id_ptr);
+
 }
