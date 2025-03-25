@@ -1,8 +1,5 @@
 #include "tau/net/Interface.h"
-#include <arpa/inet.h>
 #include <ifaddrs.h>
-#include <net/if.h>
-#include <sys/types.h>
 
 namespace tau::net {
 

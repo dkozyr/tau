@@ -22,7 +22,7 @@ public:
 
 class CandidateWriter {
 public:
-    static std::string Write(std::string_view foundation, uint16_t component_id,
+    static std::string Write(uint32_t foundation, uint16_t component_id,
         std::string_view transport, uint32_t priority, std::string_view address,
         uint16_t port, std::string_view type, std::string_view ext_parameters);
 };

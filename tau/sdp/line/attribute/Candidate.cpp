@@ -62,7 +62,7 @@ bool CandidateReader::Validate(const std::string_view& value) {
 }
 
 
-std::string CandidateWriter::Write(std::string_view foundation, uint16_t component_id,
+std::string CandidateWriter::Write(uint32_t foundation, uint16_t component_id,
         std::string_view transport, uint32_t priority, std::string_view address,
         uint16_t port, std::string_view type, std::string_view ext_parameters) {
     std::stringstream ss;

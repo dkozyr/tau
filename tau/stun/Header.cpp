@@ -4,8 +4,6 @@
 #include "tau/common/Random.h" //TODO: crypto random?
 #include <cstring>
 
-#include "tau/common/Log.h"
-
 namespace tau::stun {
 
 uint16_t HeaderReader::GetType(const BufferViewConst& view) {
