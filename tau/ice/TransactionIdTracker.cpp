@@ -6,25 +6,12 @@ namespace tau::ice {
 
 using Result = TransactionIdTracker::Result;
 
-TransactionIdTracker::TransactionIdTracker(Clock& clock)
+TransactionIdTracker::TransactionIdTracker(Clock& clock, Timepoint timeout)
     : _clock(clock)
-    , _type_to_tp{
-        {Type::kStunServer,        _clock.Now() - 60 * kSec},
-        {Type::kConnectivityCheck, _clock.Now() - 60 * kSec}
-    }
+    , _timeout(timeout)
 {}
 
-bool TransactionIdTracker::IsTimeout(Type type) const {
-    auto now = _clock.Now();
-    auto last_tp = _type_to_tp.at(type);
-    switch(type) {
-        case Type::kStunServer:        return (now >= last_tp + kStunServerKeepAlivePeriod);
-        case Type::kConnectivityCheck: return (now >= last_tp + kConnectivityCheckPeriod);
-    }
-    return false;
-}
-
-void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, Type type) {
+void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, asio_udp::endpoint remote) {
     RemoveOldHashs();
 
     auto transaction_id_ptr = stun_message_view.ptr + 2 * sizeof(uint32_t);
@@ -32,8 +19,8 @@ void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, Type 
         const auto id = stun::GenerateTransactionId(transaction_id_ptr);
         if(!Contains(_hash_storage, id)) {
             auto now = _clock.Now();
-            _hash_storage[id] = Result{.type = type, .tp = now};
-            _type_to_tp[type] = now;
+            _hash_storage[id] = Result{.remote = remote, .tp = now};
+            _endpoint_to_tp[remote] = now;
             break;
         }
     }
@@ -52,6 +39,14 @@ void TransactionIdTracker::RemoveTransactionId(uint32_t hash) {
     RemoveOldHashs();
 }
 
+Timepoint TransactionIdTracker::GetLastTimepoint(asio_udp::endpoint remote) const {
+    auto it = _endpoint_to_tp.find(remote);
+    if(it != _endpoint_to_tp.end()) {
+        return it->second;
+    }
+    return _clock.Now() - 60 * kSec;
+}
+
 size_t TransactionIdTracker::GetCount() const {
     return _hash_storage.size();
 }
@@ -60,7 +55,7 @@ void TransactionIdTracker::RemoveOldHashs() {
     auto now = _clock.Now();
     for(auto it = _hash_storage.begin(); it != _hash_storage.end(); ) {
         const auto& result = it->second;
-        if(now >= result.tp + kConnectivityCheckTimeout) {
+        if(now >= result.tp + _timeout) {
             it = _hash_storage.erase(it);
         } else {
             it++;

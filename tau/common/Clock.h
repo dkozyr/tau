@@ -9,9 +9,10 @@ namespace tau {
 
 using Timepoint = uint64_t; // nanoseconds
 
-constexpr Timepoint kSec   = 1'000'000'000;
-constexpr Timepoint kMs    = 1'000'000;
 constexpr Timepoint kMicro = 1'000;
+constexpr Timepoint kMs    = 1'000'000;
+constexpr Timepoint kSec   = 1'000'000'000;
+constexpr Timepoint kMin   = 60 * kSec;
 
 class Clock {
 public:
@@ -39,6 +40,14 @@ inline double DurationSec(Timepoint a, Timepoint b) {
 
 inline double DurationSec(Timepoint a) {
     return static_cast<double>(a) * 1e-9;
+}
+
+inline double DurationMs(Timepoint a, Timepoint b) {
+    return (b - a) / kMs;
+}
+
+inline double DurationMs(Timepoint a) {
+    return a / kMs;
 }
 
 }
