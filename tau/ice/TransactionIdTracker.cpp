@@ -11,7 +11,7 @@ TransactionIdTracker::TransactionIdTracker(Clock& clock, Timepoint timeout)
     , _timeout(timeout)
 {}
 
-void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, asio_udp::endpoint remote) {
+void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, Endpoint remote) {
     RemoveOldHashs();
 
     auto transaction_id_ptr = stun_message_view.ptr + 2 * sizeof(uint32_t);
@@ -26,7 +26,7 @@ void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, asio_
     }
 }
 
-std::optional<Result> TransactionIdTracker::HasTransactionId(uint32_t hash) const {
+std::optional<Result> TransactionIdTracker::HasTransaction(uint32_t hash) const {
     auto it = _hash_storage.find(hash);
     if(it != _hash_storage.end()) {
         return it->second;
@@ -34,12 +34,12 @@ std::optional<Result> TransactionIdTracker::HasTransactionId(uint32_t hash) cons
     return std::nullopt;
 }
 
-void TransactionIdTracker::RemoveTransactionId(uint32_t hash) {
+void TransactionIdTracker::RemoveTransaction(uint32_t hash) {
     _hash_storage.erase(hash);
     RemoveOldHashs();
 }
 
-Timepoint TransactionIdTracker::GetLastTimepoint(asio_udp::endpoint remote) const {
+Timepoint TransactionIdTracker::GetLastTimepoint(Endpoint remote) const {
     auto it = _endpoint_to_tp.find(remote);
     if(it != _endpoint_to_tp.end()) {
         return it->second;

@@ -13,17 +13,17 @@ public:
     static constexpr size_t kTimeoutDefault = 500 * kMs;
 
     struct Result {
-        asio_udp::endpoint remote;
+        Endpoint remote;
         Timepoint tp;
     };
 
 public:
     TransactionIdTracker(Clock& clock, Timepoint timeout = kTimeoutDefault);
 
-    void SetTransactionId(BufferView& stun_message_view, asio_udp::endpoint remote);
-    std::optional<Result> HasTransactionId(uint32_t hash) const;
-    void RemoveTransactionId(uint32_t hash);
-    Timepoint GetLastTimepoint(asio_udp::endpoint remote) const;
+    void SetTransactionId(BufferView& stun_message_view, Endpoint remote);
+    std::optional<Result> HasTransaction(uint32_t hash) const;
+    void RemoveTransaction(uint32_t hash);
+    Timepoint GetLastTimepoint(Endpoint remote) const;
 
     size_t GetCount() const;
 
@@ -35,7 +35,7 @@ private:
     const Timepoint _timeout;
 
     std::unordered_map<uint32_t, Result> _hash_storage;
-    std::unordered_map<asio_udp::endpoint, Timepoint> _endpoint_to_tp;
+    std::unordered_map<Endpoint, Timepoint> _endpoint_to_tp;
 };
 
 }

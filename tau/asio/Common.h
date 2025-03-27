@@ -18,4 +18,6 @@ namespace asio_ip = asio::ip;
 using asio_udp = asio_ip::udp;
 using asio_tcp = asio_ip::tcp;
 
+using Endpoint = asio_udp::endpoint;
+
 }

@@ -6,8 +6,8 @@ namespace tau::ice {
 
 class TransactionIdTrackerTest : public ::testing::Test {
 public:
-    static inline asio_udp::endpoint kEndpoint1{asio_ip::address_v4::from_string("1.2.3.4"), 55555};
-    static inline asio_udp::endpoint kEndpoint2{asio_ip::address_v4::from_string("11.22.33.44"), 54321};
+    static inline Endpoint kEndpoint1{asio_ip::address_v4::from_string("1.2.3.4"), 55555};
+    static inline Endpoint kEndpoint2{asio_ip::address_v4::from_string("11.22.33.44"), 54321};
 
 public:
     TransactionIdTrackerTest()
@@ -27,19 +27,19 @@ TEST_F(TransactionIdTrackerTest, Basic) {
     ASSERT_EQ(tp - kMin, _tracker.GetLastTimepoint(kEndpoint1));
 
     _tracker.SetTransactionId(_message_view, kEndpoint1);
-    auto id = stun::HeaderReader::GetTransactionIdHash(ToConst(_message_view));
+    auto hash = stun::HeaderReader::GetTransactionIdHash(ToConst(_message_view));
     _clock.Add(10 * kMs);
 
-    ASSERT_TRUE(_tracker.HasTransactionId(id));
-    ASSERT_FALSE(_tracker.HasTransactionId(id + 1));
+    ASSERT_TRUE(_tracker.HasTransaction(hash));
+    ASSERT_FALSE(_tracker.HasTransaction(hash + 1));
 
-    auto result = *_tracker.HasTransactionId(id);
+    auto result = *_tracker.HasTransaction(hash);
     ASSERT_EQ(kEndpoint1, result.remote);
     ASSERT_EQ(tp, result.tp);
     ASSERT_EQ(1, _tracker.GetCount());
 
-    _tracker.RemoveTransactionId(id);
-    ASSERT_FALSE(_tracker.HasTransactionId(id));
+    _tracker.RemoveTransaction(hash);
+    ASSERT_FALSE(_tracker.HasTransaction(hash));
     ASSERT_EQ(0, _tracker.GetCount());
 
     ASSERT_EQ(tp, _tracker.GetLastTimepoint(kEndpoint1));
@@ -47,24 +47,24 @@ TEST_F(TransactionIdTrackerTest, Basic) {
 
 TEST_F(TransactionIdTrackerTest, RemoveOldHashs) {
     constexpr auto kMaxHistorySize = 10;
-    std::vector<uint32_t> ids;
+    std::vector<uint32_t> hashs;
     for(size_t i = 0; i < 100; ++i) {
         const auto& remote_endpoint = (i % 2 == 0) ? kEndpoint1 : kEndpoint2;
         _tracker.SetTransactionId(_message_view, remote_endpoint);
-        auto id = stun::HeaderReader::GetTransactionIdHash(ToConst(_message_view));
-        ids.push_back(id);
-        ASSERT_TRUE(_tracker.HasTransactionId(id));
-        auto result = *_tracker.HasTransactionId(id);
+        auto hash = stun::HeaderReader::GetTransactionIdHash(ToConst(_message_view));
+        hashs.push_back(hash);
+        ASSERT_TRUE(_tracker.HasTransaction(hash));
+        auto result = *_tracker.HasTransaction(hash);
         ASSERT_EQ(remote_endpoint, result.remote);
         ASSERT_EQ(_clock.Now(), result.tp);
 
         ASSERT_GE(kMaxHistorySize, _tracker.GetCount());
-        for(size_t j = 0; j < ids.size(); ++j) {
-            if(j + _tracker.GetCount() < ids.size()) {
-                ASSERT_FALSE(_tracker.HasTransactionId(ids[j]));
+        for(size_t j = 0; j < hashs.size(); ++j) {
+            if(j + _tracker.GetCount() < hashs.size()) {
+                ASSERT_FALSE(_tracker.HasTransaction(hashs[j]));
             } else {
-                ASSERT_TRUE(_tracker.HasTransactionId(ids[j]));
-                auto result = *_tracker.HasTransactionId(ids[j]);
+                ASSERT_TRUE(_tracker.HasTransaction(hashs[j]));
+                auto result = *_tracker.HasTransaction(hashs[j]);
                 const auto& target_endpoint = (j % 2 == 0) ? kEndpoint1 : kEndpoint2;
                 ASSERT_EQ(target_endpoint, result.remote);
             }
