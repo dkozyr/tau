@@ -1,8 +1,8 @@
 #include "tau/stun/Reader.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
 #include "tau/stun/attribute/Priority.h"
-#include "tau/stun/attribute/IceControlled.h"
-#include "tau/stun/attribute/IceControlling.h"
+#include "tau/stun/attribute/IceRole.h"
+#include "tau/stun/attribute/UseCandidate.h"
 #include "tau/stun/attribute/UserName.h"
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
@@ -33,8 +33,8 @@ bool Reader::Validate(const BufferViewConst& view) {
         switch(type) {
             case AttributeType::kXorMappedAddress: return attribute::XorMappedAddressReader::Validate(attr);
             case AttributeType::kPriority:         return attribute::PriorityReader::Validate(attr);
-            case AttributeType::kIceControlled:    return attribute::IceControlledReader::Validate(attr);
-            case AttributeType::kIceControlling:   return attribute::IceControllingReader::Validate(attr);
+            case AttributeType::kIceControlled:    return attribute::IceRoleReader::Validate(attr);
+            case AttributeType::kIceControlling:   return attribute::IceRoleReader::Validate(attr);
             case AttributeType::kFingerprint:      return attribute::FingerprintReader::Validate(attr, view);
             case AttributeType::kUserName:         return attribute::UserNameReader::Validate(attr);
             case AttributeType::kMessageIntegrity: return attribute::MessageIntegrityReader::Validate(attr);

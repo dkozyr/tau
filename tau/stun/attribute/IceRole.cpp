@@ -1,22 +1,23 @@
-#include "tau/stun/attribute/IceControlling.h"
+#include "tau/stun/attribute/IceRole.h"
 #include "tau/stun/AttributeType.h"
 #include "tau/common/NetToHost.h"
 
 namespace tau::stun::attribute {
 
-uint64_t IceControllingReader::GetTiebreaker(const BufferViewConst& view) {
+uint64_t IceRoleReader::GetTiebreaker(const BufferViewConst& view) {
     return Read64(view.ptr + kAttributeHeaderSize);
 }
 
-bool IceControllingReader::Validate(const BufferViewConst& view) {
+bool IceRoleReader::Validate(const BufferViewConst& view) {
     return (view.size == kAttributeHeaderSize + sizeof(uint64_t));
 }
 
-bool IceControllingWriter::Write(Writer& writer, uint64_t tiebreaker) {
+bool IceRoleWriter::Write(Writer& writer, bool controlling, uint64_t tiebreaker) {
     if(writer.GetAvailableSize() < kAttributeHeaderSize + sizeof(uint64_t)) {
         return false;
     }
-    writer.WriteAttributeHeader(AttributeType::kIceControlling, sizeof(uint64_t));
+    auto type = controlling ? AttributeType::kIceControlling : AttributeType::kIceControlled;
+    writer.WriteAttributeHeader(type, sizeof(uint64_t));
     writer.Write(tiebreaker);
     writer.UpdateHeaderLength();
     return true;

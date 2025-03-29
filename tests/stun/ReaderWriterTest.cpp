@@ -3,8 +3,8 @@
 #include "tau/stun/AttributeType.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
 #include "tau/stun/attribute/Priority.h"
-#include "tau/stun/attribute/IceControlled.h"
-#include "tau/stun/attribute/IceControlling.h"
+#include "tau/stun/attribute/IceRole.h"
+#include "tau/stun/attribute/UseCandidate.h"
 #include "tau/stun/attribute/UserName.h"
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
@@ -41,11 +41,15 @@ TEST_F(ReaderWriterTest, Basic) {
     target_size += kAttributeHeaderSize + sizeof(uint32_t);
     ASSERT_EQ(target_size, writer.GetSize());
 
-    IceControlledWriter::Write(writer, 0x0123456789ABCDEF);
+    UseCandidateWriter::Write(writer);
+    target_size += kAttributeHeaderSize;
+    ASSERT_EQ(target_size, writer.GetSize());
+
+    IceRoleWriter::Write(writer, false, 0x0123456789ABCDEF);
     target_size += kAttributeHeaderSize + sizeof(uint64_t);
     ASSERT_EQ(target_size, writer.GetSize());
 
-    IceControllingWriter::Write(writer, 0x123456789ABCDEF0);
+    IceRoleWriter::Write(writer, true, 0x123456789ABCDEF0);
     target_size += kAttributeHeaderSize + sizeof(uint64_t);
     ASSERT_EQ(target_size, writer.GetSize());
 
@@ -78,11 +82,13 @@ TEST_F(ReaderWriterTest, Basic) {
             case AttributeType::kPriority:
                 EXPECT_EQ(0x23456789,         PriorityReader::GetPriority(attr));
                 break;
+            case AttributeType::kUseCandidate:
+                break;
             case AttributeType::kIceControlled:
-                EXPECT_EQ(0x0123456789ABCDEF, IceControlledReader::GetTiebreaker(attr));
+                EXPECT_EQ(0x0123456789ABCDEF, IceRoleReader::GetTiebreaker(attr));
                 break;
             case AttributeType::kIceControlling:
-                EXPECT_EQ(0x123456789ABCDEF0, IceControllingReader::GetTiebreaker(attr));
+                EXPECT_EQ(0x123456789ABCDEF0, IceRoleReader::GetTiebreaker(attr));
                 break;
             case AttributeType::kUserName:
                 EXPECT_EQ("world:hello",      UserNameReader::GetUserName(attr));
@@ -101,8 +107,8 @@ TEST_F(ReaderWriterTest, Basic) {
     });
     ASSERT_TRUE(ok);
     std::vector<AttributeType> target_attributes = {AttributeType::kXorMappedAddress, AttributeType::kPriority,
-        AttributeType::kIceControlled, AttributeType::kIceControlling, AttributeType::kUserName,
-        AttributeType::kMessageIntegrity, AttributeType::kFingerprint};
+        AttributeType::kUseCandidate, AttributeType::kIceControlled, AttributeType::kIceControlling,
+        AttributeType::kUserName, AttributeType::kMessageIntegrity, AttributeType::kFingerprint};
     ASSERT_EQ(target_attributes, attributes);
 }
 
@@ -136,7 +142,7 @@ TEST_F(ReaderWriterTest, Wireshark_Request) {
                 EXPECT_EQ(0x6E001EFF,         PriorityReader::GetPriority(attr));
                 break;
             case AttributeType::kIceControlling:
-                EXPECT_EQ(0xE213ACB50FA9C4CA, IceControllingReader::GetTiebreaker(attr));
+                EXPECT_EQ(0xE213ACB50FA9C4CA, IceRoleReader::GetTiebreaker(attr));
                 break;
             case AttributeType::kUseCandidate:
                 break;
