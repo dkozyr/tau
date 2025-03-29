@@ -1,17 +1,17 @@
-#include "tau/ice/TransactionIdTracker.h"
+#include "tau/ice/TransactionTracker.h"
 #include "tau/stun/Header.h"
 #include "tau/common/Container.h"
 
 namespace tau::ice {
 
-using Result = TransactionIdTracker::Result;
+using Result = TransactionTracker::Result;
 
-TransactionIdTracker::TransactionIdTracker(Clock& clock, Timepoint timeout)
+TransactionTracker::TransactionTracker(Clock& clock, Timepoint timeout)
     : _clock(clock)
     , _timeout(timeout)
 {}
 
-void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, Endpoint remote) {
+void TransactionTracker::SetTransactionId(BufferView& stun_message_view, std::optional<size_t> pair_id) {
     RemoveOldHashs();
 
     auto transaction_id_ptr = stun_message_view.ptr + 2 * sizeof(uint32_t);
@@ -19,14 +19,16 @@ void TransactionIdTracker::SetTransactionId(BufferView& stun_message_view, Endpo
         const auto id = stun::GenerateTransactionId(transaction_id_ptr);
         if(!Contains(_hash_storage, id)) {
             auto now = _clock.Now();
-            _hash_storage[id] = Result{.remote = remote, .tp = now};
-            _endpoint_to_tp[remote] = now;
+            _hash_storage[id] = Result{ .tp = now, .pair_id = pair_id};
+            if(pair_id) {
+                _pair_id_to_tp[*pair_id] = now;
+            }
             break;
         }
     }
 }
 
-std::optional<Result> TransactionIdTracker::HasTransaction(uint32_t hash) const {
+std::optional<Result> TransactionTracker::HasTransaction(uint32_t hash) const {
     auto it = _hash_storage.find(hash);
     if(it != _hash_storage.end()) {
         return it->second;
@@ -34,24 +36,24 @@ std::optional<Result> TransactionIdTracker::HasTransaction(uint32_t hash) const 
     return std::nullopt;
 }
 
-void TransactionIdTracker::RemoveTransaction(uint32_t hash) {
+void TransactionTracker::RemoveTransaction(uint32_t hash) {
     _hash_storage.erase(hash);
     RemoveOldHashs();
 }
 
-Timepoint TransactionIdTracker::GetLastTimepoint(Endpoint remote) const {
-    auto it = _endpoint_to_tp.find(remote);
-    if(it != _endpoint_to_tp.end()) {
+Timepoint TransactionTracker::GetLastTimepoint(size_t pair_id) const {
+    auto it = _pair_id_to_tp.find(pair_id);
+    if(it != _pair_id_to_tp.end()) {
         return it->second;
     }
     return _clock.Now() - 60 * kSec;
 }
 
-size_t TransactionIdTracker::GetCount() const {
+size_t TransactionTracker::GetCount() const {
     return _hash_storage.size();
 }
 
-void TransactionIdTracker::RemoveOldHashs() {
+void TransactionTracker::RemoveOldHashs() {
     auto now = _clock.Now();
     for(auto it = _hash_storage.begin(); it != _hash_storage.end(); ) {
         const auto& result = it->second;

@@ -1,29 +1,28 @@
 #pragma once
 
 #include "tau/memory/BufferView.h"
-#include "tau/asio/Common.h"
 #include "tau/common/Clock.h"
 #include <optional>
 #include <unordered_map>
 
 namespace tau::ice {
 
-class TransactionIdTracker {
+class TransactionTracker {
 public:
     static constexpr size_t kTimeoutDefault = 500 * kMs;
 
     struct Result {
-        Endpoint remote;
         Timepoint tp;
+        std::optional<size_t> pair_id;
     };
 
 public:
-    TransactionIdTracker(Clock& clock, Timepoint timeout = kTimeoutDefault);
+    TransactionTracker(Clock& clock, Timepoint timeout = kTimeoutDefault);
 
-    void SetTransactionId(BufferView& stun_message_view, Endpoint remote);
+    void SetTransactionId(BufferView& stun_message_view, std::optional<size_t> pair_id);
     std::optional<Result> HasTransaction(uint32_t hash) const;
     void RemoveTransaction(uint32_t hash);
-    Timepoint GetLastTimepoint(Endpoint remote) const;
+    Timepoint GetLastTimepoint(size_t pair_id) const;
 
     size_t GetCount() const;
 
@@ -35,7 +34,7 @@ private:
     const Timepoint _timeout;
 
     std::unordered_map<uint32_t, Result> _hash_storage;
-    std::unordered_map<Endpoint, Timepoint> _endpoint_to_tp;
+    std::unordered_map<size_t, Timepoint> _pair_id_to_tp;
 };
 
 }
