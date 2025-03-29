@@ -29,7 +29,9 @@ protected:
 
 TEST_F(ReaderWriterTest, Basic) {
     Writer writer(_packet.GetViewWithCapacity());
-    writer.WriteHeader(BindingType::kRequest, BufferViewConst{_transaction_id.data(), _transaction_id.size()});
+    writer.WriteHeader(BindingType::kRequest);
+    auto transcation_id_ptr = _packet.GetView().ptr + 2 * sizeof(uint32_t);
+    std::memcpy(transcation_id_ptr, _transaction_id.data(), _transaction_id.size());
     size_t target_size = kMessageHeaderSize;
     ASSERT_EQ(target_size, writer.GetSize());
 

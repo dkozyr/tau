@@ -12,7 +12,7 @@ class Writer {
 public:
     explicit Writer(BufferView view);
 
-    void WriteHeader(uint16_t type, const BufferViewConst& transaction_id);
+    void WriteHeader(uint16_t type);
     void WriteAttributeHeader(AttributeType type, size_t length);
     void UpdateHeaderLength();
     void SetHeaderLength(size_t length);

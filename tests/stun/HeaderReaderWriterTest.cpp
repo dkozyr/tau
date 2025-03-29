@@ -19,7 +19,9 @@ TEST_F(HeaderReaderWriterTest, Basic) {
     auto packet = Buffer::Create(g_system_allocator, kUdpMtuSize);
 
     Writer writer(packet.GetViewWithCapacity());
-    writer.WriteHeader(BindingType::kRequest, BufferViewConst{_transaction_id.data(), _transaction_id.size()});
+    writer.WriteHeader(BindingType::kRequest);
+    auto transcation_id_ptr = packet.GetView().ptr + 2 * sizeof(uint32_t);
+    std::memcpy(transcation_id_ptr, _transaction_id.data(), _transaction_id.size());
     packet.SetSize(writer.GetSize());
     ASSERT_EQ(kMessageHeaderSize, packet.GetSize());
 

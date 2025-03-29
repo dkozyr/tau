@@ -11,13 +11,11 @@ Writer::Writer(BufferView view)
     : _view(view)
 {}
 
-void Writer::WriteHeader(uint16_t type, const BufferViewConst& transaction_id) {
+void Writer::WriteHeader(uint16_t type) {
     assert(_size + kMessageHeaderSize <= _view.size);
-    assert(transaction_id.size == kTransactionIdSize);
     Write16(_view.ptr, type);
     Write16(_view.ptr + 2, 0);
     Write32(_view.ptr + 4, kMagicCookie);
-    std::memcpy(_view.ptr + 8, transaction_id.ptr, transaction_id.size);
     _size += kMessageHeaderSize;
 }
 
