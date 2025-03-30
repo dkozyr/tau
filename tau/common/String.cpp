@@ -21,6 +21,12 @@ std::vector<std::string_view> Split(const std::string& str, std::string_view mar
     return Split(std::string_view(str), marker, ignore_first);
 }
 
+void ToLowerCase(std::string& value) {
+    for(auto& c : value) {
+        c = std::tolower(c);
+    }
+}
+
 bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensitive) {
     if(case_insensitive) {
         if((str.size() < prefix.size()) || prefix.empty()) {

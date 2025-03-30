@@ -46,6 +46,7 @@ std::string ToHexString(T value) {
 
 std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first = false);
 std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first = false);
+void ToLowerCase(std::string& value);
 bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensitive = false);
 std::string ToHexDump(const uint8_t* ptr, size_t size);
 

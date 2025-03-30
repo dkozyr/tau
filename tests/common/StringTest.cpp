@@ -101,6 +101,12 @@ TEST(StringTest, Split_Empty2) {
     ASSERT_EQ(std::string_view{}, tokens[3]);
 }
 
+TEST(StringTest, ToLowerCase) {
+    std::string str = "Hello wOrlD 42!";
+    ToLowerCase(str);
+    ASSERT_EQ("hello world 42!", str);
+}
+
 TEST(StringTest, Prefix) {
     ASSERT_TRUE(IsPrefix("Hello world", "He"));
     ASSERT_FALSE(IsPrefix("Hello world", "wo"));
