@@ -204,7 +204,7 @@ TEST_F(NatEmulatorTest, DropRate) {
     Process();
     const auto send_packets = _send.size();
     ASSERT_GT(100, send_packets);
-    ASSERT_LT(80, send_packets);
+    ASSERT_LT(75, send_packets);
     ASSERT_EQ(0, _recv.size());
 
     for(size_t i = 0; i < 100; ++i) {

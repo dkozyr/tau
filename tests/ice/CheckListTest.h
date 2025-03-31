@@ -40,10 +40,8 @@ public:
             .type = params.peer2_nat_type,
             .public_ip = kServerReflexiveEndpoint2.address()});
 
-        std::vector<Endpoint> sockets1 = {kHostEndpoint1a, kHostEndpoint1b, kHostEndpoint1c};
-        std::vector<Endpoint> sockets2 = {kHostEndpoint2a, kHostEndpoint2b};
-        sockets1.resize(params.peer1_sockets_count);
-        sockets2.resize(params.peer2_sockets_count);
+        _sockets1.resize(params.peer1_sockets_count);
+        _sockets2.resize(params.peer2_sockets_count);
 
         _check_list1.emplace(
             CheckList::Dependencies{.clock = _clock, .udp_allocator = g_udp_allocator},
@@ -53,7 +51,7 @@ public:
                     .local = _credentials.local,
                     .remote = _credentials.remote,
                 },
-                .sockets = std::move(sockets1),
+                .sockets = _sockets1,
                 .stun_server = kStunServerEndpoint,
                 .log_ctx = "[offer] "
             });
@@ -66,7 +64,7 @@ public:
                     .local = _credentials.remote,
                     .remote = _credentials.local,
                 },
-                .sockets = std::move(sockets2),
+                .sockets = _sockets2,
                 .stun_server = kStunServerEndpoint,
                 .log_ctx = "[answer] "
             });
@@ -84,7 +82,12 @@ public:
             }
         });
         _nat1->SetOnRecvCallback([this](Buffer&& packet, Endpoint src, Endpoint dest) {
-            _check_list1->Recv(dest, src, std::move(packet));
+            for(size_t i = 0; i < _sockets1.size(); ++i) {
+                if(_sockets1[i] == dest) {
+                    _check_list1->Recv(i, src, std::move(packet));
+                    break;
+                }
+            }
         });
 
         _nat2->SetOnSendCallback([this](Buffer&& packet, Endpoint src, Endpoint dest) {
@@ -96,14 +99,19 @@ public:
             }
         });
         _nat2->SetOnRecvCallback([this](Buffer&& packet, Endpoint src, Endpoint dest) {
-            _check_list2->Recv(dest, src, std::move(packet));
+            for(size_t i = 0; i < _sockets2.size(); ++i) {
+                if(_sockets2[i] == dest) {
+                    _check_list2->Recv(i, src, std::move(packet));
+                    break;
+                }
+            }
         });
 
-        _check_list1->SetSendCallback([this](Endpoint local, Endpoint remote, Buffer&& message) {
-            _nat1->Send(std::move(message), local, remote);
+        _check_list1->SetSendCallback([this](size_t socket_idx, Endpoint remote, Buffer&& message) {
+            _nat1->Send(std::move(message), _sockets1[socket_idx], remote);
         });
-        _check_list2->SetSendCallback([this](Endpoint local, Endpoint remote, Buffer&& message) {
-            _nat2->Send(std::move(message), local, remote);
+        _check_list2->SetSendCallback([this](size_t socket_idx, Endpoint remote, Buffer&& message) {
+            _nat2->Send(std::move(message), _sockets2[socket_idx], remote);
         });
 
         _check_list1->SetCandidateCallback([this](std::string candidate) {
@@ -116,13 +124,13 @@ public:
 
     void AssertState(bool success) const {
         if(success) {
-            ASSERT_NO_FATAL_FAILURE(AssertState(CheckList::State::kCompleted));
+            ASSERT_NO_FATAL_FAILURE(AssertState(State::kCompleted));
         } else {
-            ASSERT_NO_FATAL_FAILURE(AssertState(CheckList::State::kFailed));
+            ASSERT_NO_FATAL_FAILURE(AssertState(State::kFailed));
         }
     }
 
-    void AssertState(CheckList::State target) const {
+    void AssertState(State target) const {
         ASSERT_EQ(target, _check_list1->GetState());
         ASSERT_EQ(target, _check_list2->GetState());
     }
@@ -141,6 +149,9 @@ protected:
     std::optional<NatEmulator> _nat1;
     std::optional<NatEmulator> _nat2;
 
+    std::vector<Endpoint> _sockets1 = {kHostEndpoint1a, kHostEndpoint1b, kHostEndpoint1c};
+    std::vector<Endpoint> _sockets2 = {kHostEndpoint2a, kHostEndpoint2b};
+
     std::optional<CheckList> _check_list1;
     std::optional<CheckList> _check_list2;
 
@@ -149,11 +160,11 @@ protected:
 
 TEST_P(CheckListTest, Main) {
     Init(GetParam());
-    ASSERT_NO_FATAL_FAILURE(AssertState(CheckList::State::kWaiting));
+    ASSERT_NO_FATAL_FAILURE(AssertState(State::kWaiting));
 
     _check_list1->Start();
     _check_list2->Start();
-    ASSERT_NO_FATAL_FAILURE(AssertState(CheckList::State::kRunning));
+    ASSERT_NO_FATAL_FAILURE(AssertState(State::kRunning));
 
     for(size_t i = 0; i < 1000; ++i) {
         _clock.Add(42 * kMs);

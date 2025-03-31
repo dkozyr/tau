@@ -1,4 +1,5 @@
 #include "tau/ice/CheckList.h"
+#include "tau/ice/Constants.h"
 #include "tau/stun/Reader.h"
 #include "tau/stun/Writer.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
@@ -23,6 +24,7 @@ CheckList::CheckList(Dependencies&& deps, Options&& options)
     : _deps(std::move(deps))
     , _role(options.role)
     , _credentials(options.credentials)
+    , _nominating_strategy(options.nominating_strategy)
     , _log_ctx(std::move(options.log_ctx))
     , _sockets(std::move(options.sockets))
     , _stun_server(std::move(options.stun_server))
@@ -63,55 +65,10 @@ void CheckList::Process() {
     }
     _last_ta_tp = now;
 
-    ProcessConnectivityChecks();
-}
-
-void CheckList::ProcessConnectivityChecks() {
     for(size_t socket_idx = 0; socket_idx < _sockets.size(); ++socket_idx) {
-        for(auto& pair : _pairs) {
-            if(socket_idx == *pair.local.socket_idx) {
-                if(pair.state == CandidatePair::State::kWaiting) {
-                    SendStunRequest(socket_idx, pair.id, pair.remote.endpoint);
-                    pair.state = CandidatePair::State::kInProgress;
-                    break;
-                }
-                if((pair.state == CandidatePair::State::kSucceeded) && (_role == Role::kControlling)) {
-                    //TODO: there shouldn't be in-progress pairs on nominating
-                    if(_pairs.front().id == pair.id) {
-                        SendStunRequest(socket_idx, pair.id, pair.remote.endpoint, true, true);
-                        pair.state = CandidatePair::State::kNominating;
-                        pair.attempts_count = 0;
-                        break;
-                    }
-                }
-            }
-        }
-
-        auto& transaction_tracker = _transcation_trackers.at(socket_idx);
-        const auto now = _deps.clock.Now();
-        Timepoint smallest_last_tp = now;
-        size_t pair_id = 0;
-        for(auto& pair : _pairs) {
-            if(socket_idx == *pair.local.socket_idx) {
-                if((pair.state == CandidatePair::State::kInProgress) || (pair.state == CandidatePair::State::kNominating)) {
-                    auto last_request_tp = transaction_tracker.GetLastTimepoint(pair.id);
-                    if(smallest_last_tp > last_request_tp) {
-                        smallest_last_tp = last_request_tp;
-                        pair_id = pair.id;
-                    }
-                }
-            }
-        }
-        if(now >= smallest_last_tp + kRtoDefault) {
-            auto& pair = GetPairById(pair_id);
-            if(pair.attempts_count < 8) {
-                pair.attempts_count++;
-                SendStunRequest(socket_idx, pair.id, pair.remote.endpoint, true, pair.state == CandidatePair::State::kNominating);
-            } else {
-                pair.state = CandidatePair::State::kFailed;
-            }
-        }
+        ProcessConnectivityChecks(socket_idx);
     }
+    Nominating();
 }
 
 void CheckList::RecvRemoteCandidate(std::string candidate) {
@@ -144,14 +101,12 @@ void CheckList::RecvRemoteCandidate(std::string candidate) {
     PrunePairs();
 }
 
-void CheckList::Recv(Endpoint local, Endpoint remote, Buffer&& message) {
+void CheckList::Recv(size_t socket_idx, Endpoint remote, Buffer&& message) {
     auto view = ToConst(message.GetView());
     if(!Reader::Validate(view)) {
         LOG_WARNING << "Invalid stun message";
         return;
     }
-
-    const auto socket_idx = GetSocketIdxByEndpoint(local); //TODO: can we remove it?
     switch(HeaderReader::GetType(view)) {
         case BindingType::kResponse:
             OnStunResponse(view, socket_idx, remote);
@@ -166,7 +121,7 @@ void CheckList::Recv(Endpoint local, Endpoint remote, Buffer&& message) {
     }
 }
 
-CheckList::State CheckList::GetState() const {
+State CheckList::GetState() const {
     if(_pairs.empty()) { return State::kWaiting; }
     for(auto& pair : _pairs) {
         if(pair.state == CandidatePair::State::kFrozen)     { return State::kRunning; }
@@ -186,7 +141,58 @@ void CheckList::ProcessLocalCandidate(CandidateType type, size_t socket_idx, End
         .endpoint = endpoint,
         .socket_idx = socket_idx
     });
-    _candidate_callback(ToCandidateAttributeString(type, socket_idx, endpoint));
+    if(type != CandidateType::kPeerRefl) {
+        _candidate_callback(ToCandidateAttributeString(type, socket_idx, endpoint));
+    }
+}
+
+void CheckList::Nominating() {
+    auto& best_pair = _pairs.front();
+    if((_role != Role::kControlling) || (best_pair.state != CandidatePair::State::kSucceeded)) {
+        return;
+    }
+    if(_nominating_strategy == NominatingStrategy::kBestValid) {
+        for(auto& pair : _pairs) {
+            if(pair.state < CandidatePair::State::kSucceeded) {
+                return; // some pairs are in-progress yet
+            }
+        }
+    }
+    SendStunRequest(*best_pair.local.socket_idx, best_pair.id, best_pair.remote.endpoint, true, true);
+    best_pair.state = CandidatePair::State::kNominating;
+    best_pair.attempts_count = 0;
+}
+
+void CheckList::ProcessConnectivityChecks(size_t socket_idx) {
+    const auto now = _deps.clock.Now();
+    Timepoint smallest_last_tp = now;
+    size_t pair_id = 0;
+    auto& transaction_tracker = _transcation_trackers.at(socket_idx);
+    for(auto& pair : _pairs) {
+        if(socket_idx == *pair.local.socket_idx) {
+            if(pair.state == CandidatePair::State::kWaiting) {
+                SendStunRequest(socket_idx, pair.id, pair.remote.endpoint);
+                pair.state = CandidatePair::State::kInProgress;
+                return;
+            }
+            if((pair.state == CandidatePair::State::kInProgress) || (pair.state == CandidatePair::State::kNominating)) {
+                auto last_request_tp = transaction_tracker.GetLastTimepoint(pair.id);
+                if(smallest_last_tp > last_request_tp) {
+                    smallest_last_tp = last_request_tp;
+                    pair_id = pair.id;
+                }
+            }
+        }
+    }
+    if(now >= smallest_last_tp + kRtoDefault) {
+        auto& pair = GetPairById(pair_id);
+        if(pair.attempts_count < 16) {
+            pair.attempts_count++;
+            SendStunRequest(socket_idx, pair.id, pair.remote.endpoint, true, pair.state == CandidatePair::State::kNominating);
+        } else {
+            pair.state = CandidatePair::State::kFailed;
+        }
+    }
 }
 
 void CheckList::SendStunRequest(size_t socket_idx, std::optional<size_t> pair_id, Endpoint remote, bool authenticated, bool nominating) {
@@ -210,7 +216,7 @@ void CheckList::SendStunRequest(size_t socket_idx, std::optional<size_t> pair_id
     }
     stun_request.SetSize(writer.GetSize());
 
-    _send_callback(_sockets[socket_idx], remote, std::move(stun_request));
+    _send_callback(socket_idx, remote, std::move(stun_request));
 }
 
 void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, Endpoint remote) {
@@ -221,6 +227,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
         LOG_WARNING << "Unknown transaction, hash: " << hash;
         return;
     }
+    transaction_tracker.RemoveTransaction(hash);
     if(transaction->pair_id) {
         auto& pair = GetPairById(*transaction->pair_id);
         if(pair.remote.endpoint != remote) {
@@ -264,18 +271,8 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
                 //TODO: we have a valid pair, ICE agent is ready for transceiving
                 SetPairState(*transaction->pair_id, CandidatePair::State::kSucceeded);
             } else {
-                SetPairState(*transaction->pair_id, CandidatePair::State::kFailed);
-
-                LOG_INFO << _log_ctx <<"Add local peer-reflexive: " << *reflexive << ", socket: " << socket_idx << ", remote: " << remote;
-                _local_candidates.push_back(Candidate{
-                    .type = CandidateType::kPeerRefl,
-                    .priority = Priority(CandidateType::kPeerRefl, socket_idx),
-                    .endpoint = *reflexive,
-                    .socket_idx = socket_idx
-                });
-                if(auto idx = FindCandidateByEndpoint(_remote_candidates, remote)) {
-                    AddPair(_local_candidates.back(), _remote_candidates.at(*idx));
-                };
+                LOG_INFO << _log_ctx << "Add local peer-reflexive: " << *reflexive << ", socket: " << socket_idx << ", remote: " << remote << ", pair_id: " << *transaction->pair_id;
+                ProcessLocalCandidate(CandidateType::kPeerRefl, socket_idx, *reflexive);
             }
         }
         if(nominating) {
@@ -299,6 +296,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
             case AttributeType::kPriority:
                 priority = PriorityReader::GetPriority(attr);
                 break;
+            // case AttributeType::kUserName: // ignore, message-integrity is used for validation
             case AttributeType::kMessageIntegrity:
                 message_integrity = MessageIntegrityReader::Validate(attr, view, _credentials.local.password);
                 return message_integrity;
@@ -309,7 +307,6 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
                     LOG_WARNING << _log_ctx << "Ignore nomination with wrong role";
                 }
                 break;
-            // case AttributeType::kUserName: // ignore, message-integrity is used for validation
             default:
                 break;
         }
@@ -337,8 +334,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
                 .endpoint = remote
             });
             AddPair(_local_candidates.at(socket_idx), _remote_candidates.back());
-            nominating = false;
-            // return; // send response to notify about new peer-reflexive address using XorMappedAddress
+            nominating = false; // send response to notify about new peer-reflexive address using XorMappedAddress
         }
 
         // prepare response and send
@@ -352,7 +348,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
         FingerprintWriter::Write(writer);
         message.SetSize(writer.GetSize());
 
-        _send_callback(_sockets[socket_idx], remote, std::move(message));
+        _send_callback(socket_idx, remote, std::move(message));
     } else {
         LOG_WARNING << "Ignore malformed message, transcation hash: " << HeaderReader::GetTransactionIdHash(view);
     }
@@ -402,16 +398,6 @@ CandidatePair& CheckList::GetPairById(size_t id) {
     }
     assert(false && "Can't find pair id");
     return _pairs.front();
-}
-
-size_t CheckList::GetSocketIdxByEndpoint(Endpoint local) const {
-    for(size_t i = 0; i < _sockets.size(); ++i) {
-        if(_sockets[i] == local) {
-            return i;
-        }
-    }
-    assert(false && "Unknown local endpoint");
-    return 0;
 }
 
 std::optional<size_t> CheckList::FindCandidateByEndpoint(const Candidates& candidates, Endpoint endpoint) {
