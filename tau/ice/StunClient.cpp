@@ -73,7 +73,7 @@ void StunClient::OnStunResponse(const BufferViewConst& view) {
         return true;
     });
     if(ok && _reflexive) {
-        _candidate_callback(CandidateType::kServRefl, *_reflexive);
+        _candidate_callback(*_reflexive);
     } else {
         _reflexive.reset();
     }

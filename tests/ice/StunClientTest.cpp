@@ -29,8 +29,8 @@ public:
     }
 
     void InitCallbacks() {
-        _client->SetCandidateCallback([this](CandidateType type, Endpoint remote) {
-            _local_candidates.push_back(std::make_pair(type, remote));
+        _client->SetCandidateCallback([this](Endpoint reflexive) {
+            _local_candidates.push_back(reflexive);
         });
         _client->SetSendCallback([this](Endpoint remote, Buffer&& message) {
             _nat->Send(std::move(message), kClientEndpoint, remote);
@@ -62,7 +62,7 @@ protected:
     std::optional<StunClient> _client;
     std::optional<NatEmulator> _nat;
 
-    std::vector<std::pair<CandidateType, Endpoint>> _local_candidates;
+    std::vector<Endpoint> _local_candidates;
     size_t _send_packets_count = 0;
 };
 
@@ -81,8 +81,7 @@ TEST_F(StunClientTest, Stun) {
 
     ASSERT_EQ(1, _send_packets_count);
     ASSERT_EQ(1, _local_candidates.size());
-    const auto& [type, reflexive] = _local_candidates[0];
-    ASSERT_EQ(CandidateType::kServRefl, type);
+    const auto& reflexive = _local_candidates[0];
     ASSERT_EQ(NatEmulator::kPublicIpDefault, reflexive.address());
 
     for(size_t i = 2; i < 10; ++i) {
@@ -113,10 +112,6 @@ TEST_F(StunClientTest, StunRequestRetransmitOnLost) {
         _nat->Process();
         ASSERT_EQ(0, _local_candidates.size());
     }
-}
-
-TEST_F(StunClientTest, Turn) {
-    //TODO: impl
 }
 
 }

@@ -15,7 +15,7 @@ public:
         Allocator& udp_allocator;
     };
 
-    using CandidateCallback = std::function<void(CandidateType type, Endpoint remote)>;
+    using CandidateCallback = std::function<void(Endpoint reflexive)>;
     using SendCallback = std::function<void(Endpoint remote, Buffer&& message)>;
 
 public:
