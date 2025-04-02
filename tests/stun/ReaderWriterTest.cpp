@@ -2,10 +2,10 @@
 #include "tau/stun/Writer.h"
 #include "tau/stun/AttributeType.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
-#include "tau/stun/attribute/Priority.h"
+#include "tau/stun/attribute/DataUint32.h"
 #include "tau/stun/attribute/IceRole.h"
 #include "tau/stun/attribute/UseCandidate.h"
-#include "tau/stun/attribute/UserName.h"
+#include "tau/stun/attribute/ByteString.h"
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tests/lib/Common.h"
@@ -35,11 +35,11 @@ TEST_F(ReaderWriterTest, Basic) {
     size_t target_size = kMessageHeaderSize;
     ASSERT_EQ(target_size, writer.GetSize());
 
-    XorMappedAddressWriter::Write(writer, 0x12345678, 12345);
+    XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress, 0x12345678, 12345);
     target_size += kAttributeHeaderSize + IPv4PayloadSize;
     ASSERT_EQ(target_size, writer.GetSize());
 
-    PriorityWriter::Write(writer, 0x23456789);
+    DataUint32Writer::Write(writer, AttributeType::kPriority, 0x23456789);
     target_size += kAttributeHeaderSize + sizeof(uint32_t);
     ASSERT_EQ(target_size, writer.GetSize());
 
@@ -55,7 +55,7 @@ TEST_F(ReaderWriterTest, Basic) {
     target_size += kAttributeHeaderSize + sizeof(uint64_t);
     ASSERT_EQ(target_size, writer.GetSize());
 
-    UserNameWriter::Write(writer, "hello", "world");
+    ByteStringWriter::Write(writer, AttributeType::kUserName, "world:hello");
     target_size += kAttributeHeaderSize + Align(5 + 5 + 1, sizeof(uint32_t));
     ASSERT_EQ(target_size, writer.GetSize());
 
@@ -82,7 +82,7 @@ TEST_F(ReaderWriterTest, Basic) {
                 EXPECT_EQ(0x12345678,         XorMappedAddressReader::GetAddressV4(attr));
                 break;
             case AttributeType::kPriority:
-                EXPECT_EQ(0x23456789,         PriorityReader::GetPriority(attr));
+                EXPECT_EQ(0x23456789,         DataUint32Reader::GetValue(attr));
                 break;
             case AttributeType::kUseCandidate:
                 break;
@@ -93,7 +93,7 @@ TEST_F(ReaderWriterTest, Basic) {
                 EXPECT_EQ(0x123456789ABCDEF0, IceRoleReader::GetTiebreaker(attr));
                 break;
             case AttributeType::kUserName:
-                EXPECT_EQ("world:hello",      UserNameReader::GetUserName(attr));
+                EXPECT_EQ("world:hello",      ByteStringReader::GetValue(attr));
                 break;
             case AttributeType::kMessageIntegrity:
                 EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, "pas$word"));
@@ -141,7 +141,7 @@ TEST_F(ReaderWriterTest, Wireshark_Request) {
         attributes.push_back(type);
         switch(type) {
             case AttributeType::kPriority:
-                EXPECT_EQ(0x6E001EFF,         PriorityReader::GetPriority(attr));
+                EXPECT_EQ(0x6E001EFF,         DataUint32Reader::GetValue(attr));
                 break;
             case AttributeType::kIceControlling:
                 EXPECT_EQ(0xE213ACB50FA9C4CA, IceRoleReader::GetTiebreaker(attr));
@@ -149,7 +149,7 @@ TEST_F(ReaderWriterTest, Wireshark_Request) {
             case AttributeType::kUseCandidate:
                 break;
             case AttributeType::kUserName:
-                EXPECT_EQ("C0Of:aIZC",        UserNameReader::GetUserName(attr));
+                EXPECT_EQ("C0Of:aIZC",        ByteStringReader::GetValue(attr));
                 break;
             case AttributeType::kMessageIntegrity:
                 EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, "ZN4ykLX1bRr+BzKwm2/ZAdCV"));

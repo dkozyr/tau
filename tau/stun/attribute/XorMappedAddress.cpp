@@ -1,6 +1,5 @@
 #include "tau/stun/attribute/XorMappedAddress.h"
 #include "tau/stun/MagicCookie.h"
-#include "tau/stun/AttributeType.h"
 #include "tau/common/NetToHost.h"
 
 namespace tau::stun::attribute {
@@ -31,11 +30,11 @@ bool XorMappedAddressReader::Validate(const BufferViewConst& view) {
     return false;
 }
 
-bool XorMappedAddressWriter::Write(Writer& writer, uint32_t address, uint16_t port) {
+bool XorMappedAddressWriter::Write(Writer& writer, AttributeType type, uint32_t address, uint16_t port) {
     if(writer.GetAvailableSize() < kAttributeHeaderSize + IPv4PayloadSize) {
         return false;
     }
-    writer.WriteAttributeHeader(AttributeType::kXorMappedAddress, IPv4PayloadSize);
+    writer.WriteAttributeHeader(type, IPv4PayloadSize);
     writer.Write(static_cast<uint16_t>(1)); //IPv4 family
     writer.Write(static_cast<uint16_t>(port ^ (kMagicCookie >> 16)));
     writer.Write(address ^ kMagicCookie);

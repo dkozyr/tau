@@ -1,9 +1,9 @@
 #include "tau/stun/Reader.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
-#include "tau/stun/attribute/Priority.h"
+#include "tau/stun/attribute/DataUint32.h"
 #include "tau/stun/attribute/IceRole.h"
 #include "tau/stun/attribute/UseCandidate.h"
-#include "tau/stun/attribute/UserName.h"
+#include "tau/stun/attribute/ByteString.h"
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tau/common/NetToHost.h"
@@ -31,13 +31,18 @@ bool Reader::Validate(const BufferViewConst& view) {
     }
     return ForEachAttribute(view, [&](AttributeType type, const BufferViewConst& attr) {
         switch(type) {
-            case AttributeType::kXorMappedAddress: return attribute::XorMappedAddressReader::Validate(attr);
-            case AttributeType::kPriority:         return attribute::PriorityReader::Validate(attr);
-            case AttributeType::kIceControlled:    return attribute::IceRoleReader::Validate(attr);
-            case AttributeType::kIceControlling:   return attribute::IceRoleReader::Validate(attr);
-            case AttributeType::kFingerprint:      return attribute::FingerprintReader::Validate(attr, view);
-            case AttributeType::kUserName:         return attribute::UserNameReader::Validate(attr);
-            case AttributeType::kMessageIntegrity: return attribute::MessageIntegrityReader::Validate(attr);
+            case AttributeType::kXorMappedAddress:   return attribute::XorMappedAddressReader::Validate(attr);
+            case AttributeType::kXorPeerAddress:     return attribute::XorMappedAddressReader::Validate(attr);
+            case AttributeType::kXorRelayedAddress:  return attribute::XorMappedAddressReader::Validate(attr);
+            case AttributeType::kPriority:           return attribute::DataUint32Reader::Validate(attr);
+            case AttributeType::kRequestedTransport: return attribute::DataUint32Reader::Validate(attr);
+            case AttributeType::kIceControlled:      return attribute::IceRoleReader::Validate(attr);
+            case AttributeType::kIceControlling:     return attribute::IceRoleReader::Validate(attr);
+            case AttributeType::kFingerprint:        return attribute::FingerprintReader::Validate(attr, view);
+            case AttributeType::kUserName:           return attribute::ByteStringReader::Validate(attr);
+            case AttributeType::kRealm:              return attribute::ByteStringReader::Validate(attr);
+            case AttributeType::kNonce:              return attribute::ByteStringReader::Validate(attr);
+            case AttributeType::kMessageIntegrity:   return attribute::MessageIntegrityReader::Validate(attr);
             default:
                 break;
         }
