@@ -24,7 +24,7 @@ public:
         std::free(ptr);
     }
 
-    size_t GetChunkSize() const {
+    size_t GetChunkSize() const override {
         return kDefaultSize;
     }
 };

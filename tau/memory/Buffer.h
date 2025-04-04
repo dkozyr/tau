@@ -19,11 +19,11 @@ public:
 
 public:
     static Buffer Create(Allocator& allocator, size_t capacity, Info info = Info{.tp = 0}) {
-        return std::move(Buffer(allocator, capacity, info));
+        return Buffer(allocator, capacity, info);
     }
 
     static Buffer Create(Allocator& allocator, Info info = Info{.tp = 0}) {
-        return std::move(Buffer(allocator, info));
+        return Buffer(allocator, info);
     }
 
     Buffer(const Buffer&) = delete;
