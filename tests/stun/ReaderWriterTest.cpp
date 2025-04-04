@@ -6,6 +6,7 @@
 #include "tau/stun/attribute/IceRole.h"
 #include "tau/stun/attribute/UseCandidate.h"
 #include "tau/stun/attribute/ByteString.h"
+#include "tau/stun/attribute/Data.h"
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tests/lib/Common.h"
@@ -59,6 +60,11 @@ TEST_F(ReaderWriterTest, Basic) {
     target_size += kAttributeHeaderSize + Align(5 + 5 + 1, sizeof(uint32_t));
     ASSERT_EQ(target_size, writer.GetSize());
 
+    const std::vector<uint8_t> test_data = {1, 2, 3, 4, 5, 6, 7, 8, 42, 255};
+    DataWriter::Write(writer, BufferViewConst{test_data.data(), test_data.size()});
+    target_size += kAttributeHeaderSize + Align(test_data.size(), sizeof(uint32_t));
+    ASSERT_EQ(target_size, writer.GetSize());
+
     MessageIntegrityWriter::Write(writer, "pas$word");
     target_size += kAttributeHeaderSize + MessageIntegrityPayloadSize;
     ASSERT_EQ(target_size, writer.GetSize());
@@ -95,6 +101,12 @@ TEST_F(ReaderWriterTest, Basic) {
             case AttributeType::kUserName:
                 EXPECT_EQ("world:hello",      ByteStringReader::GetValue(attr));
                 break;
+            case AttributeType::kData: {
+                auto data = DataReader::GetData(attr);
+                EXPECT_EQ(test_data.size(), data.size);
+                EXPECT_EQ(0, std::memcmp(test_data.data(), data.ptr, data.size));
+                break;
+            }
             case AttributeType::kMessageIntegrity:
                 EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, "pas$word"));
                 break;
@@ -110,7 +122,7 @@ TEST_F(ReaderWriterTest, Basic) {
     ASSERT_TRUE(ok);
     std::vector<AttributeType> target_attributes = {AttributeType::kXorMappedAddress, AttributeType::kPriority,
         AttributeType::kUseCandidate, AttributeType::kIceControlled, AttributeType::kIceControlling,
-        AttributeType::kUserName, AttributeType::kMessageIntegrity, AttributeType::kFingerprint};
+        AttributeType::kUserName, AttributeType::kData, AttributeType::kMessageIntegrity, AttributeType::kFingerprint};
     ASSERT_EQ(target_attributes, attributes);
 }
 

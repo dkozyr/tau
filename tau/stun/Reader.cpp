@@ -36,6 +36,7 @@ bool Reader::Validate(const BufferViewConst& view) {
             case AttributeType::kXorRelayedAddress:  return attribute::XorMappedAddressReader::Validate(attr);
             case AttributeType::kPriority:           return attribute::DataUint32Reader::Validate(attr);
             case AttributeType::kRequestedTransport: return attribute::DataUint32Reader::Validate(attr);
+            case AttributeType::kLifetime:           return attribute::DataUint32Reader::Validate(attr);
             case AttributeType::kIceControlled:      return attribute::IceRoleReader::Validate(attr);
             case AttributeType::kIceControlling:     return attribute::IceRoleReader::Validate(attr);
             case AttributeType::kFingerprint:        return attribute::FingerprintReader::Validate(attr, view);
