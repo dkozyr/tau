@@ -114,8 +114,7 @@ void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, uint3
 
 void TurnServerEmulator::OnAllocateRequestInitial(Buffer&& message, Endpoint src, uint32_t hash) {
     auto view = message.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(kAllocateErrorResponse);
+    stun::Writer writer(view, kAllocateErrorResponse);
 
     auto nonce = ToHexString(g_random.Int<uint64_t>());
     _hash_to_nonce[hash] = nonce;
@@ -130,8 +129,7 @@ void TurnServerEmulator::OnAllocateRequestInitial(Buffer&& message, Endpoint src
 
 void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, const std::string& user_name, const std::string& nonce) {
     auto view = message.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(kAllocateResponse);
+    stun::Writer writer(view, kAllocateResponse);
 
     XorMappedAddressWriter::Write(writer, AttributeType::kXorRelayedAddress,
         _options.public_ip.to_v4().to_uint(), _latest_port);
@@ -156,8 +154,7 @@ void TurnServerEmulator::OnRefreshRequest(Buffer&& message, Endpoint src) {
         return DropPacket("Refresh request from unknown endpoint");
     }
     auto view = message.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(kRefreshResponse);
+    stun::Writer writer(view, kRefreshResponse);
 
     XorMappedAddressWriter::Write(writer, AttributeType::kXorRelayedAddress,
         _options.public_ip.to_v4().to_uint(), _latest_port);
@@ -210,8 +207,7 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
         return DropPacket("stun message reader failed");
     }
 
-    stun::Writer writer(message.GetViewWithCapacity());
-    writer.WriteHeader(kCreatePermissionResponse);
+    stun::Writer writer(message.GetViewWithCapacity(), kCreatePermissionResponse);
     FinalizeStunMessage(message, writer, _public_to_remote.at(src).user_name);
 
     _on_send_callback(std::move(message), kEndpointDefault, src);

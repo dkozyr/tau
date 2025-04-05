@@ -10,9 +10,8 @@ namespace tau::stun {
 // Writer is unsafe, need to control available size yourself 
 class Writer {
 public:
-    explicit Writer(BufferView view);
+    Writer(BufferView view, uint16_t type);
 
-    void WriteHeader(uint16_t type);
     void WriteAttributeHeader(AttributeType type, size_t length);
     void UpdateHeaderLength();
     void SetHeaderLength(size_t length);

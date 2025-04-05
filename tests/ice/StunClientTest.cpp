@@ -48,9 +48,9 @@ public:
 protected:
     //TODO: move to helper functions file?
     static void OnStunServerRequest(Buffer& message, Endpoint src) {
-        stun::Writer writer(message.GetViewWithCapacity());
-        writer.WriteHeader(stun::BindingType::kResponse);
+        stun::Writer writer(message.GetViewWithCapacity(), stun::kBindingResponse);
         stun::attribute::XorMappedAddressWriter::Write(writer,
+            stun::AttributeType::kXorMappedAddress,
             src.address().to_v4().to_uint(),
             src.port());
         stun::attribute::FingerprintWriter::Write(writer);

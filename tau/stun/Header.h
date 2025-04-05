@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tau/stun/BindingType.h"
+#include "tau/stun/Type.h"
 #include "tau/memory/BufferView.h"
 
 namespace tau::stun {

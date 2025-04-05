@@ -29,8 +29,7 @@ protected:
 };
 
 TEST_F(ReaderWriterTest, Basic) {
-    Writer writer(_packet.GetViewWithCapacity());
-    writer.WriteHeader(BindingType::kRequest);
+    Writer writer(_packet.GetViewWithCapacity(), kBindingRequest);
     auto transcation_id_ptr = _packet.GetView().ptr + 2 * sizeof(uint32_t);
     std::memcpy(transcation_id_ptr, _transaction_id.data(), _transaction_id.size());
     size_t target_size = kMessageHeaderSize;
@@ -144,7 +143,7 @@ TEST_F(ReaderWriterTest, Wireshark_Request) {
     BufferViewConst view{.ptr = incoming_stun_request.data(), .size = incoming_stun_request.size()};
     ASSERT_TRUE(Reader::Validate(view));
 
-    ASSERT_EQ(BindingType::kRequest, HeaderReader::GetType(view));
+    ASSERT_EQ(kBindingRequest, HeaderReader::GetType(view));
     ASSERT_EQ(80, HeaderReader::GetLength(view));
     ASSERT_EQ(0x6A430944, HeaderReader::GetTransactionIdHash(view));
 

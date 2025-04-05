@@ -7,12 +7,8 @@
 
 namespace tau::stun {
 
-Writer::Writer(BufferView view)
-    : _view(view)
-{}
-
-void Writer::WriteHeader(uint16_t type) {
-    assert(_size + kMessageHeaderSize <= _view.size);
+Writer::Writer(BufferView view, uint16_t type) : _view(view) {
+    assert(kMessageHeaderSize <= _view.size);
     Write16(_view.ptr, type);
     Write16(_view.ptr + 2, 0);
     Write32(_view.ptr + 4, kMagicCookie);

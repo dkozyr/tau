@@ -67,9 +67,7 @@ void TurnClient::Send(Buffer&& packet, Endpoint remote) {
 
     auto indication = Buffer::Create(_deps.udp_allocator);
     auto view = indication.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(kSendIndication);
-
+    stun::Writer writer(view, kSendIndication);
     auto transaction_id_ptr = view.ptr + 2 * sizeof(uint32_t);
     stun::GenerateTransactionId(transaction_id_ptr);
 
@@ -124,9 +122,7 @@ void TurnClient::ProcessPermissionsRto() {
 void TurnClient::SendAllocationRequest(bool authenticated) {
     auto request = Buffer::Create(_deps.udp_allocator);
     auto view = request.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(kAllocateRequest);
-
+    stun::Writer writer(view, kAllocateRequest);
     if(!authenticated) {
         _transaction_id.resize(kTransactionIdSize);
         _transaction_hash = GenerateTransactionId(_transaction_id.data());
@@ -155,8 +151,7 @@ void TurnClient::SendAllocationRequest(bool authenticated) {
 void TurnClient::SendRefreshRequest(size_t refresh_sec) {
     auto request = Buffer::Create(_deps.udp_allocator);
     auto view = request.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(kRefreshRequest);
+    stun::Writer writer(view, kRefreshRequest);
     _transaction_tracker.SetTransactionId(view, 0);
 
     DataUint32Writer::Write(writer, AttributeType::kLifetime, refresh_sec);
@@ -175,8 +170,7 @@ void TurnClient::SendRefreshRequest(size_t refresh_sec) {
 void TurnClient::SendCreatePermissionRequest(asio_ip::address remote) {
     auto request = Buffer::Create(_deps.udp_allocator);
     auto view = request.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(kCreatePermissionRequest);
+    stun::Writer writer(view, kCreatePermissionRequest);
 
     uint32_t ip4_addr = remote.to_v4().to_uint();
     _transaction_tracker.SetTransactionId(view, ip4_addr);

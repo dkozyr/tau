@@ -38,7 +38,7 @@ void StunClient::Recv(Buffer&& message) {
     }
     _transaction_tracker.RemoveTransaction(hash);
 
-    if(HeaderReader::GetType(view) == BindingType::kResponse) {
+    if(HeaderReader::GetType(view) == kBindingResponse) {
         OnStunResponse(view);
     }
 }
@@ -50,8 +50,7 @@ bool StunClient::IsServerEndpoint(Endpoint remote) const {
 void StunClient::SendStunRequest() {
     auto stun_request = Buffer::Create(_deps.udp_allocator);
     auto view = stun_request.GetViewWithCapacity();
-    stun::Writer writer(view);
-    writer.WriteHeader(BindingType::kRequest);
+    stun::Writer writer(view, kBindingRequest);
     _transaction_tracker.SetTransactionId(view, 0);
     _transaction_hash = HeaderReader::GetTransactionIdHash(ToConst(view));
     stun_request.SetSize(writer.GetSize());
