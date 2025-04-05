@@ -44,6 +44,13 @@ std::string ToHexString(T value) {
     return result;
 }
 
+template<typename T>
+std::string ToString(const T& value) {
+    std::stringstream ss;
+    ss << value;
+    return ss.str();
+}
+
 std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first = false);
 std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first = false);
 void ToLowerCase(std::string& value);
