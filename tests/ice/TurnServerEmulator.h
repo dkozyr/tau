@@ -22,7 +22,7 @@ public:
 
     void SetOnSendCallback(Callback&& callback) { _on_send_callback = std::move(callback); }
 
-    void Recv(Buffer&& packet, Endpoint src);
+    void Recv(Buffer&& packet, Endpoint src, Endpoint dest);
 
     size_t GetDroppedPacketsCount() const;
 
@@ -33,6 +33,8 @@ private:
     void OnRefreshRequest(Buffer&& message, Endpoint src);
     void OnCreatePermissionRequest(Buffer&& message, Endpoint src);
     void OnSendIndication(Buffer&& message, Endpoint src);
+
+    void OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest);
 
     void FinalizeStunMessage(Buffer& message, stun::Writer& writer, const std::string& user_name);
 
@@ -55,7 +57,7 @@ private:
     };
 
     std::unordered_map<uint32_t, std::string> _hash_to_nonce;
-    std::unordered_map<Endpoint, Allocation> _public_to_remote; //TODO: rename it?
+    std::unordered_map<Endpoint, Allocation> _client_to_allocation;
     size_t _dropped_packets_count = 0;
 
     Callback _on_send_callback;

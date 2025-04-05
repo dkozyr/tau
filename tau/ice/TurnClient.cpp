@@ -47,13 +47,15 @@ void TurnClient::Recv(Buffer&& message) {
 
     const auto type = HeaderReader::GetType(view);
     const auto hash = HeaderReader::GetTransactionIdHash(view);
-    if(type == kCreatePermissionResponse) {
-        OnCreatePermissionResponse(hash);
-        return;
-    }
-    if((hash != _transaction_hash) && !_transaction_tracker.HasTransaction(hash)) {
-        LOG_WARNING << "Unknown transaction, hash: " << hash;
-        return;
+    switch(type) {
+        case kCreatePermissionResponse: return OnCreatePermissionResponse(hash);
+        case kDataIndication:           return OnDataIndication(std::move(message));
+        default:
+            if((hash != _transaction_hash) && !_transaction_tracker.HasTransaction(hash)) {
+                LOG_WARNING << "Unknown transaction, hash: " << hash;
+                return;
+            }
+            break;
     }
     _transaction_tracker.RemoveTransaction(hash);
     OnStunResponse(view);
@@ -244,6 +246,38 @@ void TurnClient::OnCreatePermissionResponse(uint32_t hash) {
         }
     }
     _transaction_tracker.RemoveTransaction(hash);
+}
+
+void TurnClient::OnDataIndication(Buffer&& message) {
+    std::optional<Endpoint> remote_peer;
+    std::optional<BufferViewConst> data;
+    auto view = message.GetView();
+    auto ok = Reader::ForEachAttribute(ToConst(view), [&](AttributeType type, BufferViewConst attr) {
+        switch(type) {
+            case AttributeType::kXorPeerAddress:
+                if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
+                    auto address = XorMappedAddressReader::GetAddressV4(attr);
+                    auto port = XorMappedAddressReader::GetPort(attr);
+                    remote_peer.emplace(Endpoint{asio_ip::address_v4(address), port});
+                }
+                break;
+            case AttributeType::kData:
+                data.emplace(DataReader::GetData(attr));
+                break;
+            default:
+                break;
+        }
+        return true;
+    });
+    if(!ok || !remote_peer || !data || !data->size) {
+        LOG_WARNING << "Wrong data indication";
+        return;
+    }
+
+    std::memmove(view.ptr, data->ptr, data->size);
+    message.SetSize(data->size);
+
+    _recv_callback(*remote_peer, std::move(message));
 }
 
 void TurnClient::UpdateMessageIntegrityPassword() {

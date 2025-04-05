@@ -19,7 +19,10 @@ TurnServerEmulator::TurnServerEmulator(Clock& clock, Options&& options)
     , _options(std::move(options))
 {}
 
-void TurnServerEmulator::Recv(Buffer&& packet, Endpoint src) {
+void TurnServerEmulator::Recv(Buffer&& packet, Endpoint src, Endpoint dest) {
+    if(dest != kEndpointDefault) {
+        return OnRecvData(std::move(packet), src, dest);
+    }
     auto view = ToConst(packet.GetView());
     if(!Reader::Validate(view)) {
         return DropPacket("Invalid stun message");
@@ -138,7 +141,7 @@ void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, const
     DataUint32Writer::Write(writer, AttributeType::kLifetime, 600);
     FinalizeStunMessage(message, writer, user_name);
 
-    _public_to_remote[src] = Allocation{
+    _client_to_allocation[src] = Allocation{
         .user_name = user_name,
         .nonce = nonce,
         .port = _latest_port,
@@ -150,7 +153,7 @@ void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, const
 }
 
 void TurnServerEmulator::OnRefreshRequest(Buffer&& message, Endpoint src) {
-    if(!Contains(_public_to_remote, src)) {
+    if(!Contains(_client_to_allocation, src)) {
         return DropPacket("Refresh request from unknown endpoint");
     }
     auto view = message.GetViewWithCapacity();
@@ -161,14 +164,14 @@ void TurnServerEmulator::OnRefreshRequest(Buffer&& message, Endpoint src) {
     XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress,
         src.address().to_v4().to_uint(), src.port());
     DataUint32Writer::Write(writer, AttributeType::kLifetime, 600);
-    FinalizeStunMessage(message, writer, _public_to_remote.at(src).user_name);
+    FinalizeStunMessage(message, writer, _client_to_allocation.at(src).user_name);
 
     _on_send_callback(std::move(message), kEndpointDefault, src);
 }
 
 void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint src) {
-    auto it = _public_to_remote.find(src);
-    if(it == _public_to_remote.end()) {
+    auto it = _client_to_allocation.find(src);
+    if(it == _client_to_allocation.end()) {
         return DropPacket("Create permission request from unknown endpoint");
     }
     auto& allocation = it->second;
@@ -208,14 +211,14 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
     }
 
     stun::Writer writer(message.GetViewWithCapacity(), kCreatePermissionResponse);
-    FinalizeStunMessage(message, writer, _public_to_remote.at(src).user_name);
+    FinalizeStunMessage(message, writer, _client_to_allocation.at(src).user_name);
 
     _on_send_callback(std::move(message), kEndpointDefault, src);
 }
 
 void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
-    auto it = _public_to_remote.find(src);
-    if(it == _public_to_remote.end()) {
+    auto it = _client_to_allocation.find(src);
+    if(it == _client_to_allocation.end()) {
         return DropPacket("Create permission request from unknown endpoint");
     }
     auto& allocation = it->second;
@@ -251,6 +254,31 @@ void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
     message.SetSize(data->size);
 
     _on_send_callback(std::move(message), kEndpointDefault, *remote_peer);
+}
+
+void TurnServerEmulator::OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest) {
+    for(auto& [client, allocation] : _client_to_allocation) {
+        if(allocation.port == dest.port()) {
+            if(Contains(allocation.permissions, src.address())) {
+                auto indication = Buffer::Create(g_udp_allocator);
+                auto view = indication.GetViewWithCapacity();
+                stun::Writer writer(view, kDataIndication);
+                auto transaction_id_ptr = view.ptr + 2 * sizeof(uint32_t);
+                stun::GenerateTransactionId(transaction_id_ptr);
+
+                XorMappedAddressWriter::Write(writer, AttributeType::kXorPeerAddress,
+                    src.address().to_v4().to_uint(), src.port());
+                //TODO: DONT-FRAGMENT attribute
+                DataWriter::Write(writer, ToConst(packet.GetView()));
+                indication.SetSize(writer.GetSize());
+
+                _on_send_callback(std::move(indication), kEndpointDefault, client);
+                return;
+            }
+            break;
+        }
+    }
+    DropPacket("No permission, src: " + ToString(src) + ", dest: " + ToString(dest));
 }
 
 void TurnServerEmulator::FinalizeStunMessage(Buffer& message, stun::Writer& writer, const std::string& user_name) {

@@ -28,13 +28,14 @@ public:
     };
 
     using CandidateCallback = std::function<void(CandidateType type, Endpoint reflexive)>;
-    using SendCallback = std::function<void(Endpoint remote, Buffer&& message)>;
+    using Callback = std::function<void(Endpoint remote, Buffer&& message)>;
 
 public:
     TurnClient(Dependencies&& deps, Options&& options);
 
     void SetCandidateCallback(CandidateCallback callback) { _candidate_callback = std::move(callback); };
-    void SetSendCallback(SendCallback callback) { _send_callback = std::move(callback); }
+    void SetSendCallback(Callback callback) { _send_callback = std::move(callback); }
+    void SetRecvCallback(Callback callback) { _recv_callback = std::move(callback); }
 
     void Process();
     void Recv(Buffer&& message);
@@ -55,6 +56,7 @@ private:
 
     void OnStunResponse(const BufferViewConst& view);
     void OnCreatePermissionResponse(uint32_t hash);
+    void OnDataIndication(Buffer&& message);
 
     void UpdateMessageIntegrityPassword();
 
@@ -81,7 +83,8 @@ private:
     std::string _message_integrity_password;
 
     CandidateCallback _candidate_callback;
-    SendCallback _send_callback;
+    Callback _send_callback;
+    Callback _recv_callback;
 };
 
 }

@@ -42,9 +42,12 @@ public:
             _nat.Send(std::move(message), kClientEndpoint, remote);
             _send_packets_count++;
         });
+        _client->SetRecvCallback([this](Endpoint remote, Buffer&& message) {
+            _from_remote_peer_packets.push_back(std::make_pair(remote, std::move(message)));
+        });
         _nat.SetOnSendCallback([this](Buffer&& message, Endpoint src, Endpoint dest) {
             if(dest == kServerEndpoint) {
-                _turn_server.Recv(std::move(message), src);
+                _turn_server.Recv(std::move(message), src, dest);
             }
         });
         _nat.SetOnRecvCallback([this](Buffer&& message, Endpoint src, Endpoint) {
@@ -91,7 +94,7 @@ protected:
 
     std::vector<std::pair<CandidateType, Endpoint>> _local_candidates;
     size_t _send_packets_count = 0;
-
+    std::vector<std::pair<Endpoint, Buffer>> _from_remote_peer_packets;
     std::vector<std::pair<Endpoint, Buffer>> _to_remote_peer_packets;
 };
 
@@ -139,6 +142,14 @@ TEST_F(TurnClientTest, BasicAllocation) {
     ASSERT_EQ(remote_peer, dest);
     ASSERT_EQ(outgoing_packet.GetSize(), packet.GetSize());
     ASSERT_EQ(0, std::memcmp(outgoing_packet.GetView().ptr, packet.GetView().ptr, packet.GetSize()));
+
+    auto incoming_packet = CreatePacket(1234);
+    _turn_server.Recv(incoming_packet.MakeCopy(), remote_peer, relayed);
+    ASSERT_EQ(1, _from_remote_peer_packets.size());
+    auto& [from_remote, recv_packet] = _from_remote_peer_packets.back();
+    ASSERT_EQ(remote_peer, from_remote);
+    ASSERT_EQ(incoming_packet.GetSize(), recv_packet.GetSize());
+    ASSERT_EQ(0, std::memcmp(incoming_packet.GetView().ptr, recv_packet.GetView().ptr, recv_packet.GetSize()));
 
     _client->Stop();
     ProcessNat();
