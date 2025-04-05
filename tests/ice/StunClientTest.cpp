@@ -4,6 +4,7 @@
 #include "tau/stun/attribute/XorMappedAddress.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tests/ice/NatEmulator.h"
+#include "tests/lib/Common.h"
 
 namespace tau::ice {
 
