@@ -20,7 +20,7 @@ public:
 
 TEST_F(TransactionTrackerTest, Basic) {
     const auto tp = _clock.Now();
-    ASSERT_EQ(tp - kMin, _tracker.GetLastTimepoint(42));
+    ASSERT_EQ(tp - 10 * kMin, _tracker.GetLastTimepoint(42));
 
     _tracker.SetTransactionId(_message_view, 42);
     auto hash = stun::HeaderReader::GetTransactionIdHash(ToConst(_message_view));
@@ -31,7 +31,7 @@ TEST_F(TransactionTrackerTest, Basic) {
 
     auto result = *_tracker.HasTransaction(hash);
     ASSERT_EQ(tp, result.tp);
-    ASSERT_EQ(42, result.pair_id);
+    ASSERT_EQ(42, result.tag);
     ASSERT_EQ(1, _tracker.GetCount());
 
     _tracker.RemoveTransaction(hash);
@@ -39,25 +39,6 @@ TEST_F(TransactionTrackerTest, Basic) {
     ASSERT_EQ(0, _tracker.GetCount());
 
     ASSERT_EQ(tp, _tracker.GetLastTimepoint(42));
-}
-
-TEST_F(TransactionTrackerTest, WithoutPairId) {
-    const auto tp = _clock.Now();
-    _tracker.SetTransactionId(_message_view, std::nullopt);
-    auto hash = stun::HeaderReader::GetTransactionIdHash(ToConst(_message_view));
-    _clock.Add(10 * kMs);
-
-    ASSERT_TRUE(_tracker.HasTransaction(hash));
-    ASSERT_FALSE(_tracker.HasTransaction(hash + 1));
-
-    auto result = *_tracker.HasTransaction(hash);
-    ASSERT_EQ(tp, result.tp);
-    ASSERT_EQ(std::nullopt, result.pair_id);
-    ASSERT_EQ(1, _tracker.GetCount());
-
-    _tracker.RemoveTransaction(hash);
-    ASSERT_FALSE(_tracker.HasTransaction(hash));
-    ASSERT_EQ(0, _tracker.GetCount());
 }
 
 TEST_F(TransactionTrackerTest, RemoveOldHashs) {
@@ -70,7 +51,7 @@ TEST_F(TransactionTrackerTest, RemoveOldHashs) {
         ASSERT_TRUE(_tracker.HasTransaction(hash));
         auto result = *_tracker.HasTransaction(hash);
         ASSERT_EQ(_clock.Now(), result.tp);
-        ASSERT_EQ(i, result.pair_id);
+        ASSERT_EQ(i, result.tag);
 
         ASSERT_GE(kMaxHistorySize, _tracker.GetCount());
         for(size_t j = 0; j < hashs.size(); ++j) {
@@ -79,8 +60,8 @@ TEST_F(TransactionTrackerTest, RemoveOldHashs) {
             } else {
                 ASSERT_TRUE(_tracker.HasTransaction(hashs[j]));
                 auto result = *_tracker.HasTransaction(hashs[j]);
-                const auto& target_pair_id = j;
-                ASSERT_EQ(target_pair_id, result.pair_id);
+                const auto& target_tag = j;
+                ASSERT_EQ(target_tag, result.tag);
             }
         }
         _clock.Add(TransactionTracker::kTimeoutDefault / kMaxHistorySize);

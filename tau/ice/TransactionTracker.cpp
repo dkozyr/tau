@@ -11,18 +11,16 @@ TransactionTracker::TransactionTracker(Clock& clock, Timepoint timeout)
     , _timeout(timeout)
 {}
 
-void TransactionTracker::SetTransactionId(BufferView& stun_message_view, std::optional<size_t> pair_id) {
+void TransactionTracker::SetTransactionId(BufferView& stun_message_view, size_t tag) {
     RemoveOldHashs();
 
     auto transaction_id_ptr = stun_message_view.ptr + 2 * sizeof(uint32_t);
     while(true) {
-        const auto id = stun::GenerateTransactionId(transaction_id_ptr);
-        if(!Contains(_hash_storage, id)) {
+        const auto hash = stun::GenerateTransactionId(transaction_id_ptr);
+        if(!Contains(_hash_storage, hash)) {
             auto now = _clock.Now();
-            _hash_storage[id] = Result{ .tp = now, .pair_id = pair_id};
-            if(pair_id) {
-                _pair_id_to_tp[*pair_id] = now;
-            }
+            _hash_storage[hash] = Result{ .tp = now, .tag = tag};
+            _tag_to_tp[tag] = now;
             break;
         }
     }
@@ -41,12 +39,12 @@ void TransactionTracker::RemoveTransaction(uint32_t hash) {
     RemoveOldHashs();
 }
 
-Timepoint TransactionTracker::GetLastTimepoint(size_t pair_id) const {
-    auto it = _pair_id_to_tp.find(pair_id);
-    if(it != _pair_id_to_tp.end()) {
+Timepoint TransactionTracker::GetLastTimepoint(size_t tag) const {
+    auto it = _tag_to_tp.find(tag);
+    if(it != _tag_to_tp.end()) {
         return it->second;
     }
-    return _clock.Now() - 60 * kSec;
+    return _clock.Now() - 10 * kMin;
 }
 
 size_t TransactionTracker::GetCount() const {
