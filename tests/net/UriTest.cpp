@@ -30,9 +30,55 @@ TEST(UriTest, DefaultPort_Https) {
     ASSERT_EQ("",               uri->path);
 }
 
+TEST(UriTest, Stun) {
+    auto uri = GetUriFromString("stun:stun.l.google.com:19302");
+    ASSERT_TRUE(uri.has_value());
+    ASSERT_EQ(Protocol::kStun,     uri->protocol);
+    ASSERT_EQ("stun.l.google.com", uri->host);
+    ASSERT_EQ(19302,               uri->port);
+    ASSERT_EQ(Transport::kUdp,     uri->transport.value());
+    ASSERT_TRUE(uri->path.empty());
+}
+
+TEST(UriTest, TurnUdp) {
+    auto uri = GetUriFromString("turn:123.44.55.66:3478?transport=udp");
+    ASSERT_TRUE(uri.has_value());
+    ASSERT_EQ(Protocol::kTurn,     uri->protocol);
+    ASSERT_EQ("123.44.55.66",      uri->host);
+    ASSERT_EQ(3478,                uri->port);
+    ASSERT_EQ(Transport::kUdp,     uri->transport.value());
+    ASSERT_TRUE(uri->path.empty());
+}
+
+TEST(UriTest, TurnTcp) {
+    auto uri = GetUriFromString("turn:some.turn.com:3456?transport=tcp");
+    ASSERT_TRUE(uri.has_value());
+    ASSERT_EQ(Protocol::kTurn,     uri->protocol);
+    ASSERT_EQ("some.turn.com",     uri->host);
+    ASSERT_EQ(3456,                uri->port);
+    ASSERT_EQ(Transport::kTcp,     uri->transport.value());
+    ASSERT_TRUE(uri->path.empty());
+}
+
+TEST(UriTest, TurnWithoutPortAndTransport) {
+    auto uri = GetUriFromString("turn:some-turn-server.com");
+    ASSERT_TRUE(uri.has_value());
+    ASSERT_EQ(Protocol::kTurn,        uri->protocol);
+    ASSERT_EQ("some-turn-server.com", uri->host);
+    ASSERT_EQ(3478,                   uri->port);
+    ASSERT_FALSE(uri->transport.has_value());
+    ASSERT_TRUE(uri->path.empty());
+}
+
 TEST(UriTest, Valid) {
     ASSERT_TRUE(GetUriFromString("rtsp://hello:0/world//////").has_value());
     ASSERT_TRUE(GetUriFromString("http://h:65535///~!@#$%^&*()_+").has_value());
+    ASSERT_TRUE(GetUriFromString("stun:www").has_value());
+}
+
+TEST(UriTest, NotSupportedProtocol) {
+    ASSERT_FALSE(GetUriFromString("stuns:stun-server.com").has_value());
+    ASSERT_FALSE(GetUriFromString("turns:server.com").has_value());
 }
 
 TEST(UriTest, MalformedProtocol) {

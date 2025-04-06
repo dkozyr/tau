@@ -12,6 +12,13 @@ enum Protocol {
     kHttps,
     kRtsp,
     kRtsps,
+    kStun,
+    kTurn,
+};
+
+enum Transport {
+    kTcp,
+    kUdp,
 };
 
 struct Uri {
@@ -19,6 +26,7 @@ struct Uri {
     std::string host;
     uint16_t port;
     std::string path;
+    std::optional<Transport> transport = std::nullopt;
 };
 
 std::optional<Uri> GetUriFromString(std::string_view str);
