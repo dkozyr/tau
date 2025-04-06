@@ -5,13 +5,13 @@ namespace tau::ice {
 
 class NatEmulatorTest : public ::testing::Test {
 public:
-    static inline auto kEndpoint1 = Endpoint{asio_ip::address_v4::from_string("1.2.3.4"), 33333};
-    static inline auto kEndpoint2 = Endpoint{asio_ip::address_v4::from_string("2.3.4.5"), 44444};
-    static inline auto kEndpoint3 = Endpoint{asio_ip::address_v4::from_string("3.4.5.6"), 55555};
-    static inline auto kEndpoint4 = Endpoint{asio_ip::address_v4::from_string("4.5.6.7"), 65000};
+    static inline auto kEndpoint1 = Endpoint{IpAddressV4::from_string("1.2.3.4"), 33333};
+    static inline auto kEndpoint2 = Endpoint{IpAddressV4::from_string("2.3.4.5"), 44444};
+    static inline auto kEndpoint3 = Endpoint{IpAddressV4::from_string("3.4.5.6"), 55555};
+    static inline auto kEndpoint4 = Endpoint{IpAddressV4::from_string("4.5.6.7"), 65000};
 
-    static inline auto kLocalEndpoint1 = Endpoint{asio_ip::address_v4::from_string("192.168.0.77"),  34567};
-    static inline auto kLocalEndpoint2 = Endpoint{asio_ip::address_v4::from_string("192.168.0.111"), 45678};
+    static inline auto kLocalEndpoint1 = Endpoint{IpAddressV4::from_string("192.168.0.77"),  34567};
+    static inline auto kLocalEndpoint2 = Endpoint{IpAddressV4::from_string("192.168.0.111"), 45678};
 
     using Context = NatEmulator::Context;
     using Type = NatEmulator::Type;

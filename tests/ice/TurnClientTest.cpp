@@ -10,7 +10,7 @@ namespace tau::ice {
 
 class TurnClientTest : public ::testing::Test {
 public:
-    static inline Endpoint kClientEndpoint{asio_ip::address_v4::from_string("192.168.0.77"), 44444};
+    static inline Endpoint kClientEndpoint{IpAddressV4::from_string("192.168.0.77"), 44444};
     static inline Endpoint kServerEndpoint = TurnServerEmulator::kEndpointDefault;
 
 public:
@@ -125,7 +125,7 @@ TEST_F(TurnClientTest, BasicAllocation) {
     const auto& relayed = _local_candidates.back();
     ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address());
 
-    Endpoint remote_peer{asio_ip::address_v4::from_string("55.66.77.88"), 54321};
+    Endpoint remote_peer{IpAddressV4::from_string("55.66.77.88"), 54321};
     _client->CreatePermission(remote_peer.address());
     ASSERT_EQ(3, _send_packets_count);
     ASSERT_FALSE(_client->HasPermission(remote_peer.address()));
@@ -180,7 +180,7 @@ TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
             .clock = clock, .udp_allocator = g_udp_allocator
         },
         TurnClient::Options{
-            .server = Endpoint{asio_ip::address_v4::from_string("127.0.0.1"), 3478},
+            .server = Endpoint{IpAddressV4::from_string("127.0.0.1"), 3478},
             .credentials = {
                 .ufrag = "username",
                 .password = "password"
@@ -209,7 +209,7 @@ TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
     }
 
 
-    Endpoint remote_peer{asio_ip::address_v4::from_string("192.168.0.154"), 54321};
+    Endpoint remote_peer{IpAddressV4::from_string("192.168.0.154"), 54321};
     client.CreatePermission(remote_peer.address());
     while(!client.HasPermission(remote_peer.address())) {
         std::this_thread::sleep_for(100ms);

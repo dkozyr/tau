@@ -184,7 +184,7 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
             case AttributeType::kXorPeerAddress:
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
-                    allocation.permissions.insert(asio_ip::address_v4(address));
+                    allocation.permissions.insert(IpAddressV4(address));
                     peer_address = true;
                 }
                 break;
@@ -232,7 +232,7 @@ void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    remote_peer.emplace(Endpoint{asio_ip::address_v4(address), port});
+                    remote_peer.emplace(Endpoint{IpAddressV4(address), port});
                 }
                 break;
             case AttributeType::kData:

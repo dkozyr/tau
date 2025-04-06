@@ -14,17 +14,6 @@ struct CheckListTestParams {
     bool success;
 };
 
-inline std::ostream& operator<<(std::ostream& s, const NatEmulator::Type& type) {
-    switch(type) {
-        case NatEmulator::Type::kFullCone:           return s << "full";
-        case NatEmulator::Type::kRestrictedCone:     return s << "restricted";
-        case NatEmulator::Type::kPortRestrictedCone: return s << "port-restricted";
-        case NatEmulator::Type::kSymmetric:          return s << "symmetric";
-        case NatEmulator::Type::kLocalNetworkOnly:   return s << "local-network";
-    }
-    return s << "unknown";
-}
-
 inline std::ostream& operator<<(std::ostream& s, const CheckListTestParams& x) {
     return s
         << "peer1: {nat: " << x.peer1_nat_type << ", sockets: " << x.peer1_sockets_count << "}, "

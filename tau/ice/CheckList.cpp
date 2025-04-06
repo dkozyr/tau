@@ -245,7 +245,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    reflexive.emplace(Endpoint{asio_ip::address_v4(address), port});
+                    reflexive.emplace(Endpoint{IpAddressV4(address), port});
                 }
                 break;
             default:

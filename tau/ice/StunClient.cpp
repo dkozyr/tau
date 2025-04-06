@@ -66,7 +66,7 @@ void StunClient::OnStunResponse(const BufferViewConst& view) {
             if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                 auto address = XorMappedAddressReader::GetAddressV4(attr);
                 auto port = XorMappedAddressReader::GetPort(attr);
-                _reflexive.emplace(Endpoint{asio_ip::address_v4(address), port});
+                _reflexive.emplace(Endpoint{IpAddressV4(address), port});
             }
         }
         return true;

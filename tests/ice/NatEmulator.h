@@ -12,7 +12,7 @@ namespace tau::ice {
 // NAT emulator for tests only
 class NatEmulator {
 public:
-    static inline const auto kPublicIpDefault = asio_ip::address::from_string("1.1.1.1");
+    static inline const auto kPublicIpDefault = IpAddress::from_string("1.1.1.1");
 
     enum class Type {
         kFullCone,
@@ -24,7 +24,7 @@ public:
 
     struct Options {
         Type type;
-        asio_ip::address public_ip = kPublicIpDefault;
+        IpAddress public_ip = kPublicIpDefault;
         Timepoint delay = 50 * kMs; // sending only
         double drop_rate = 0;       // [0, 1) sending only
     };
@@ -83,5 +83,7 @@ private:
     Callback _on_send_callback;
     Callback _on_recv_callback;
 };
+
+std::ostream& operator<<(std::ostream& s, const NatEmulator::Type& type);
 
 }

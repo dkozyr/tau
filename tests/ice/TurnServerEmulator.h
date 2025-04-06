@@ -7,11 +7,11 @@ namespace tau::ice {
 // TURN Server emulator for tests only
 class TurnServerEmulator {
 public:
-    static inline const auto kPublicIpDefault = asio_ip::address::from_string("222.222.222.222");
+    static inline const auto kPublicIpDefault = IpAddress::from_string("222.222.222.222");
     static inline const Endpoint kEndpointDefault = Endpoint{kPublicIpDefault, 3478};
 
     struct Options {
-        asio_ip::address public_ip = kPublicIpDefault;
+        IpAddress public_ip = kPublicIpDefault;
         std::string password = "password"; // same password for each client
     };
 
@@ -53,7 +53,7 @@ private:
         std::string nonce;
         uint16_t port;
         Timepoint expire_time;
-        std::unordered_set<asio_ip::address> permissions = {};
+        std::unordered_set<IpAddress> permissions = {};
     };
 
     std::unordered_map<uint32_t, std::string> _hash_to_nonce;
