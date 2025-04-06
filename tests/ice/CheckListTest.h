@@ -2,6 +2,7 @@
 
 #include "tests/ice/CheckListTestParams.h"
 #include "tau/ice/CheckList.h"
+#include "tau/ice/StunClient.h"
 #include "tau/stun/Writer.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
 #include "tau/crypto/Random.h"
@@ -52,7 +53,6 @@ public:
                     .remote = _credentials.remote,
                 },
                 .sockets = _sockets1,
-                .stun_server = kStunServerEndpoint,
                 .log_ctx = "[offer] "
             });
 
@@ -65,9 +65,33 @@ public:
                     .remote = _credentials.local,
                 },
                 .sockets = _sockets2,
-                .stun_server = kStunServerEndpoint,
                 .log_ctx = "[answer] "
             });
+
+        for(size_t i = 0; i < _sockets1.size(); ++i) {
+            _stun_clients1.emplace_back(
+                StunClient::Dependencies{_clock, g_udp_allocator}, kStunServerEndpoint
+            );
+            auto& stun_client = _stun_clients1.back();
+            stun_client.SetCandidateCallback([this, idx = i](Endpoint reflexive) {
+                _check_list1->AddLocalCandidate(CandidateType::kServRefl, idx, reflexive);
+            });
+            stun_client.SetSendCallback([this, socket = _sockets1[i]](Endpoint remote, Buffer&& message) {
+                _nat1->Send(std::move(message), socket, remote);
+            });
+        }
+        for(size_t i = 0; i < _sockets2.size(); ++i) {
+            _stun_clients2.emplace_back(
+                StunClient::Dependencies{_clock, g_udp_allocator}, kStunServerEndpoint
+            );
+            auto& stun_client = _stun_clients2.back();
+            stun_client.SetCandidateCallback([this, idx = i](Endpoint reflexive) {
+                _check_list2->AddLocalCandidate(CandidateType::kServRefl, idx, reflexive);
+            });
+            stun_client.SetSendCallback([this, socket = _sockets2[i]](Endpoint remote, Buffer&& message) {
+                _nat2->Send(std::move(message), socket, remote);
+            });
+        }
 
         InitCallbacks();
     }
@@ -84,7 +108,11 @@ public:
         _nat1->SetOnRecvCallback([this](Buffer&& packet, Endpoint src, Endpoint dest) {
             for(size_t i = 0; i < _sockets1.size(); ++i) {
                 if(_sockets1[i] == dest) {
+                    if(_stun_clients1[i].IsServerEndpoint(src)) {
+                        _stun_clients1[i].Recv(std::move(packet));
+                    } else {
                     _check_list1->Recv(i, src, std::move(packet));
+                    }
                     break;
                 }
             }
@@ -101,7 +129,11 @@ public:
         _nat2->SetOnRecvCallback([this](Buffer&& packet, Endpoint src, Endpoint dest) {
             for(size_t i = 0; i < _sockets2.size(); ++i) {
                 if(_sockets2[i] == dest) {
+                    if(_stun_clients2[i].IsServerEndpoint(src)) {
+                        _stun_clients2[i].Recv(std::move(packet));
+                    } else {
                     _check_list2->Recv(i, src, std::move(packet));
+                    }
                     break;
                 }
             }
@@ -136,9 +168,9 @@ public:
     }
 
     static void OnStunServerRequest(Buffer& message, Endpoint src) {
-        stun::Writer writer(message.GetViewWithCapacity());
-        writer.WriteHeader(stun::BindingType::kResponse);
+        stun::Writer writer(message.GetViewWithCapacity(), stun::kBindingResponse);
         stun::attribute::XorMappedAddressWriter::Write(writer,
+            stun::AttributeType::kXorMappedAddress,
             src.address().to_v4().to_uint(),
             src.port());
         message.SetSize(writer.GetSize());
@@ -151,6 +183,9 @@ protected:
 
     std::vector<Endpoint> _sockets1 = {kHostEndpoint1a, kHostEndpoint1b, kHostEndpoint1c};
     std::vector<Endpoint> _sockets2 = {kHostEndpoint2a, kHostEndpoint2b};
+
+    std::vector<StunClient> _stun_clients1;
+    std::vector<StunClient> _stun_clients2;
 
     std::optional<CheckList> _check_list1;
     std::optional<CheckList> _check_list2;
@@ -170,6 +205,8 @@ TEST_P(CheckListTest, Main) {
         _clock.Add(42 * kMs);
         _check_list1->Process();
         _check_list2->Process();
+        for(auto& stun_client : _stun_clients1) { stun_client.Process(); }
+        for(auto& stun_client : _stun_clients2) { stun_client.Process(); }
         _nat1->Process();
         _nat2->Process();
     }

@@ -27,8 +27,6 @@ public:
         Credentials credentials;
         //TODO: rename to local_endpoints?
         std::vector<Endpoint> sockets; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
-        Endpoint stun_server;
-        // std::vector<Endpoint> turn_servers; // TODO: impl
         NominatingStrategy nominating_strategy = NominatingStrategy::kBestValid;
         std::string log_ctx = {};
     };
@@ -48,17 +46,16 @@ public:
     void Start();
     void Process();
 
+    void AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoint remote);
     void RecvRemoteCandidate(std::string candidate);
     void Recv(size_t socket_idx, Endpoint remote, Buffer&& message);
 
     State GetState() const;
 
 private:
-    void ProcessLocalCandidate(CandidateType type, size_t socket_idx, Endpoint endpoint);
-
     void Nominating();
     void ProcessConnectivityChecks(size_t socket_idx);
-    void SendStunRequest(size_t socket_idx, std::optional<size_t> pair_id, Endpoint remote, bool authenticated = true, bool nominating = false);
+    void SendStunRequest(size_t socket_idx, size_t pair_id, Endpoint remote, bool nominating = false);
     void OnStunResponse(const BufferViewConst& view, size_t socket_idx, Endpoint remote);
     void OnStunRequest(Buffer&& message, const BufferViewConst& view, size_t socket_idx, Endpoint remote);
 
@@ -77,9 +74,6 @@ private:
     const std::string _log_ctx;
 
     std::vector<Endpoint> _sockets; //TODO: local_endpoints?
-    Endpoint _stun_server;
-    // std::vector<Endpoint> _turn_servers; // TODO: impl
-
     std::unordered_map<size_t, TransactionTracker> _transcation_trackers;
 
     Candidates _local_candidates;

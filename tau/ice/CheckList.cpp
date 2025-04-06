@@ -3,10 +3,10 @@
 #include "tau/stun/Reader.h"
 #include "tau/stun/Writer.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
-#include "tau/stun/attribute/Priority.h"
+#include "tau/stun/attribute/DataUint32.h"
 #include "tau/stun/attribute/UseCandidate.h"
 #include "tau/stun/attribute/IceRole.h"
-#include "tau/stun/attribute/UserName.h"
+#include "tau/stun/attribute/ByteString.h"
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tau/sdp/line/attribute/Candidate.h"
@@ -27,7 +27,6 @@ CheckList::CheckList(Dependencies&& deps, Options&& options)
     , _nominating_strategy(options.nominating_strategy)
     , _log_ctx(std::move(options.log_ctx))
     , _sockets(std::move(options.sockets))
-    , _stun_server(std::move(options.stun_server))
     , _last_ta_tp(_deps.clock.Now() - kTaDefault) {
     for(size_t i = 0; i < _sockets.size(); ++i) {
         _transcation_trackers.insert({i, TransactionTracker(_deps.clock)});
@@ -45,9 +44,7 @@ CheckList::~CheckList() {
 
 void CheckList::Start() {
     for(size_t i = 0; i < _sockets.size(); ++i) {
-        auto& socket = _sockets[i];
-        ProcessLocalCandidate(CandidateType::kHost, i, socket);
-        SendStunRequest(i, std::nullopt, _stun_server, false);
+        AddLocalCandidate(CandidateType::kHost, i, _sockets[i]);
     }
 
     for(auto& remote : _remote_candidates) {
@@ -69,6 +66,18 @@ void CheckList::Process() {
         ProcessConnectivityChecks(socket_idx);
     }
     Nominating();
+}
+
+void CheckList::AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoint endpoint) {
+    _local_candidates.push_back(Candidate{
+        .type = type,
+        .priority = Priority(type, socket_idx),
+        .endpoint = endpoint,
+        .socket_idx = socket_idx
+    });
+    if(type != CandidateType::kPeerRefl) {
+        _candidate_callback(ToCandidateAttributeString(type, socket_idx, endpoint));
+    }
 }
 
 void CheckList::RecvRemoteCandidate(std::string candidate) {
@@ -108,15 +117,15 @@ void CheckList::Recv(size_t socket_idx, Endpoint remote, Buffer&& message) {
         return;
     }
     switch(HeaderReader::GetType(view)) {
-        case BindingType::kResponse:
+        case kBindingResponse:
             OnStunResponse(view, socket_idx, remote);
             break;
-        case BindingType::kRequest:
+        case kBindingRequest:
             OnStunRequest(std::move(message), view, socket_idx, remote);
             break;
-        case BindingType::kIndication:
+        case kBindingIndication:
             break;
-        case BindingType::kErrorResponse:
+        case kBindingErrorResponse:
             break;
     }
 }
@@ -134,18 +143,6 @@ State CheckList::GetState() const {
     return State::kRunning;
 }
 
-void CheckList::ProcessLocalCandidate(CandidateType type, size_t socket_idx, Endpoint endpoint) {
-    _local_candidates.push_back(Candidate{
-        .type = type,
-        .priority = Priority(type, socket_idx),
-        .endpoint = endpoint,
-        .socket_idx = socket_idx
-    });
-    if(type != CandidateType::kPeerRefl) {
-        _candidate_callback(ToCandidateAttributeString(type, socket_idx, endpoint));
-    }
-}
-
 void CheckList::Nominating() {
     auto& best_pair = _pairs.front();
     if((_role != Role::kControlling) || (best_pair.state != CandidatePair::State::kSucceeded)) {
@@ -158,7 +155,7 @@ void CheckList::Nominating() {
             }
         }
     }
-    SendStunRequest(*best_pair.local.socket_idx, best_pair.id, best_pair.remote.endpoint, true, true);
+    SendStunRequest(*best_pair.local.socket_idx, best_pair.id, best_pair.remote.endpoint, true);
     best_pair.state = CandidatePair::State::kNominating;
     best_pair.attempts_count = 0;
 }
@@ -188,32 +185,30 @@ void CheckList::ProcessConnectivityChecks(size_t socket_idx) {
         auto& pair = GetPairById(pair_id);
         if(pair.attempts_count < 16) {
             pair.attempts_count++;
-            SendStunRequest(socket_idx, pair.id, pair.remote.endpoint, true, pair.state == CandidatePair::State::kNominating);
+            SendStunRequest(socket_idx, pair.id, pair.remote.endpoint, pair.state == CandidatePair::State::kNominating);
         } else {
             pair.state = CandidatePair::State::kFailed;
         }
     }
 }
 
-void CheckList::SendStunRequest(size_t socket_idx, std::optional<size_t> pair_id, Endpoint remote, bool authenticated, bool nominating) {
+void CheckList::SendStunRequest(size_t socket_idx, size_t pair_id, Endpoint remote, bool nominating) {
     auto stun_request = Buffer::Create(_deps.udp_allocator);
     auto view = stun_request.GetViewWithCapacity();
-    Writer writer(view);
-    writer.WriteHeader(BindingType::kRequest);
+    Writer writer(view, kBindingRequest);
     auto& transaction_tracker = _transcation_trackers.at(socket_idx);
     transaction_tracker.SetTransactionId(view, pair_id);
 
-    if(authenticated) {
-        if(nominating) {
-            UseCandidateWriter::Write(writer);
-        }
-        uint64_t tiebreaker = _deps.clock.Now(); //TODO: fix tiebreaker
-        IceRoleWriter::Write(writer, (_role == Role::kControlling), tiebreaker);
-        PriorityWriter::Write(writer, Priority(CandidateType::kPeerRefl, socket_idx));
-        UserNameWriter::Write(writer, _credentials.local.ufrag, _credentials.remote.ufrag);
-        MessageIntegrityWriter::Write(writer, _credentials.remote.password);
-        FingerprintWriter::Write(writer);
+    if(nominating) {
+        UseCandidateWriter::Write(writer);
     }
+    uint64_t tiebreaker = _deps.clock.Now(); //TODO: fix tiebreaker
+    IceRoleWriter::Write(writer, (_role == Role::kControlling), tiebreaker);
+    DataUint32Writer::Write(writer, AttributeType::kPriority, Priority(CandidateType::kPeerRefl, socket_idx));
+    const std::string user_name = _credentials.remote.ufrag + ":" + _credentials.local.ufrag;
+    ByteStringWriter::Write(writer, AttributeType::kUserName, user_name);
+    MessageIntegrityWriter::Write(writer, _credentials.remote.password);
+    FingerprintWriter::Write(writer);
     stun_request.SetSize(writer.GetSize());
 
     _send_callback(socket_idx, remote, std::move(stun_request));
@@ -228,15 +223,10 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
         return;
     }
     transaction_tracker.RemoveTransaction(hash);
-    if(transaction->pair_id) {
-        auto& pair = GetPairById(*transaction->pair_id);
-        if(pair.remote.endpoint != remote) {
-            LOG_WARNING << "Transaction expected remote: " << pair.remote.endpoint << ", actual remote: " << remote;
-            pair.state = CandidatePair::State::kFailed;
-            return;
-        }
-    } else if(remote != _stun_server) {
-        LOG_WARNING << "Unexpected remote endpoint: " << remote;
+    auto& pair = GetPairById(transaction->tag);
+    if(pair.remote.endpoint != remote) {
+        LOG_WARNING << "Transaction expected remote: " << pair.remote.endpoint << ", actual remote: " << remote;
+        pair.state = CandidatePair::State::kFailed;
         return;
     }
 
@@ -264,20 +254,16 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
         return true;
     });
     if(ok && reflexive) {
-        if(remote == _stun_server) {
-            ProcessLocalCandidate(CandidateType::kServRefl, socket_idx, *reflexive);
+        if(FindCandidateByEndpoint(_local_candidates, *reflexive)) {
+            //TODO: we have a valid pair, ICE agent is ready for transceiving
+            SetPairState(transaction->tag, CandidatePair::State::kSucceeded);
         } else {
-            if(FindCandidateByEndpoint(_local_candidates, *reflexive)) {
-                //TODO: we have a valid pair, ICE agent is ready for transceiving
-                SetPairState(*transaction->pair_id, CandidatePair::State::kSucceeded);
-            } else {
-                LOG_INFO << _log_ctx << "Add local peer-reflexive: " << *reflexive << ", socket: " << socket_idx << ", remote: " << remote << ", pair_id: " << *transaction->pair_id;
-                ProcessLocalCandidate(CandidateType::kPeerRefl, socket_idx, *reflexive);
-            }
+            LOG_INFO << _log_ctx << "Add local peer-reflexive: " << *reflexive << ", socket: " << socket_idx << ", remote: " << remote << ", pair_id: " << transaction->tag;
+            AddLocalCandidate(CandidateType::kPeerRefl, socket_idx, *reflexive);
         }
         if(nominating) {
             if(_role == Role::kControlling) {
-                SetPairState(*transaction->pair_id, CandidatePair::State::kNominated);
+                SetPairState(transaction->tag, CandidatePair::State::kNominated);
             } else {
                 LOG_WARNING << _log_ctx << "Ignore nomination, wrong role";
             }
@@ -294,7 +280,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
             case AttributeType::kIceControlled:  return (_role == Role::kControlling);
             case AttributeType::kIceControlling: return (_role == Role::kControlled);
             case AttributeType::kPriority:
-                priority = PriorityReader::GetPriority(attr);
+                priority = DataUint32Reader::GetValue(attr);
                 break;
             // case AttributeType::kUserName: // ignore, message-integrity is used for validation
             case AttributeType::kMessageIntegrity:
@@ -338,12 +324,12 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
         }
 
         // prepare response and send
-        Writer writer(message.GetViewWithCapacity());
-        writer.WriteHeader(BindingType::kResponse);
+        Writer writer(message.GetViewWithCapacity(), kBindingResponse);
         if(nominating) {
             UseCandidateWriter::Write(writer);
         }
-        XorMappedAddressWriter::Write(writer, remote.address().to_v4().to_uint(), remote.port());
+        XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress,
+            remote.address().to_v4().to_uint(), remote.port());
         MessageIntegrityWriter::Write(writer, _credentials.remote.password);
         FingerprintWriter::Write(writer);
         message.SetSize(writer.GetSize());
