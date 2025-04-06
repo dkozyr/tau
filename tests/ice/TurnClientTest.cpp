@@ -35,8 +35,8 @@ public:
     }
 
     void InitCallbacks() {
-        _client->SetCandidateCallback([this](CandidateType type, Endpoint remote) {
-            _local_candidates.push_back(std::make_pair(type, remote));
+        _client->SetCandidateCallback([this](Endpoint remote) {
+            _local_candidates.push_back(remote);
         });
         _client->SetSendCallback([this](Endpoint remote, Buffer&& message) {
             _nat.Send(std::move(message), kClientEndpoint, remote);
@@ -92,7 +92,7 @@ protected:
     NatEmulator _nat;
     TurnServerEmulator _turn_server;
 
-    std::vector<std::pair<CandidateType, Endpoint>> _local_candidates;
+    std::vector<Endpoint> _local_candidates;
     size_t _send_packets_count = 0;
     std::vector<std::pair<Endpoint, Buffer>> _from_remote_peer_packets;
     std::vector<std::pair<Endpoint, Buffer>> _to_remote_peer_packets;
@@ -122,8 +122,7 @@ TEST_F(TurnClientTest, BasicAllocation) {
     ProcessNat();
     ASSERT_EQ(2, _send_packets_count);
     ASSERT_EQ(1, _local_candidates.size());
-    const auto& [type, relayed] = _local_candidates[0];
-    ASSERT_EQ(CandidateType::kServRefl, type);
+    const auto& relayed = _local_candidates.back();
     ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address());
 
     Endpoint remote_peer{asio_ip::address_v4::from_string("55.66.77.88"), 54321};
@@ -189,8 +188,8 @@ TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
             .log_ctx = "[test] "
         });
 
-    client.SetCandidateCallback([&](CandidateType type, Endpoint relayed) {
-        LOG_INFO << "candidate type: " << type << ", relayed: " << relayed;
+    client.SetCandidateCallback([&](Endpoint relayed) {
+        LOG_INFO << "candidate relayed: " << relayed;
     });
     client.SetSendCallback([&](Endpoint remote, Buffer&& message) {
         udp_socket->Send(std::move(message), remote);

@@ -222,7 +222,7 @@ void TurnClient::OnStunResponse(const BufferViewConst& view) {
         const auto now = _deps.clock.Now();
         if(_relayed && (now < _allocation_eol)) {
             _next_request_tp = std::min(now + kMin, _allocation_eol - 10 * kSec);
-            _candidate_callback(CandidateType::kServRefl, *_relayed);
+            _candidate_callback(*_relayed);
         } else {
             _next_request_tp = now + kTaDefault;
         }

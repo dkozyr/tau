@@ -27,7 +27,7 @@ public:
         std::string log_ctx = {};
     };
 
-    using CandidateCallback = std::function<void(CandidateType type, Endpoint reflexive)>;
+    using CandidateCallback = std::function<void(Endpoint reflexive)>;
     using Callback = std::function<void(Endpoint remote, Buffer&& message)>;
 
 public:
