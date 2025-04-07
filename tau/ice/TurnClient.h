@@ -33,6 +33,9 @@ public:
 public:
     TurnClient(Dependencies&& deps, Options&& options);
 
+    TurnClient(const TurnClient&) = delete;
+    TurnClient(TurnClient&&) = default;
+
     void SetCandidateCallback(CandidateCallback callback) { _candidate_callback = std::move(callback); };
     void SetSendCallback(Callback callback) { _send_callback = std::move(callback); }
     void SetRecvCallback(Callback callback) { _recv_callback = std::move(callback); }
@@ -41,8 +44,8 @@ public:
     void Recv(Buffer&& message);
     void Send(Buffer&& message, Endpoint remote);
 
-    void CreatePermission(asio_ip::address remote);
-    bool HasPermission(asio_ip::address remote);
+    void CreatePermission(const std::vector<IpAddress>& remote_ips);
+    bool HasPermission(IpAddress remote);
     void Stop();
 
     bool IsServerEndpoint(Endpoint remote) const;
@@ -52,7 +55,8 @@ private:
 
     void SendAllocationRequest(bool authenticated);
     void SendRefreshRequest(size_t refresh_sec = kRefreshSecDefault);
-    void SendCreatePermissionRequest(asio_ip::address remote);
+    void SendCreatePermissionRequest(IpAddress remote);
+    void SendDataIndication(Buffer&& packet, Endpoint remote);
 
     void OnStunResponse(const BufferViewConst& view);
     void OnCreatePermissionResponse(uint32_t hash);
@@ -64,18 +68,18 @@ private:
     Dependencies _deps;
     const Options _options;
     Timepoint _next_request_tp;
+    bool _stopped = false;
     TransactionTracker _transaction_tracker;
     uint32_t _transaction_hash = 0;
     std::vector<uint8_t> _transaction_id;
-    std::optional<Endpoint> _peer;
     std::optional<Endpoint> _relayed;
 
     struct Permission {
         bool done;
         Timepoint rto_tp;
     };
-    //TODO: rename asio_ip::address?
-    std::unordered_map<asio_ip::address, Permission> _permissions;
+    std::unordered_map<IpAddress, Permission> _permissions;
+    std::unordered_map<Endpoint, std::vector<Buffer>> _queue;
 
     std::string _realm;
     std::string _nonce;

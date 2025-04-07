@@ -17,10 +17,11 @@ using namespace stun::attribute;
 TurnServerEmulator::TurnServerEmulator(Clock& clock, Options&& options)
     : _clock(clock)
     , _options(std::move(options))
+    , _public_endpoint({_options.public_ip, kPortDefault})
 {}
 
 void TurnServerEmulator::Recv(Buffer&& packet, Endpoint src, Endpoint dest) {
-    if(dest != kEndpointDefault) {
+    if(dest.port() != kPortDefault) {
         return OnRecvData(std::move(packet), src, dest);
     }
     auto view = ToConst(packet.GetView());
@@ -127,7 +128,7 @@ void TurnServerEmulator::OnAllocateRequestInitial(Buffer&& message, Endpoint src
     ByteStringWriter::Write(writer, AttributeType::kNonce, nonce);
     message.SetSize(writer.GetSize());
 
-    _on_send_callback(std::move(message), kEndpointDefault, src);
+    _on_send_callback(std::move(message), _public_endpoint, src);
 }
 
 void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, const std::string& user_name, const std::string& nonce) {
@@ -149,7 +150,7 @@ void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, const
     };
     _latest_port++;
 
-    _on_send_callback(std::move(message), kEndpointDefault, src);
+    _on_send_callback(std::move(message), _public_endpoint, src);
 }
 
 void TurnServerEmulator::OnRefreshRequest(Buffer&& message, Endpoint src) {
@@ -166,7 +167,7 @@ void TurnServerEmulator::OnRefreshRequest(Buffer&& message, Endpoint src) {
     DataUint32Writer::Write(writer, AttributeType::kLifetime, 600);
     FinalizeStunMessage(message, writer, _client_to_allocation.at(src).user_name);
 
-    _on_send_callback(std::move(message), kEndpointDefault, src);
+    _on_send_callback(std::move(message), _public_endpoint, src);
 }
 
 void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint src) {
@@ -213,7 +214,7 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
     stun::Writer writer(message.GetViewWithCapacity(), kCreatePermissionResponse);
     FinalizeStunMessage(message, writer, _client_to_allocation.at(src).user_name);
 
-    _on_send_callback(std::move(message), kEndpointDefault, src);
+    _on_send_callback(std::move(message), _public_endpoint, src);
 }
 
 void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
@@ -253,7 +254,7 @@ void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
     std::memmove(view.ptr, data->ptr, data->size);
     message.SetSize(data->size);
 
-    _on_send_callback(std::move(message), kEndpointDefault, *remote_peer);
+    _on_send_callback(std::move(message), Endpoint{_options.public_ip, allocation.port}, *remote_peer);
 }
 
 void TurnServerEmulator::OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest) {
@@ -272,7 +273,7 @@ void TurnServerEmulator::OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest
                 DataWriter::Write(writer, ToConst(packet.GetView()));
                 indication.SetSize(writer.GetSize());
 
-                _on_send_callback(std::move(indication), kEndpointDefault, client);
+                _on_send_callback(std::move(indication), _public_endpoint, client);
                 return;
             }
             break;

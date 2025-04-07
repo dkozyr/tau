@@ -7,8 +7,9 @@ namespace tau::ice {
 // TURN Server emulator for tests only
 class TurnServerEmulator {
 public:
+    static inline const auto kPortDefault = 3478;
     static inline const auto kPublicIpDefault = IpAddress::from_string("222.222.222.222");
-    static inline const Endpoint kEndpointDefault = Endpoint{kPublicIpDefault, 3478};
+    static inline const Endpoint kEndpointDefault = Endpoint{kPublicIpDefault, kPortDefault};
 
     struct Options {
         IpAddress public_ip = kPublicIpDefault;
@@ -43,6 +44,7 @@ private:
 private:
     Clock& _clock;
     const Options _options;
+    const Endpoint _public_endpoint;
 
     std::string _realm = "some_realm";
 

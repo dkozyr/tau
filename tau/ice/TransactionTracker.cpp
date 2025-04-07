@@ -19,7 +19,7 @@ void TransactionTracker::SetTransactionId(BufferView& stun_message_view, size_t 
         const auto hash = stun::GenerateTransactionId(transaction_id_ptr);
         if(!Contains(_hash_storage, hash)) {
             auto now = _clock.Now();
-            _hash_storage[hash] = Result{ .tp = now, .tag = tag};
+            _hash_storage[hash] = Result{.tp = now, .tag = tag};
             _tag_to_tp[tag] = now;
             break;
         }

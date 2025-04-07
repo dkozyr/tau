@@ -126,7 +126,7 @@ TEST_F(TurnClientTest, BasicAllocation) {
     ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address());
 
     Endpoint remote_peer{IpAddressV4::from_string("55.66.77.88"), 54321};
-    _client->CreatePermission(remote_peer.address());
+    _client->CreatePermission({remote_peer.address()});
     ASSERT_EQ(3, _send_packets_count);
     ASSERT_FALSE(_client->HasPermission(remote_peer.address()));
     ProcessNat();
@@ -153,6 +153,76 @@ TEST_F(TurnClientTest, BasicAllocation) {
     _client->Stop();
     ProcessNat();
     ASSERT_EQ(5, _send_packets_count);
+}
+
+TEST_F(TurnClientTest, SendDataToRequestPermission) {
+    Init();
+
+    _client->Process();
+    ProcessNat();
+    ASSERT_EQ(0, _send_packets_count);
+
+    _clock.Add(_options.start_delay);
+    _client->Process();
+    ProcessNat();
+    ASSERT_EQ(1, _send_packets_count);
+    ASSERT_EQ(0, _local_candidates.size());
+
+    _clock.Add(50 * kMs);
+    _client->Process();
+    ProcessNat();
+    ASSERT_EQ(2, _send_packets_count);
+    ASSERT_EQ(1, _local_candidates.size());
+    const auto& relayed = _local_candidates.back();
+    ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address());
+
+    Endpoint remote_peer{IpAddressV4::from_string("55.66.77.88"), 54321};
+    auto outgoing_packet = CreatePacket();
+    _client->Send(outgoing_packet.MakeCopy(), remote_peer);
+    ProcessNat();
+    ASSERT_EQ(4, _send_packets_count);
+    ASSERT_EQ(0, _to_remote_peer_packets.size());
+
+    ProcessNat();
+    ASSERT_EQ(4, _send_packets_count);
+    ASSERT_EQ(1, _to_remote_peer_packets.size());
+    auto& [dest, packet] = _to_remote_peer_packets.back();
+    ASSERT_EQ(remote_peer, dest);
+    ASSERT_EQ(outgoing_packet.GetSize(), packet.GetSize());
+    ASSERT_EQ(0, std::memcmp(outgoing_packet.GetView().ptr, packet.GetView().ptr, packet.GetSize()));
+
+    auto incoming_packet = CreatePacket(1234);
+    _turn_server.Recv(incoming_packet.MakeCopy(), remote_peer, relayed);
+    ASSERT_EQ(1, _from_remote_peer_packets.size());
+    auto& [from_remote, recv_packet] = _from_remote_peer_packets.back();
+    ASSERT_EQ(remote_peer, from_remote);
+    ASSERT_EQ(incoming_packet.GetSize(), recv_packet.GetSize());
+    ASSERT_EQ(0, std::memcmp(incoming_packet.GetView().ptr, recv_packet.GetView().ptr, recv_packet.GetSize()));
+
+    _client->Stop();
+    ProcessNat();
+    ASSERT_EQ(5, _send_packets_count);
+}
+
+TEST_F(TurnClientTest, StopBeforeAllocationToPreventCreatingRelayedCandidate) {
+    Init();
+
+    _client->Process();
+    ProcessNat();
+    ASSERT_EQ(0, _send_packets_count);
+
+    _clock.Add(_options.start_delay);
+    _client->Process();
+    ProcessNat();
+    ASSERT_EQ(1, _send_packets_count);
+    ASSERT_EQ(0, _local_candidates.size());
+
+    _client->Stop();
+    _clock.Add(50 * kMs);
+    _client->Process();
+    ProcessNat();
+    ASSERT_EQ(1, _send_packets_count);
+    ASSERT_EQ(0, _local_candidates.size());
 }
 
 // turnserver --allow-loopback-peers --cli-password=nonempty --lt-cred-mech --user=username:password --realm testrealm --log-file stdout -v
@@ -210,7 +280,7 @@ TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
 
 
     Endpoint remote_peer{IpAddressV4::from_string("192.168.0.154"), 54321};
-    client.CreatePermission(remote_peer.address());
+    client.CreatePermission({remote_peer.address()});
     while(!client.HasPermission(remote_peer.address())) {
         std::this_thread::sleep_for(100ms);
     }
