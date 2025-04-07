@@ -26,6 +26,7 @@ TurnClient::TurnClient(Dependencies&& deps, Options&& options)
 {}
 
 void TurnClient::Process() {
+    if(_stopped) { return; }
     if(_deps.clock.Now() < _next_request_tp) {
         ProcessPermissionsRto();
         return;
@@ -97,7 +98,12 @@ bool TurnClient::HasPermission(IpAddress remote) {
 }
 
 void TurnClient::Stop() {
-    SendRefreshRequest(0);
+    if(!_stopped) {
+        _stopped = true;
+        if(_relayed) {
+            SendRefreshRequest(0);
+        }
+    }
 }
 
 bool TurnClient::IsServerEndpoint(Endpoint remote) const {
