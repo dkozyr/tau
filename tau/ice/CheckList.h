@@ -31,7 +31,6 @@ public:
         std::string log_ctx = {};
     };
 
-    using StateCallback = std::function<void(State state)>;
     using CandidateCallback = std::function<void(std::string candidate)>;
     using SendCallback = std::function<void(size_t socket_idx, Endpoint remote, Buffer&& message)>;
 
@@ -39,7 +38,6 @@ public:
     CheckList(Dependencies&& deps, Options&& options);
     ~CheckList();
 
-    void SetStateCallback(StateCallback callback) { _state_callback = std::move(callback); }
     void SetSendCallback(SendCallback callback) { _send_callback = std::move(callback); }
     void SetCandidateCallback(CandidateCallback callback) { _candidate_callback = std::move(callback); }
 
@@ -83,7 +81,6 @@ private:
     size_t _next_pair_id = 1;
     Timepoint _last_ta_tp;
 
-    StateCallback _state_callback;
     CandidateCallback _candidate_callback;
     SendCallback _send_callback;
 };

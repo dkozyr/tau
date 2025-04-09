@@ -44,7 +44,7 @@ void TurnClient::Process() {
 void TurnClient::Recv(Buffer&& message) {
     auto view = ToConst(message.GetView());
     if(!Reader::Validate(view)) {
-        LOG_WARNING << _options.log_ctx << "Invalid stun message";
+        TAU_LOG_WARNING(_options.log_ctx << "Invalid stun message");
         return;
     }
 
@@ -55,7 +55,7 @@ void TurnClient::Recv(Buffer&& message) {
         case kDataIndication:           return OnDataIndication(std::move(message));
         default:
             if((hash != _transaction_hash) && !_transaction_tracker.HasTransaction(hash)) {
-                LOG_WARNING << _options.log_ctx << "Unknown transaction, hash: " << hash;
+                TAU_LOG_WARNING(_options.log_ctx << "Unknown transaction, hash: " << hash);
                 return;
             }
             break;
@@ -79,12 +79,12 @@ void TurnClient::Send(Buffer&& packet, Endpoint remote) {
 
 void TurnClient::CreatePermission(const std::vector<IpAddress>& remote_ips) {
     for(auto& remote : remote_ips) {
-    if(!Contains(_permissions, remote)) {
-        _permissions.insert(std::make_pair(remote, Permission{
-            .done = false,
-            .rto_tp = _deps.clock.Now() + kRtoDefault
-        }));
-        SendCreatePermissionRequest(remote);
+        if(!Contains(_permissions, remote)) {
+            _permissions.insert(std::make_pair(remote, Permission{
+                .done = false,
+                .rto_tp = _deps.clock.Now() + kRtoDefault
+            }));
+            SendCreatePermissionRequest(remote);
         }
     }
 }
@@ -98,12 +98,17 @@ bool TurnClient::HasPermission(IpAddress remote) {
 }
 
 void TurnClient::Stop() {
+    TAU_LOG_WARNING("Stopping");
     if(!_stopped) {
         _stopped = true;
         if(_relayed) {
             SendRefreshRequest(0);
         }
     }
+}
+
+bool TurnClient::IsActive() const {
+    return _relayed.has_value();
 }
 
 bool TurnClient::IsServerEndpoint(Endpoint remote) const {
@@ -252,7 +257,7 @@ void TurnClient::OnStunResponse(const BufferViewConst& view) {
 void TurnClient::OnCreatePermissionResponse(uint32_t hash) {
     auto result = _transaction_tracker.HasTransaction(hash);
     if(!result) {
-        LOG_WARNING << _options.log_ctx << "Unknown hash: " << hash;
+        TAU_LOG_WARNING(_options.log_ctx << "Unknown hash: " << hash);
         return;
     }
 
@@ -300,7 +305,7 @@ void TurnClient::OnDataIndication(Buffer&& message) {
         return true;
     });
     if(!ok || !remote_peer || !data || !data->size) {
-        LOG_WARNING << _options.log_ctx << "Wrong data indication";
+        TAU_LOG_WARNING(_options.log_ctx << "Wrong data indication");
         return;
     }
 
@@ -314,7 +319,7 @@ void TurnClient::UpdateMessageIntegrityPassword() {
     _message_integrity_password.resize(kLongTermPassword);
     auto password_ptr = reinterpret_cast<uint8_t*>(_message_integrity_password.data());
     if(!CalcLongTermPassword(_options.credentials, _realm, password_ptr)) {
-        LOG_WARNING << _options.log_ctx << "CalcLongTermPassword failed";
+        TAU_LOG_WARNING(_options.log_ctx << "CalcLongTermPassword failed");
     }
 }
 

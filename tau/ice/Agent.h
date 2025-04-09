@@ -43,8 +43,6 @@ public:
     void RecvRemoteCandidate(std::string candidate);
     void Recv(size_t socket_idx, Endpoint remote, Buffer&& message);
 
-    // State GetState() const; //TODO: remove it
-
 private:
     void InitStunClients(const std::vector<Endpoint>& stun_servers);
     void InitTurnClients(const std::unordered_map<Endpoint, PeerCredentials>& turn_servers);
@@ -57,6 +55,8 @@ private:
     CheckList _check_list;
     std::vector<StunClient> _stun_clients;
     std::vector<TurnClient> _turn_clients;
+
+    State _state = State::kWaiting;
 
     StateCallback _state_callback;
     SendCallback _send_callback;

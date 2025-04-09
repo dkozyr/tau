@@ -10,6 +10,7 @@
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/attribute/Fingerprint.h"
 #include "tau/sdp/line/attribute/Candidate.h"
+#include "tau/common/Container.h"
 #include "tau/common/String.h"
 #include "tau/common/Log.h"
 #include <sstream>
@@ -34,11 +35,11 @@ CheckList::CheckList(Dependencies&& deps, Options&& options)
 }
 
 CheckList::~CheckList() {
-    LOG_DEBUG << _log_ctx << "Candidate pairs:";
+    TAU_LOG_DEBUG(_log_ctx << "Candidate pairs:");
     for(auto& pair : _pairs) {
-        LOG_DEBUG << _log_ctx << "id: " << pair.id << ", local: " << (size_t)pair.local.type << ", remote: " << (size_t)pair.remote.type
+        TAU_LOG_DEBUG(_log_ctx << "id: " << pair.id << ", local: " << (size_t)pair.local.type << ", remote: " << (size_t)pair.remote.type
             << ", priority: " << pair.priority << ", socket: " << pair.local.socket_idx.value()
-            << ", remote: " << pair.remote.endpoint << ", state: " << pair.state << ", attempts: " << pair.attempts_count;
+            << ", remote: " << pair.remote.endpoint << ", state: " << pair.state << ", attempts: " << pair.attempts_count);
     }
 }
 
@@ -62,7 +63,7 @@ void CheckList::Process() {
     }
     _last_ta_tp = now;
 
-    for(size_t socket_idx = 0; socket_idx < _sockets.size(); ++socket_idx) {
+    for(auto& [socket_idx, _] : _transcation_trackers) {
         ProcessConnectivityChecks(socket_idx);
     }
     Nominating();
@@ -75,6 +76,14 @@ void CheckList::AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoin
         .endpoint = endpoint,
         .socket_idx = socket_idx
     });
+    if(type == CandidateType::kRelayed) {
+        _transcation_trackers.insert({socket_idx, TransactionTracker(_deps.clock)});
+        for(auto& remote : _remote_candidates) {
+            if(remote.type != CandidateType::kPeerRefl) {
+                AddPair(_local_candidates.back(), remote);
+            }
+        }
+    }
     if(type != CandidateType::kPeerRefl) {
         _candidate_callback(ToCandidateAttributeString(type, socket_idx, endpoint));
     }
@@ -82,9 +91,9 @@ void CheckList::AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoin
 
 void CheckList::RecvRemoteCandidate(std::string candidate) {
     ToLowerCase(candidate);
-    LOG_INFO << _log_ctx << "Candidate: " << candidate;
+    TAU_LOG_INFO(_log_ctx << "Candidate: " << candidate);
     if(!sdp::attribute::CandidateReader::Validate(candidate)) {
-        LOG_WARNING << "Invalid remote candidate: " << candidate;
+        TAU_LOG_WARNING(_log_ctx << "Invalid remote candidate: " << candidate);
         return;
     }
     if(sdp::attribute::CandidateReader::GetTransport(candidate) != "udp") {
@@ -105,15 +114,16 @@ void CheckList::RecvRemoteCandidate(std::string candidate) {
         .endpoint = endpoint
     });
     for(auto& local : _local_candidates) {
-        AddPair(local, _remote_candidates.back());
+        if((local.type == CandidateType::kHost) || (local.type == CandidateType::kRelayed)) {
+            AddPair(local, _remote_candidates.back());
+        }
     }
-    PrunePairs();
 }
 
 void CheckList::Recv(size_t socket_idx, Endpoint remote, Buffer&& message) {
     auto view = ToConst(message.GetView());
     if(!Reader::Validate(view)) {
-        LOG_WARNING << "Invalid stun message";
+        TAU_LOG_WARNING(_log_ctx << "Invalid stun message");
         return;
     }
     switch(HeaderReader::GetType(view)) {
@@ -132,14 +142,11 @@ void CheckList::Recv(size_t socket_idx, Endpoint remote, Buffer&& message) {
 
 State CheckList::GetState() const {
     if(_pairs.empty()) { return State::kWaiting; }
-    for(auto& pair : _pairs) {
-        if(pair.state == CandidatePair::State::kFrozen)     { return State::kRunning; }
-        if(pair.state == CandidatePair::State::kWaiting)    { return State::kRunning; }
-        if(pair.state == CandidatePair::State::kInProgress) { return State::kRunning; }
-    }
     auto& pair = _pairs.front();
-    if(pair.state == CandidatePair::State::kFailed)    { return State::kFailed; }
-    if(pair.state == CandidatePair::State::kNominated) { return State::kCompleted; }
+    if(pair.state == CandidatePair::State::kSucceeded)  { return State::kReady; }
+    if(pair.state == CandidatePair::State::kNominating) { return State::kReady; }
+    if(pair.state == CandidatePair::State::kNominated)  { return State::kCompleted; }
+    if(pair.state == CandidatePair::State::kFailed)     { return State::kFailed; }
     return State::kRunning;
 }
 
@@ -156,7 +163,7 @@ void CheckList::Nominating() {
         }
     }
     SendStunRequest(*best_pair.local.socket_idx, best_pair.id, best_pair.remote.endpoint, true);
-    best_pair.state = CandidatePair::State::kNominating;
+    SetPairState(best_pair.id, CandidatePair::State::kNominating);
     best_pair.attempts_count = 0;
 }
 
@@ -169,7 +176,7 @@ void CheckList::ProcessConnectivityChecks(size_t socket_idx) {
         if(socket_idx == *pair.local.socket_idx) {
             if(pair.state == CandidatePair::State::kWaiting) {
                 SendStunRequest(socket_idx, pair.id, pair.remote.endpoint);
-                pair.state = CandidatePair::State::kInProgress;
+                SetPairState(pair.id, CandidatePair::State::kInProgress);
                 return;
             }
             if((pair.state == CandidatePair::State::kInProgress) || (pair.state == CandidatePair::State::kNominating)) {
@@ -181,13 +188,14 @@ void CheckList::ProcessConnectivityChecks(size_t socket_idx) {
             }
         }
     }
+    const size_t max_attempts = (GetState() == State::kRunning) ? 16 : 4;
     if(now >= smallest_last_tp + kRtoDefault) {
         auto& pair = GetPairById(pair_id);
-        if(pair.attempts_count < 16) {
+        if(pair.attempts_count < max_attempts) {
             pair.attempts_count++;
             SendStunRequest(socket_idx, pair.id, pair.remote.endpoint, pair.state == CandidatePair::State::kNominating);
         } else {
-            pair.state = CandidatePair::State::kFailed;
+            SetPairState(pair.id, CandidatePair::State::kFailed);
         }
     }
 }
@@ -219,14 +227,14 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
     const auto hash = HeaderReader::GetTransactionIdHash(view);
     const auto transaction = transaction_tracker.HasTransaction(hash);
     if(!transaction) {
-        LOG_WARNING << "Unknown transaction, hash: " << hash;
+        TAU_LOG_WARNING(_log_ctx << "Unknown transaction, hash: " << hash);
         return;
     }
     transaction_tracker.RemoveTransaction(hash);
     auto& pair = GetPairById(transaction->tag);
     if(pair.remote.endpoint != remote) {
-        LOG_WARNING << "Transaction expected remote: " << pair.remote.endpoint << ", actual remote: " << remote;
-        pair.state = CandidatePair::State::kFailed;
+        TAU_LOG_WARNING(_log_ctx << "Transaction expected remote: " << pair.remote.endpoint << ", actual remote: " << remote);
+        SetPairState(pair.id, CandidatePair::State::kFailed);
         return;
     }
 
@@ -255,17 +263,16 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
     });
     if(ok && reflexive) {
         if(FindCandidateByEndpoint(_local_candidates, *reflexive)) {
-            //TODO: we have a valid pair, ICE agent is ready for transceiving
             SetPairState(transaction->tag, CandidatePair::State::kSucceeded);
         } else {
-            LOG_INFO << _log_ctx << "Add local peer-reflexive: " << *reflexive << ", socket: " << socket_idx << ", remote: " << remote << ", pair_id: " << transaction->tag;
+            TAU_LOG_INFO(_log_ctx << "Add local peer-reflexive: " << *reflexive << ", socket: " << socket_idx << ", remote: " << remote << ", pair_id: " << transaction->tag);
             AddLocalCandidate(CandidateType::kPeerRefl, socket_idx, *reflexive);
         }
         if(nominating) {
             if(_role == Role::kControlling) {
                 SetPairState(transaction->tag, CandidatePair::State::kNominated);
             } else {
-                LOG_WARNING << _log_ctx << "Ignore nomination, wrong role";
+                TAU_LOG_WARNING(_log_ctx << "Ignore nomination, wrong role");
             }
         }
     }
@@ -290,7 +297,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
                 if(_role == Role::kControlled) {
                     nominating = true;
                 } else {
-                    LOG_WARNING << _log_ctx << "Ignore nomination with wrong role";
+                    TAU_LOG_WARNING(_log_ctx << "Ignore nomination with wrong role");
                 }
                 break;
             default:
@@ -305,7 +312,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
                 for(auto& pair : _pairs) {
                     if((*pair.local.socket_idx == socket_idx) && (pair.remote.endpoint == remote)) {
                         if((pair.state == CandidatePair::State::kSucceeded) || (pair.state == CandidatePair::State::kNominated)) {
-                            pair.state = CandidatePair::State::kNominated;
+                            SetPairState(pair.id, CandidatePair::State::kNominated);
                             nominating = true;
                             break;
                         }
@@ -313,13 +320,17 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
                 }
             }
         } else {
-            LOG_INFO << _log_ctx << "Add peer-reflexive remote candidate: " << remote << ", priority: " << priority;
+            TAU_LOG_INFO(_log_ctx << "Add peer-reflexive remote candidate: " << remote << ", priority: " << priority << ", socket_idx: " << socket_idx);
             _remote_candidates.push_back(Candidate{
                 .type = CandidateType::kPeerRefl,
                 .priority = priority,
                 .endpoint = remote
             });
-            AddPair(_local_candidates.at(socket_idx), _remote_candidates.back());
+            for(auto& local : _local_candidates) {
+                if(*local.socket_idx == socket_idx) {
+                    AddPair(local, _remote_candidates.back());
+                }
+            }
             nominating = false; // send response to notify about new peer-reflexive address using XorMappedAddress
         }
 
@@ -336,7 +347,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
 
         _send_callback(socket_idx, remote, std::move(message));
     } else {
-        LOG_WARNING << "Ignore malformed message, transcation hash: " << HeaderReader::GetTransactionIdHash(view);
+        TAU_LOG_WARNING(_log_ctx << "Ignore malformed message, transcation hash: " << HeaderReader::GetTransactionIdHash(view));
     }
 }
 

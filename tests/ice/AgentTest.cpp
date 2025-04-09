@@ -1,4 +1,5 @@
 #include "tests/ice/AgentTestParams.h"
+#include "tests/ice/TurnServerEmulator.h"
 #include "tau/ice/Agent.h"
 #include "tau/stun/Writer.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
@@ -8,8 +9,7 @@
 
 namespace tau::ice {
 
-// class AgentTest : public ::testing::TestWithParam<AgentTestParams> {
-class AgentTest : public ::testing::Test {
+class AgentTest : public ::testing::TestWithParam<AgentTestParams> {
 public:
     static inline Endpoint kHostEndpoint1a{IpAddressV4::from_string("1.2.3.4"), 55555};
     static inline Endpoint kHostEndpoint1b{IpAddressV4::from_string("1.2.3.5"), 55000};
@@ -18,11 +18,14 @@ public:
     static inline IpAddressV4 kServerReflexiveIp1{IpAddressV4::from_string("44.44.44.44")};
     static inline IpAddressV4 kServerReflexiveIp2{IpAddressV4::from_string("55.55.55.55")};
     static inline Endpoint kStunServerEndpoint{IpAddressV4::from_string("88.77.66.55"), 43210};
-    static inline Endpoint kTurnServerEndpoint{IpAddressV4::from_string("99.99.99.99"), 3478};
+    static inline IpAddress kTurnServerIp1 = IpAddress::from_string("222.222.222.222");
+    static inline IpAddress kTurnServerIp2 = IpAddress::from_string("210.210.210.210");
 
 public:
     AgentTest()
-        : _credentials{
+        : _turn_server1(_clock, TurnServerEmulator::Options{.public_ip = kTurnServerIp1})
+        , _turn_server2(_clock, TurnServerEmulator::Options{.public_ip = kTurnServerIp2})
+        , _credentials{
             .local = {.ufrag = crypto::RandomBase64(4), .password = crypto::RandomBase64(22)},
             .remote = {.ufrag = crypto::RandomBase64(4), .password = crypto::RandomBase64(22)},
         }
@@ -31,11 +34,15 @@ public:
     void Init(const AgentTestParams& params) {
         _nat1.emplace(_clock, NatEmulator::Options{
             .type = params.peer1_nat_type,
-            .public_ip = kServerReflexiveIp1});
+            .public_ip = kServerReflexiveIp1,
+            .drop_rate = 0 //TODO: test it
+        });
 
         _nat2.emplace(_clock, NatEmulator::Options{
             .type = params.peer2_nat_type,
-            .public_ip = kServerReflexiveIp1});
+            .public_ip = kServerReflexiveIp2,
+            .drop_rate = 0 //TODO: test it
+        });
 
         _sockets1.resize(params.peer1_sockets_count);
         _sockets2.resize(params.peer2_sockets_count);
@@ -50,7 +57,10 @@ public:
                 },
                 .interfaces = _sockets1,
                 .stun_servers = {kStunServerEndpoint},
-                .turn_servers = {},
+                .turn_servers = CreateTurnServersOptions(params.peer1_has_turn),
+                .nominating_strategy = params.nominating_strategy_best
+                    ? Agent::NominatingStrategy::kBestValid
+                    : Agent::NominatingStrategy::kFirstValid,
                 .log_ctx = "[offer] "
             });
 
@@ -64,7 +74,7 @@ public:
                 },
                 .interfaces = _sockets1,
                 .stun_servers = {kStunServerEndpoint},
-                .turn_servers = {},
+                .turn_servers = CreateTurnServersOptions(params.peer2_has_turn),
                 .log_ctx = "[answer] "
             });
 
@@ -76,8 +86,10 @@ public:
             if(dest == kStunServerEndpoint) {
                 OnStunServerRequest(packet, src);
                 _nat1->Recv(std::move(packet), dest, src);
-            } else if(dest == kTurnServerEndpoint) {
-                //TODO: use test TURN server
+            } else if(dest.address() == kTurnServerIp1) {
+                _turn_server1.Recv(std::move(packet), src, dest);
+            } else if(dest.address() == kTurnServerIp2) {
+                _turn_server2.Recv(std::move(packet), src, dest);
             } else {
                 _nat2->Recv(std::move(packet), src, dest);
             }
@@ -86,7 +98,7 @@ public:
             for(size_t i = 0; i < _sockets1.size(); ++i) {
                 if(_sockets1[i] == dest) {
                     _agent1->Recv(i, src, std::move(packet));
-                    break;
+                    return;
                 }
             }
         });
@@ -95,8 +107,10 @@ public:
             if(dest == kStunServerEndpoint) {
                 OnStunServerRequest(packet, src);
                 _nat2->Recv(std::move(packet), dest, src);
-            } else if(dest == kTurnServerEndpoint) {
-                //TODO: use test TURN server
+            } else if(dest.address() == kTurnServerIp1) {
+                _turn_server1.Recv(std::move(packet), src, dest);
+            } else if(dest.address() == kTurnServerIp2) {
+                _turn_server2.Recv(std::move(packet), src, dest);
             } else {
                 _nat1->Recv(std::move(packet), src, dest);
             }
@@ -105,8 +119,36 @@ public:
             for(size_t i = 0; i < _sockets2.size(); ++i) {
                 if(_sockets2[i] == dest) {
                     _agent2->Recv(i, src, std::move(packet));
-                    break;
+                    return;
                 }
+            }
+        });
+
+        _turn_server1.SetOnSendCallback([this](Buffer&& message, Endpoint src, Endpoint dest) {
+            if(dest.address() == kServerReflexiveIp1) {
+                _nat1->Recv(std::move(message), src, dest);
+            } else if(dest.address() == kServerReflexiveIp2) {
+                _nat2->Recv(std::move(message), src, dest);
+            } else if(dest.address() == kTurnServerIp1) {
+                _turn_server1.Recv(std::move(message), src, dest);
+            } else if(dest.address() == kTurnServerIp2) {
+                _turn_server2.Recv(std::move(message), src, dest);
+            } else {
+                // TAU_LOG_WARNING("Unknown dest: " << dest << ", src: " << src);
+            }
+        });
+
+        _turn_server2.SetOnSendCallback([this](Buffer&& message, Endpoint src, Endpoint dest) {
+            if(dest.address() == kServerReflexiveIp1) {
+                _nat1->Recv(std::move(message), src, dest);
+            } else if(dest.address() == kServerReflexiveIp2) {
+                _nat2->Recv(std::move(message), src, dest);
+            } else if(dest.address() == kTurnServerIp1) {
+                _turn_server1.Recv(std::move(message), src, dest);
+            } else if(dest.address() == kTurnServerIp2) {
+                _turn_server2.Recv(std::move(message), src, dest);
+            } else {
+                // TAU_LOG_WARNING("Unknown dest: " << dest << ", src: " << src);
             }
         });
 
@@ -123,20 +165,33 @@ public:
         _agent2->SetCandidateCallback([this](std::string candidate) {
             _agent1->RecvRemoteCandidate(std::move(candidate));
         });
+
+        _agent1->SetStateCallback([this](State state) {
+            _agent1_states.push_back(state);
+        });
+        _agent2->SetStateCallback([this](State state) {
+            _agent2_states.push_back(state);
+        });
     }
 
-//     void AssertState(bool success) const {
-//         if(success) {
-//             ASSERT_NO_FATAL_FAILURE(AssertState(State::kCompleted));
-//         } else {
-//             ASSERT_NO_FATAL_FAILURE(AssertState(State::kFailed));
-//         }
-//     }
+    void AssertState(bool success) const {
+        const auto target_states = success
+            ? std::vector<State>{State::kRunning, State::kReady, State::kCompleted}
+            : std::vector<State>{State::kRunning, State::kFailed};
+        ASSERT_EQ(target_states, _agent1_states);
+        ASSERT_EQ(target_states, _agent2_states);
+    }
 
-//     void AssertState(State target) const {
-//         ASSERT_EQ(target, _check_list1->GetState());
-//         ASSERT_EQ(target, _check_list2->GetState());
-//     }
+    static std::unordered_map<Endpoint, PeerCredentials> CreateTurnServersOptions(bool enable) {
+        std::unordered_map<Endpoint, PeerCredentials> turn_servers;
+        if(enable) {
+            turn_servers[Endpoint{kTurnServerIp1, 3478}] = PeerCredentials{
+                .ufrag = crypto::RandomBase64(6),
+                .password = "password"
+            };
+        }
+        return turn_servers;
+    }
 
     //TODO: move to utils file?
     static void OnStunServerRequest(Buffer& message, Endpoint src) {
@@ -150,6 +205,8 @@ public:
 
 protected:
     TestClock _clock;
+    TurnServerEmulator _turn_server1;
+    TurnServerEmulator _turn_server2;
     std::optional<NatEmulator> _nat1;
     std::optional<NatEmulator> _nat2;
 
@@ -159,38 +216,88 @@ protected:
     std::optional<Agent> _agent1;
     std::optional<Agent> _agent2;
 
+    std::vector<State> _agent1_states;
+    std::vector<State> _agent2_states;
+
     Credentials _credentials;
 };
 
-// TEST_P(AgentTest, Main) {
-TEST_F(AgentTest, Main) {
-    Init(AgentTestParams{
-        .peer1_nat_type = NatEmulator::Type::kSymmetric,
-        .peer1_sockets_count = 2,
-        .peer1_has_turn = false,
-
-        .peer2_nat_type = NatEmulator::Type::kPortRestrictedCone,
-        .peer2_sockets_count = 2,
-        .peer2_has_turn = false,
-        
-        .success = true
-    });
-//     Init(GetParam());
-//     ASSERT_NO_FATAL_FAILURE(AssertState(State::kWaiting));
+TEST_P(AgentTest, Main) {
+    TAU_LOG_INFO("GetParam(): " << GetParam());
+    Init(GetParam());
 
     _agent1->Start();
     _agent2->Start();
-//     ASSERT_NO_FATAL_FAILURE(AssertState(State::kRunning));
 
-    for(size_t i = 0; i < 1000; ++i) {
-        _clock.Add(42 * kMs);
+    for(size_t i = 0; i < 1'000; ++i) {
+        _clock.Add(10 * kMs);
         _agent1->Process();
         _agent2->Process();
         _nat1->Process();
         _nat2->Process();
     }
 
-//     ASSERT_NO_FATAL_FAILURE(AssertState(GetParam().success));
+    ASSERT_NO_FATAL_FAILURE(AssertState(GetParam().success));
 }
+
+std::vector<AgentTestParams> MakeAgentTestParams(bool use_turn) {
+    const std::vector<NatEmulator::Type> nat_types = {
+        NatEmulator::Type::kFullCone,
+        NatEmulator::Type::kRestrictedCone,
+        NatEmulator::Type::kPortRestrictedCone,
+        NatEmulator::Type::kSymmetric,
+        // NatEmulator::Type::kLocalNetworkOnly,
+    };
+
+    const size_t turn_parameters = use_turn ? 4 : 1;
+ 
+    std::vector<AgentTestParams> params;
+    for(size_t i = 0; i < nat_types.size(); ++i) {
+    for(size_t j = i; j < nat_types.size(); ++j) {
+        bool success = true;
+        if(!use_turn) {
+            if(nat_types[i] == NatEmulator::Type::kSymmetric) {
+                success = false;
+            }
+            if(nat_types[i] == NatEmulator::Type::kPortRestrictedCone) {
+                if(nat_types[j] == NatEmulator::Type::kSymmetric) {
+                    success = false;
+                }
+            }
+        }
+
+        auto s1 = g_random.Int<size_t>(1, 2);
+        auto s2 = g_random.Int<size_t>(1, 2);
+        for(size_t t = use_turn; t < turn_parameters; ++t) {
+            auto peer1_use_turn = ((t & 1) == 1);
+            auto peer2_use_turn = ((t & 2) == 2);
+            auto nominating_strategy_best = g_random.Bool();
+            params.push_back(AgentTestParams{
+                .peer1_nat_type = nat_types[i],
+                .peer1_sockets_count = s1,
+                .peer1_has_turn = peer1_use_turn,
+                .peer2_nat_type = nat_types[j],
+                .peer2_sockets_count = s2,
+                .peer2_has_turn = peer2_use_turn,
+                .nominating_strategy_best = nominating_strategy_best,
+                .success = success
+            });
+            params.push_back(AgentTestParams{
+                .peer1_nat_type = nat_types[j],
+                .peer1_sockets_count = s1,
+                .peer1_has_turn = peer1_use_turn,
+                .peer2_nat_type = nat_types[i],
+                .peer2_sockets_count = s2,
+                .peer2_has_turn = peer2_use_turn,
+                .nominating_strategy_best = !nominating_strategy_best,
+                .success = success
+            });
+        }
+    }}
+    return params;
+}
+
+INSTANTIATE_TEST_SUITE_P(WithoutTurn, AgentTest, ::testing::ValuesIn(MakeAgentTestParams(false)));
+INSTANTIATE_TEST_SUITE_P(WithTurn,    AgentTest, ::testing::ValuesIn(MakeAgentTestParams(true)));
 
 }

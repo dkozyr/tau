@@ -47,6 +47,7 @@ public:
     void CreatePermission(const std::vector<IpAddress>& remote_ips);
     bool HasPermission(IpAddress remote);
     void Stop();
+    bool IsActive() const;
 
     bool IsServerEndpoint(Endpoint remote) const;
 

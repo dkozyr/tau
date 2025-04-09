@@ -21,7 +21,12 @@ Agent::Agent(Dependencies&& deps, Options&& options)
     )
 {
     _check_list.SetSendCallback([this](size_t socket_idx, Endpoint remote, Buffer&& message) {
-        _send_callback(socket_idx, remote, std::move(message));
+        if(socket_idx < _interfaces.size()) {
+            _send_callback(socket_idx, remote, std::move(message));
+        } else {
+            auto turn_client_idx = socket_idx - _interfaces.size();
+            _turn_clients[turn_client_idx].Send(std::move(message), remote);
+        }
     });
     InitStunClients(options.stun_servers);
     InitTurnClients(options.turn_servers);
@@ -51,6 +56,20 @@ void Agent::Process() {
     for(auto& stun_client : _stun_clients) { stun_client.Process(); }
     for(auto& turn_client : _turn_clients) { turn_client.Process(); }
     _check_list.Process();
+
+    const auto current_state = _check_list.GetState();
+    if(_state != current_state) {
+        if(current_state == State::kReady) {
+            for(auto& turn_client : _turn_clients) {
+                if(!turn_client.IsActive()) {
+                    turn_client.Stop();
+                }
+            }
+        }
+
+        _state = current_state;
+        _state_callback(_state);
+    }
 }
 
 void Agent::RecvRemoteCandidate(std::string candidate) {
@@ -99,6 +118,7 @@ void Agent::InitStunClients(const std::vector<Endpoint>& stun_servers) {
 void Agent::InitTurnClients(const std::unordered_map<Endpoint, PeerCredentials>& turn_servers) {
     for(auto& [endpoint, credentials] : turn_servers) {
         for(size_t i = 0; i < _interfaces.size(); ++i) {
+            size_t idx = _interfaces.size() + _turn_clients.size();
             _turn_clients.emplace_back(
                 TurnClient::Dependencies{
                     .clock = _deps.clock,
@@ -111,11 +131,15 @@ void Agent::InitTurnClients(const std::unordered_map<Endpoint, PeerCredentials>&
                 }
             );
             auto& turn_client = _turn_clients.back();
-            turn_client.SetCandidateCallback([this, socket_idx = i](Endpoint relayed) {
+            turn_client.SetCandidateCallback([this, socket_idx = idx](Endpoint relayed) {
+                //TODO: can we add permissions for all outgoing endpoints
                 _check_list.AddLocalCandidate(CandidateType::kRelayed, socket_idx, relayed);
             });
             turn_client.SetSendCallback([this, socket_idx = i](Endpoint remote, Buffer&& message) {
                 _send_callback(socket_idx, remote, std::move(message));
+            });
+            turn_client.SetRecvCallback([this, socket_idx = idx](Endpoint remote, Buffer&& message) {
+                _check_list.Recv(socket_idx, remote, std::move(message));
             });
         }
     }
