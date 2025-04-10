@@ -1,2 +1,4 @@
-/build/
 /.vscode/
+/3rdparty/
+/build/
+/build_3rdparty/

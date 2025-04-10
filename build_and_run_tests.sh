@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -e
 
+mkdir -p build
 cd build
 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DGCC_SANITIZER=ON ..
 ninja -j 4

@@ -1,6 +1,5 @@
 #include "tau/crypto/Hmac.h"
 #include <openssl/hmac.h>
-#include <openssl/err.h>
 
 namespace tau::crypto {
 

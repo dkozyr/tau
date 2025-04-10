@@ -13,8 +13,11 @@ set(CMAKE_INTERPROCEDURAL_OPTIMIZATION TRUE) # LTO
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
 
 include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR})
-
 add_compile_definitions(PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
+
+# dependencies
+include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/build_3rdparty/include)
+set(OPENSSL_ROOT_DIR ${PROJECT_SOURCE_DIR}/build_3rdparty)
 
 option(GCC_SANITIZER "Enter gcc sanitizer mode" OFF)
 if(GCC_SANITIZER)
@@ -25,4 +28,3 @@ endif()
 add_subdirectory("${PROJECT_SOURCE_DIR}/tau")
 add_subdirectory("${PROJECT_SOURCE_DIR}/apps")
 add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
-

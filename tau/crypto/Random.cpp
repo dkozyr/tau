@@ -6,7 +6,7 @@
 namespace tau::crypto {
 
 bool RandomBytes(uint8_t* ptr, size_t size) {
-    return (1 == RAND_bytes(ptr, size));
+    return RAND_bytes(ptr, size);
 }
 
 std::string RandomBase64(size_t size) {
