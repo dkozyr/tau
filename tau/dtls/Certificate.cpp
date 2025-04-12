@@ -23,6 +23,15 @@ Certificate::~Certificate() {
     EVP_PKEY_free(_private_key);
 }
 
+Certificate::Digest Certificate::GetDigestSha256() const {
+    Digest digest(EVP_MAX_MD_SIZE);
+    uint32_t size = 0;
+    if(X509_digest(_certificate, EVP_sha256(), digest.data(), &size)) {
+        digest.resize(size);
+    }
+    return digest;
+}
+
 void Certificate::GeneratePrivateKey() {
     EVP_PKEY_CTX* ctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
     if(!ctx) {

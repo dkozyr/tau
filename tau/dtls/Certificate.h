@@ -1,16 +1,22 @@
 #pragma once
 
 #include <openssl/x509v3.h>
+#include <vector>
 
 namespace tau::dtls {
 
 class Certificate {
+public:
+    using Digest = std::vector<uint8_t>;
+
 public:
     Certificate();
     ~Certificate();
 
     X509* GetCertificate() { return _certificate; }
     EVP_PKEY* GetPrivateKey() { return _private_key; }
+
+    Digest GetDigestSha256() const;
 
 private:
     void GeneratePrivateKey();
