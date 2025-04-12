@@ -17,6 +17,7 @@ add_compile_definitions(PROJECT_SOURCE_DIR="${PROJECT_SOURCE_DIR}")
 
 # dependencies
 include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR}/build_3rdparty/include)
+list(APPEND CMAKE_PREFIX_PATH "${PROJECT_SOURCE_DIR}/build_3rdparty/lib/cmake")
 set(OPENSSL_ROOT_DIR ${PROJECT_SOURCE_DIR}/build_3rdparty)
 
 option(GCC_SANITIZER "Enter gcc sanitizer mode" OFF)

@@ -13,6 +13,7 @@ ninja -j 4
 ./bin/rtp-test-app
 ./bin/rtcp-test-app
 ./bin/rtp-packetization-test-app
+./bin/srtp-test-app
 ./bin/rtp-session-test-app
 ./bin/sdp-test-app
 ./bin/stun-test-app
