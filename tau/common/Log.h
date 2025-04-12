@@ -43,11 +43,11 @@ inline constexpr std::string_view TruncateFileName(std::string_view path) {
 }
 
 #define DETAIL_LOG_FILENAME TruncateFileName("/" __FILE__)
-#define DETAIL_LOG_CONTEXT << "[" << DETAIL_LOG_FILENAME << ":" << __LINE__ << "] [" << __FUNCTION__ << "] "
+#define DETAIL_LOG_CONTEXT "[" << DETAIL_LOG_FILENAME << ":" << __LINE__ << "] [" << __FUNCTION__ << "] "
 
-#define DETAIL_TAU_LOG(severity, message)                          \
-    if constexpr(boost::log::trivial::severity >= g_severity) {    \
-        BOOST_LOG_TRIVIAL(severity) DETAIL_LOG_CONTEXT << message; \
+#define DETAIL_TAU_LOG(severity, message)                             \
+    if constexpr(boost::log::trivial::severity >= g_severity) {       \
+        BOOST_LOG_TRIVIAL(severity) << DETAIL_LOG_CONTEXT << message; \
     }
 
 #define TAU_LOG_FATAL(message)   DETAIL_TAU_LOG(fatal, message)
@@ -58,11 +58,11 @@ inline constexpr std::string_view TruncateFileName(std::string_view path) {
 #define TAU_LOG_TRACE(message)   DETAIL_TAU_LOG(trace, message)
 
 //TODO: remove it
-#define LOG_TRACE   BOOST_LOG_TRIVIAL(trace)   DETAIL_LOG_CONTEXT
-#define LOG_DEBUG   BOOST_LOG_TRIVIAL(debug)   DETAIL_LOG_CONTEXT
-#define LOG_INFO    BOOST_LOG_TRIVIAL(info)    DETAIL_LOG_CONTEXT
-#define LOG_WARNING BOOST_LOG_TRIVIAL(warning) DETAIL_LOG_CONTEXT
-#define LOG_ERROR   BOOST_LOG_TRIVIAL(error)   DETAIL_LOG_CONTEXT
-#define LOG_FATAL   BOOST_LOG_TRIVIAL(fatal)   DETAIL_LOG_CONTEXT
+#define LOG_TRACE   BOOST_LOG_TRIVIAL(trace)   << DETAIL_LOG_CONTEXT
+#define LOG_DEBUG   BOOST_LOG_TRIVIAL(debug)   << DETAIL_LOG_CONTEXT
+#define LOG_INFO    BOOST_LOG_TRIVIAL(info)    << DETAIL_LOG_CONTEXT
+#define LOG_WARNING BOOST_LOG_TRIVIAL(warning) << DETAIL_LOG_CONTEXT
+#define LOG_ERROR   BOOST_LOG_TRIVIAL(error)   << DETAIL_LOG_CONTEXT
+#define LOG_FATAL   BOOST_LOG_TRIVIAL(fatal)   << DETAIL_LOG_CONTEXT
 
 }
