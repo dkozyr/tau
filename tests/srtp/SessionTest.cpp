@@ -159,7 +159,14 @@ TEST_P(SessionTest, Rtcp) {
     ASSERT_TRUE(_decryptor->Decrypt(_encrypted[0].MakeCopy(), false));
     ASSERT_EQ(1, _decrypted.size());
     ASSERT_NO_FATAL_FAILURE(AssertPackets(packet, _encrypted[0], _decrypted[0]));
-    
+}
+
+TEST(SessionTest, WrongProfile) {
+    ASSERT_ANY_THROW(Session(Session::Options{
+        .type = Session::Type::kEncryptor,
+        .profile = srtp_profile_t::srtp_profile_null_sha1_32,
+        .key = {}
+    }));
 }
 
 }
