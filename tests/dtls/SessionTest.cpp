@@ -6,18 +6,21 @@ namespace tau::dtls {
 TEST(SessionTest, Basic) {
     TestClock clock;
 
+    Certificate certificate1;
+    Certificate certificate2;
+
     Session server(
-        Session::Dependencies{.clock = clock, .udp_allocator = g_udp_allocator},
+        Session::Dependencies{.clock = clock, .udp_allocator = g_udp_allocator, .certificate = certificate1},
         Session::Options{
             .type = Session::Type::kServer,
-            .remote_peer_cert_digest = "hello",
+            .remote_peer_cert_digest = certificate2.GetDigestSha256String(),
             .log_ctx = "[server] "
         });
     Session client(
-        Session::Dependencies{.clock = clock, .udp_allocator = g_udp_allocator},
+        Session::Dependencies{.clock = clock, .udp_allocator = g_udp_allocator, .certificate = certificate2},
         Session::Options{
             .type = Session::Type::kClient,
-            .remote_peer_cert_digest = "worlds",
+            .remote_peer_cert_digest = certificate1.GetDigestSha256String(),
             .log_ctx = "[client] "
         });
 
@@ -63,8 +66,6 @@ TEST(SessionTest, Basic) {
 
     const char* message = "Hello from DTLS client!";
     ASSERT_TRUE(client.Send(BufferViewConst{.ptr = (const uint8_t*)message, .size = strlen(message)}));
-    // client.Send(BufferViewConst{.ptr = (const uint8_t*)message, .size = strlen(message)});
-
     process_queue();
 
     TAU_LOG_INFO("Closing DTLS connection...");

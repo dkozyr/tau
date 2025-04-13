@@ -19,11 +19,11 @@ Session::Session(Dependencies&& deps, Options&& options)
     SSL_CTX_set_min_proto_version(_ctx, DTLS1_2_VERSION);
     SSL_CTX_set_max_proto_version(_ctx, DTLS1_2_VERSION);
 
-    if(auto error = SSL_CTX_use_certificate(_ctx, _cert.GetCertificate()) <= 0) {
+    if(auto error = SSL_CTX_use_certificate(_ctx, _deps.certificate.GetCertificate()) <= 0) {
         TAU_EXCEPTION(std::runtime_error, "SSL_CTX_use_certificate failed, error: " << error
             << ", message: " << ERR_error_string(ERR_get_error(), NULL));
     }
-    if(auto error = SSL_CTX_use_PrivateKey(_ctx, _cert.GetPrivateKey()) <= 0) {
+    if(auto error = SSL_CTX_use_PrivateKey(_ctx, _deps.certificate.GetPrivateKey()) <= 0) {
         TAU_EXCEPTION(std::runtime_error, "SSL_CTX_use_PrivateKey failed, error: " << error
             << ", message: " << ERR_error_string(ERR_get_error(), NULL));
     }
@@ -39,6 +39,10 @@ Session::Session(Dependencies&& deps, Options&& options)
             << ", message: " << ERR_error_string(ERR_get_error(), NULL));
     }
 
+    if(!_options.remote_peer_cert_digest.empty()) {
+        SSL_CTX_set_verify(_ctx, SSL_VERIFY_PEER, OnVerifyPeerStatic);
+    }
+
     _ssl = SSL_new(_ctx);
     if(!_ssl) {
         TAU_EXCEPTION(std::runtime_error, "SSL_new failed, error: " << ERR_error_string(ERR_get_error(), NULL));
@@ -51,9 +55,6 @@ Session::Session(Dependencies&& deps, Options&& options)
     SSL_set_app_data(_ssl, this);
 
     // DTLSv1_set_initial_timeout_duration(_ssl, _handshake_timeout_ms); //TODO: process timeouts
-
-    const auto digest = _cert.GetDigestSha256();
-    TAU_LOG_INFO(_options.log_ctx << "fingerprint: " << ToHexDump(digest.data(), digest.size(), ':'));
 }
 
 Session::~Session() {
@@ -147,6 +148,26 @@ void Session::Recv(Buffer&& packet) {
     }
 
     Process();
+}
+
+int Session::OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx) {
+    if(auto ssl = (SSL*)X509_STORE_CTX_get_ex_data(x509_ctx, SSL_get_ex_data_X509_STORE_CTX_idx())) {
+        if(auto self = SSL_get_app_data(ssl)) {
+            return static_cast<Session*>(self)->OnVerifyPeer(preverify_ok, x509_ctx);
+        }
+    }
+    return 0;
+}
+
+int Session::OnVerifyPeer(int, X509_STORE_CTX* x509_ctx) {
+    if(auto cert = X509_STORE_CTX_get_current_cert(x509_ctx)) {
+        std::vector<uint8_t> digest(EVP_MAX_MD_SIZE);
+        uint32_t size = 0;
+        if(X509_digest(cert, EVP_sha256(), digest.data(), &size)) {
+            return (_options.remote_peer_cert_digest == ToHexDump(digest.data(), size, ':'));
+        }
+    }
+    return 0;
 }
 
 }

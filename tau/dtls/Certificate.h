@@ -2,6 +2,7 @@
 
 #include <openssl/x509v3.h>
 #include <vector>
+#include <string>
 
 namespace tau::dtls {
 
@@ -16,6 +17,7 @@ public:
     X509* GetCertificate() { return _certificate; }
     EVP_PKEY* GetPrivateKey() { return _private_key; }
 
+    std::string GetDigestSha256String() const;
     Digest GetDigestSha256() const;
 
 private:

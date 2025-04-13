@@ -10,7 +10,7 @@ TEST(CertificateTest, SelfSigned) {
 
     auto fingerprint = cert.GetDigestSha256();
     ASSERT_FALSE(fingerprint.empty());
-    TAU_LOG_INFO("Fingerprint: " << ToHexDump(fingerprint.data(), fingerprint.size(), ':'));
+    TAU_LOG_INFO("Fingerprint: " << cert.GetDigestSha256String());
 }
 
 }

@@ -29,6 +29,7 @@ public:
     struct Dependencies {
         Clock& clock;
         Allocator& udp_allocator;
+        Certificate& certificate;
     };
 
     struct Options{
@@ -56,9 +57,12 @@ public:
     void Recv(Buffer&& packet);
 
 private:
+    static int OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx);
+    int OnVerifyPeer(int preverify_ok, X509_STORE_CTX* x509_ctx);
+
+private:
     Dependencies _deps;
     const Options _options;
-    Certificate _cert;
 
     SSL_CTX* _ctx = nullptr;
     SSL* _ssl = nullptr;

@@ -1,4 +1,5 @@
 #include "tau/dtls/Certificate.h"
+#include "tau/common/String.h"
 #include "tau/common/Exception.h"
 #include <openssl/rsa.h>
 #include <openssl/err.h>
@@ -21,6 +22,11 @@ Certificate::Certificate() {
 Certificate::~Certificate() {
     X509_free(_certificate);
     EVP_PKEY_free(_private_key);
+}
+
+std::string Certificate::GetDigestSha256String() const {
+    auto digest = GetDigestSha256();
+    return ToHexDump(digest.data(), digest.size(), ':');
 }
 
 Certificate::Digest Certificate::GetDigestSha256() const {
