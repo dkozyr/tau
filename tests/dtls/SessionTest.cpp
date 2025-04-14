@@ -3,76 +3,142 @@
 
 namespace tau::dtls {
 
-TEST(SessionTest, Basic) {
-    TestClock clock;
+class SessionTest : public ::testing::Test {
+public:
+    SessionTest() {
+        Init();
+    }
 
-    Certificate certificate1;
-    Certificate certificate2;
+    void Init() {
+        _client.emplace(
+            Session::Dependencies{.clock = _clock, .udp_allocator = g_udp_allocator, .certificate = _client_certificate},
+            Session::Options{_client_options});
+        _server.emplace(
+            Session::Dependencies{.clock = _clock, .udp_allocator = g_udp_allocator, .certificate = _server_certificate},
+            Session::Options{_server_options});
 
-    Session server(
-        Session::Dependencies{.clock = clock, .udp_allocator = g_udp_allocator, .certificate = certificate1},
-        Session::Options{
-            .type = Session::Type::kServer,
-            .remote_peer_cert_digest = certificate2.GetDigestSha256String(),
-            .log_ctx = "[server] "
+        _client->SetSendCallback([&](Buffer&& packet) { _queue.push(std::make_pair(false, std::move(packet))); });
+        _server->SetSendCallback([&](Buffer&& packet) { _queue.push(std::make_pair(true, std::move(packet))); });
+
+        _client->SetRecvCallback([&](Buffer&& packet) {
+            auto view = packet.GetView();
+            auto message = std::string_view{reinterpret_cast<char*>(view.ptr), view.size};
+            TAU_LOG_INFO("[client] [recv] message: " << message);
+            EXPECT_EQ(message, "Hello from server!");
         });
-    Session client(
-        Session::Dependencies{.clock = clock, .udp_allocator = g_udp_allocator, .certificate = certificate2},
-        Session::Options{
-            .type = Session::Type::kClient,
-            .remote_peer_cert_digest = certificate1.GetDigestSha256String(),
-            .log_ctx = "[client] "
+        _server->SetRecvCallback([&](Buffer&& packet) {
+            auto view = packet.GetView();
+            auto message = std::string_view{reinterpret_cast<char*>(view.ptr), view.size};
+            TAU_LOG_INFO("[server] [recv] message: " << message);
+            EXPECT_EQ(message, "Hello from client!");
         });
 
-    std::queue<std::pair<bool, Buffer>> queue;
-    server.SetSendCallback([&](Buffer&& packet) { queue.push(std::make_pair(true, std::move(packet))); });
-    client.SetSendCallback([&](Buffer&& packet) { queue.push(std::make_pair(false, std::move(packet))); });
+        _client->SetStateCallback([&](Session::State state) { _client_states.push_back(state); });
+        _server->SetStateCallback([&](Session::State state) { _server_states.push_back(state); });
+    }
 
-    server.SetRecvCallback([&](Buffer&& packet) {
-        auto view = packet.GetView();
-        auto message = std::string_view{reinterpret_cast<char*>(view.ptr), view.size};
-        TAU_LOG_INFO("[server] [recv] message: " << message);
-    });
-    client.SetRecvCallback([&](Buffer&& packet) {
-        auto view = packet.GetView();
-        auto message = std::string_view{reinterpret_cast<char*>(view.ptr), view.size};
-        TAU_LOG_INFO("[client] [recv] message: " << message);
-    });
-
-    server.SetStateCallback([&](Session::State state) { TAU_LOG_INFO("[server] state: " << (size_t)state); });
-    client.SetStateCallback([&](Session::State state) { TAU_LOG_INFO("[client] state: " << (size_t)state); });
-
-    auto process_queue = [&]() {
-        for(auto i = 0; i < 4; ++i) {
-            server.Process();
-            client.Process();
-            while(!queue.empty()) {
-                // TAU_LOG_INFO("queue: " << queue.size());   
-                auto& [from_server, packet] = queue.front();
-                if(from_server) {
-                    client.Recv(std::move(packet));
-                } else {
-                    server.Recv(std::move(packet));
-                }
-                queue.pop();
+    void Process() {
+        while(!_queue.empty()) {
+            auto& [from_server, packet] = _queue.front();
+            if(from_server) {
+                _client->Recv(std::move(packet));
+            } else {
+                _server->Recv(std::move(packet));
             }
+            _queue.pop();
+
+            _client->Process();
+            _server->Process();
         }
+    }
+
+    static void AssertStates(const std::vector<Session::State>& actual, const std::vector<Session::State>& target) {
+        ASSERT_EQ(actual.size(), target.size());
+        for(size_t i = 0; i < actual.size(); ++i) {
+            ASSERT_EQ(target[i], actual[i]);
+        }
+    }
+
+protected:
+    TestClock _clock;
+
+    Certificate _client_certificate;
+    Certificate _server_certificate;
+
+    std::optional<Session> _client;
+    std::optional<Session> _server;
+
+    Session::Options _client_options{
+        .type = Session::Type::kClient,
+        .remote_peer_cert_digest = {},
+        .log_ctx = "[client] "
+    };
+    Session::Options _server_options{
+        .type = Session::Type::kServer,
+        .remote_peer_cert_digest = {},
+        .log_ctx = "[server] "
     };
 
-    client.Process();
-    process_queue();
+    std::queue<std::pair<bool, Buffer>> _queue;
+    std::vector<Session::State> _client_states;
+    std::vector<Session::State> _server_states;
+};
 
-    TAU_LOG_INFO("DTLS connection is established?");
+TEST_F(SessionTest, Basic) {
+    _client->Process();
+    Process();
 
-    const char* message = "Hello from DTLS client!";
-    ASSERT_TRUE(client.Send(BufferViewConst{.ptr = (const uint8_t*)message, .size = strlen(message)}));
-    process_queue();
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
 
-    TAU_LOG_INFO("Closing DTLS connection...");
-    server.Stop();
-    client.Stop();
+    const char* client_message = "Hello from client!";
+    ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
+    const char* server_message = "Hello from server!";
+    ASSERT_TRUE(_server->Send(BufferViewConst{.ptr = (const uint8_t*)server_message, .size = strlen(server_message)}));
+    Process();
 
-    process_queue();
+    _client->Stop();
+    _server->Stop();
+    Process();
+}
+
+TEST_F(SessionTest, WithRemoteCertificateValidation) {
+    _client_options.remote_peer_cert_digest = _server_certificate.GetDigestSha256String();
+    _server_options.remote_peer_cert_digest = _client_certificate.GetDigestSha256String();
+    Init();
+
+    _client->Process();
+    Process();
+
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
+
+    const char* client_message = "Hello from client!";
+    ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
+    const char* server_message = "Hello from server!";
+    ASSERT_TRUE(_server->Send(BufferViewConst{.ptr = (const uint8_t*)server_message, .size = strlen(server_message)}));
+    Process();
+
+    _client->Stop();
+    _server->Stop();
+    Process();
+}
+
+TEST_F(SessionTest, WrongRemoteCertificate) {
+    Certificate unknown_certificate;
+    _client_options.remote_peer_cert_digest = unknown_certificate.GetDigestSha256String();
+    _server_options.remote_peer_cert_digest = _client_certificate.GetDigestSha256String();
+    Init();
+
+    _client->Process();
+    Process();
+
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kFailed}));
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kFailed}));
+
+    _client->Stop();
+    _server->Stop();
+    Process();
 }
 
 }

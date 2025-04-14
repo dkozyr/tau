@@ -32,13 +32,6 @@ Session::Session(Dependencies&& deps, Options&& options)
         TAU_EXCEPTION(std::runtime_error, "SSL_CTX_set_cipher_list failed, error: " << ERR_error_string(ERR_get_error(), NULL));
     }
 
-    //TODO: do we need it?
-    // Verify private key matches certificate (optional but recommended)
-    if(auto error = SSL_CTX_check_private_key(_ctx) <= 0) {
-        TAU_EXCEPTION(std::runtime_error, "SSL_CTX_check_private_key failed, error: " << error
-            << ", message: " << ERR_error_string(ERR_get_error(), NULL));
-    }
-
     if(!_options.remote_peer_cert_digest.empty()) {
         SSL_CTX_set_verify(_ctx, SSL_VERIFY_PEER, OnVerifyPeerStatic);
     }
@@ -132,6 +125,7 @@ bool Session::Send(const BufferViewConst& packet_view) {
         TAU_LOG_WARNING(_options.log_ctx << "size: " << size << ", error: " << ERR_error_string(ERR_get_error(), NULL));
         return false;
     }
+    Process();
     return true;
 }
 
