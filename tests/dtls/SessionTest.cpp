@@ -59,6 +59,22 @@ public:
         }
     }
 
+    void AssertSrtpProfile(Session::SrtpProfile target_profile) const {
+        ASSERT_EQ(target_profile, _client->GetSrtpProfile().value());
+        ASSERT_EQ(target_profile, _server->GetSrtpProfile().value());
+    }
+
+    void AssertKeyingMaterial() const {
+        auto client_encrypting = _client->GetKeyingMaterial(true);
+        auto client_decrypting = _client->GetKeyingMaterial(false);
+        auto server_encrypting = _server->GetKeyingMaterial(true);
+        auto server_decrypting = _server->GetKeyingMaterial(false);
+        ASSERT_FALSE(client_encrypting.empty());
+        ASSERT_FALSE(server_encrypting.empty());
+        ASSERT_EQ(client_encrypting, server_decrypting);
+        ASSERT_EQ(client_decrypting, server_encrypting);
+    }
+
 protected:
     TestClock _clock;
 
@@ -70,11 +86,13 @@ protected:
 
     Session::Options _client_options{
         .type = Session::Type::kClient,
+        .srtp_profiles = Session::kSrtpProfilesDefault,
         .remote_peer_cert_digest = {},
         .log_ctx = "[client] "
     };
     Session::Options _server_options{
         .type = Session::Type::kServer,
+        .srtp_profiles = Session::kSrtpProfilesDefault,
         .remote_peer_cert_digest = {},
         .log_ctx = "[server] "
     };
@@ -90,6 +108,8 @@ TEST_F(SessionTest, Basic) {
 
     ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
     ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
+    ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
 
     const char* client_message = "Hello from client!";
     ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
@@ -112,6 +132,33 @@ TEST_F(SessionTest, WithRemoteCertificateValidation) {
 
     ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
     ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
+    ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
+
+    const char* client_message = "Hello from client!";
+    ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
+    const char* server_message = "Hello from server!";
+    ASSERT_TRUE(_server->Send(BufferViewConst{.ptr = (const uint8_t*)server_message, .size = strlen(server_message)}));
+    Process();
+
+    _client->Stop();
+    _server->Stop();
+    Process();
+}
+
+TEST_F(SessionTest, SelectNonDefaultSrtpProfile) {
+    _client_options.srtp_profiles = "SRTP_AES128_CM_SHA1_32";
+    _client_options.remote_peer_cert_digest = _server_certificate.GetDigestSha256String();
+    _server_options.remote_peer_cert_digest = _client_certificate.GetDigestSha256String();
+    Init();
+
+    _client->Process();
+    Process();
+
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_32));
+    ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
 
     const char* client_message = "Hello from client!";
     ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
@@ -135,6 +182,9 @@ TEST_F(SessionTest, WrongRemoteCertificate) {
 
     ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kFailed}));
     ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kFailed}));
+
+    ASSERT_FALSE(_client->GetSrtpProfile().has_value());
+    ASSERT_FALSE(_server->GetSrtpProfile().has_value());
 
     _client->Stop();
     _server->Stop();

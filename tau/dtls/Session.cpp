@@ -3,10 +3,18 @@
 #include "tau/common/Exception.h"
 #include "tau/common/Log.h"
 #include <openssl/err.h>
-
-// #include <openssl/x509_vfy.h>
+#include <unordered_map>
 
 namespace tau::dtls {
+
+const std::unordered_map<Session::SrtpProfile, size_t> kProfileKeyingMaterialSize = {
+    {Session::SrtpProfile::kAes128CmSha1_80, 20 + 10},
+    {Session::SrtpProfile::kAes128CmSha1_32, 20 + 10},
+    // {Session::SrtpProfile::kAes256CmSha1_80, 20 + 10},
+    // {Session::SrtpProfile::kAes256CmSha1_32, 20 + 10},
+    // {Session::SrtpProfile::kAeadAes128Gcm,   16 + 12},
+    // {Session::SrtpProfile::kAeadAes256Gcm,   32 + 12},
+};
 
 Session::Session(Dependencies&& deps, Options&& options)
     : _deps(deps)
@@ -28,8 +36,11 @@ Session::Session(Dependencies&& deps, Options&& options)
             << ", message: " << ERR_error_string(ERR_get_error(), NULL));
     }
 
-    if(!SSL_CTX_set_cipher_list(_ctx, "DEFAULT:!NULL:!aNULL:!SHA256:!SHA384:!aECDH:!AESGCM+AES256:!aPSK:!3DES")) {
-        TAU_EXCEPTION(std::runtime_error, "SSL_CTX_set_cipher_list failed, error: " << ERR_error_string(ERR_get_error(), NULL));
+    if(!_options.srtp_profiles.empty()) {
+        if(auto error = SSL_CTX_set_tlsext_use_srtp(_ctx, _options.srtp_profiles.c_str())) {
+            TAU_EXCEPTION(std::runtime_error, "SSL_CTX_set_tlsext_use_srtp failed, error: " << error
+                << ", message: " << ERR_error_string(ERR_get_error(), NULL));
+        }
     }
 
     if(!_options.remote_peer_cert_digest.empty()) {
@@ -142,6 +153,46 @@ void Session::Recv(Buffer&& packet) {
     }
 
     Process();
+}
+
+std::optional<Session::SrtpProfile> Session::GetSrtpProfile() const {
+    if(_state != State::kConnected) {
+        return std::nullopt;
+    }
+    auto selected_profile = SSL_get_selected_srtp_profile(_ssl);
+    if(!selected_profile) {
+        TAU_LOG_WARNING("SSL_get_selected_srtp_profile failed, error: " << ERR_error_string(ERR_get_error(), NULL));
+        return std::nullopt;
+    }
+
+    const auto profile = static_cast<SrtpProfile>(selected_profile->id);
+    switch(profile) {
+        case SrtpProfile::kAes128CmSha1_80:
+        case SrtpProfile::kAes128CmSha1_32:
+            return profile;
+    }
+    return std::nullopt;
+}
+
+std::vector<uint8_t> Session::GetKeyingMaterial(bool encryption) const {
+    auto profile = GetSrtpProfile();
+    if(!profile) {
+        return {};
+    }
+
+    constexpr std::string_view kLabel = "EXTRACTOR-dtls_srtp";
+    const auto keying_material_size = kProfileKeyingMaterialSize.at(*profile);
+    std::vector<uint8_t> keying_material(2 * keying_material_size);
+    if(!SSL_export_keying_material(_ssl, keying_material.data(), keying_material.size(), kLabel.data(), kLabel.size(), NULL, 0, 0)) {
+        return {};
+    }
+
+    if((encryption && (_options.type == Type::kClient)) || (!encryption && (_options.type == Type::kServer))) {
+        keying_material.resize(keying_material_size);
+    } else {
+        keying_material.erase(keying_material.begin() + keying_material_size);
+    }
+    return keying_material;
 }
 
 int Session::OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx) {

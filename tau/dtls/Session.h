@@ -6,6 +6,7 @@
 #include <openssl/ssl.h>
 #include <vector>
 #include <functional>
+#include <optional>
 #include <string_view>
 
 namespace tau::dtls {
@@ -14,6 +15,8 @@ class Session {
     using BioData = std::vector<uint8_t>;
 
 public:
+    static constexpr auto kSrtpProfilesDefault = "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"; //SRTP_AEAD_AES_128_GCM:SRTP_AEAD_AES_256_GCM
+
     enum Type {
         kServer,
         kClient
@@ -26,6 +29,17 @@ public:
         kFailed //TODO: impl
     };
 
+    // https://datatracker.ietf.org/doc/html/draft-ietf-avt-dtls-srtp-00#section-3.2.2
+    // https://www.rfc-editor.org/rfc/rfc7714.html#section-14.2
+    enum SrtpProfile : uint8_t {
+        kAes128CmSha1_80 = 1,
+        kAes128CmSha1_32 = 2,
+        // kAes256CmSha1_80 = 3,
+        // kAes256CmSha1_32 = 4,
+        // kAeadAes128Gcm   = 7,
+        // kAeadAes256Gcm   = 8,
+    };
+
     struct Dependencies {
         Clock& clock;
         Allocator& udp_allocator;
@@ -34,6 +48,7 @@ public:
 
     struct Options{
         Type type;
+        std::string srtp_profiles;
         std::string remote_peer_cert_digest;
         std::string log_ctx;
     };
@@ -55,6 +70,9 @@ public:
     bool Send(Buffer&& packet);
     bool Send(const BufferViewConst& packet);
     void Recv(Buffer&& packet);
+
+    std::optional<SrtpProfile> GetSrtpProfile() const;
+    std::vector<uint8_t> GetKeyingMaterial(bool encryption) const;
 
 private:
     static int OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx);
