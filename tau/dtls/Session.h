@@ -2,12 +2,10 @@
 
 #include "tau/dtls/Certificate.h"
 #include "tau/memory/Buffer.h"
-#include "tau/common/Clock.h"
 #include <openssl/ssl.h>
 #include <vector>
 #include <functional>
 #include <optional>
-#include <string_view>
 
 namespace tau::dtls {
 
@@ -16,6 +14,7 @@ class Session {
 
 public:
     static constexpr auto kSrtpProfilesDefault = "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"; //SRTP_AEAD_AES_128_GCM:SRTP_AEAD_AES_256_GCM
+    static constexpr auto kFailureTimeout = 10 * kSec;
 
     enum Type {
         kServer,
@@ -26,7 +25,7 @@ public:
         kWaiting,
         kConnecting,
         kConnected,
-        kFailed //TODO: impl
+        kFailed
     };
 
     // https://datatracker.ietf.org/doc/html/draft-ietf-avt-dtls-srtp-00#section-3.2.2
@@ -41,7 +40,6 @@ public:
     };
 
     struct Dependencies {
-        Clock& clock;
         Allocator& udp_allocator;
         Certificate& certificate;
     };
@@ -70,6 +68,8 @@ public:
     bool Send(Buffer&& packet);
     bool Send(const BufferViewConst& packet);
     void Recv(Buffer&& packet);
+
+    std::optional<Timepoint> GetTimeout();
 
     std::optional<SrtpProfile> GetSrtpProfile() const;
     std::vector<uint8_t> GetKeyingMaterial(bool encryption) const;

@@ -19,6 +19,7 @@
 #include <queue>
 #include <optional>
 #include <functional>
+#include <thread>
 #include <algorithm>
 #include <string_view>
 #include <cstring>

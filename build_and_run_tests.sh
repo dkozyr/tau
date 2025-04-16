@@ -14,7 +14,7 @@ ninja -j 4
 ./bin/rtcp-test-app
 ./bin/rtp-packetization-test-app
 ./bin/srtp-test-app
-./bin/dtls-test-app
+./bin/dtls-test-app --gtest_also_run_disabled_tests=1
 ./bin/rtp-session-test-app
 ./bin/sdp-test-app
 ./bin/stun-test-app

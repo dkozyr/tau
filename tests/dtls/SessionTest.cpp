@@ -11,10 +11,10 @@ public:
 
     void Init() {
         _client.emplace(
-            Session::Dependencies{.clock = _clock, .udp_allocator = g_udp_allocator, .certificate = _client_certificate},
+            Session::Dependencies{.udp_allocator = g_udp_allocator, .certificate = _client_certificate},
             Session::Options{_client_options});
         _server.emplace(
-            Session::Dependencies{.clock = _clock, .udp_allocator = g_udp_allocator, .certificate = _server_certificate},
+            Session::Dependencies{.udp_allocator = g_udp_allocator, .certificate = _server_certificate},
             Session::Options{_server_options});
 
         _client->SetSendCallback([&](Buffer&& packet) { _queue.push(std::make_pair(false, std::move(packet))); });
@@ -52,6 +52,16 @@ public:
         }
     }
 
+    void AssertSendData() {
+        constexpr std::string_view client_message = "Hello from client!";
+        ASSERT_TRUE(_client->Send(
+            BufferViewConst{.ptr = (const uint8_t*)client_message.data(), .size = client_message.size()}));
+        
+        constexpr std::string_view server_message = "Hello from server!";
+        ASSERT_TRUE(_server->Send(
+            BufferViewConst{.ptr = (const uint8_t*)server_message.data(), .size = server_message.size()}));
+    }
+
     static void AssertStates(const std::vector<Session::State>& actual, const std::vector<Session::State>& target) {
         ASSERT_EQ(actual.size(), target.size());
         for(size_t i = 0; i < actual.size(); ++i) {
@@ -76,8 +86,6 @@ public:
     }
 
 protected:
-    TestClock _clock;
-
     Certificate _client_certificate;
     Certificate _server_certificate;
 
@@ -110,12 +118,7 @@ TEST_F(SessionTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
-
-    const char* client_message = "Hello from client!";
-    ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
-    const char* server_message = "Hello from server!";
-    ASSERT_TRUE(_server->Send(BufferViewConst{.ptr = (const uint8_t*)server_message, .size = strlen(server_message)}));
-    Process();
+    ASSERT_NO_FATAL_FAILURE(AssertSendData());
 
     _client->Stop();
     _server->Stop();
@@ -134,12 +137,7 @@ TEST_F(SessionTest, WithRemoteCertificateValidation) {
     ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
-
-    const char* client_message = "Hello from client!";
-    ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
-    const char* server_message = "Hello from server!";
-    ASSERT_TRUE(_server->Send(BufferViewConst{.ptr = (const uint8_t*)server_message, .size = strlen(server_message)}));
-    Process();
+    ASSERT_NO_FATAL_FAILURE(AssertSendData());
 
     _client->Stop();
     _server->Stop();
@@ -159,12 +157,60 @@ TEST_F(SessionTest, SelectNonDefaultSrtpProfile) {
     ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_32));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
+    ASSERT_NO_FATAL_FAILURE(AssertSendData());
 
-    const char* client_message = "Hello from client!";
-    ASSERT_TRUE(_client->Send(BufferViewConst{.ptr = (const uint8_t*)client_message, .size = strlen(client_message)}));
-    const char* server_message = "Hello from server!";
-    ASSERT_TRUE(_server->Send(BufferViewConst{.ptr = (const uint8_t*)server_message, .size = strlen(server_message)}));
+    _client->Stop();
+    _server->Stop();
     Process();
+}
+
+TEST_F(SessionTest, PacketLoss) {
+    _client->Process();
+    _queue.pop();
+
+    while(true) {
+        auto timeout = _client->GetTimeout();
+        if(!timeout) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::nanoseconds(*timeout));
+        _client->Process();
+        _server->Process();
+        Process();
+    }
+
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_server_states, {Session::State::kConnecting, Session::State::kConnected}));
+    ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
+    ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
+    ASSERT_NO_FATAL_FAILURE(AssertSendData());
+
+    _client->Stop();
+    _server->Stop();
+    Process();
+}
+
+TEST_F(SessionTest, DISABLED_FailOnPacketLoss_BigTimeout) {
+    _client->Process();
+    _queue.pop();
+
+    while(true) {
+        auto timeout = _client->GetTimeout();
+        if(!timeout) {
+            break;
+        }
+        std::this_thread::sleep_for(std::chrono::nanoseconds(*timeout));
+        _client->Process();
+        _server->Process();
+        _queue.pop();
+        Process();
+    }
+
+    ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kFailed}));
+    ASSERT_TRUE(_server_states.empty());
+
+    ASSERT_FALSE(_client->GetSrtpProfile().has_value());
+    ASSERT_FALSE(_server->GetSrtpProfile().has_value());
 
     _client->Stop();
     _server->Stop();

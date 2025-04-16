@@ -57,8 +57,6 @@ Session::Session(Dependencies&& deps, Options&& options)
     SSL_set_bio(_ssl, _bio_read, _bio_write);
 
     SSL_set_app_data(_ssl, this);
-
-    // DTLSv1_set_initial_timeout_duration(_ssl, _handshake_timeout_ms); //TODO: process timeouts
 }
 
 Session::~Session() {
@@ -153,6 +151,22 @@ void Session::Recv(Buffer&& packet) {
     }
 
     Process();
+}
+
+std::optional<Timepoint> Session::GetTimeout() {
+    if(_state == State::kConnecting) {
+        timeval timeout;
+        if(DTLSv1_get_timeout(_ssl, &timeout) == 1) {
+            auto tp = timeout.tv_sec * kSec + timeout.tv_usec * kMicro;
+            if(tp < kFailureTimeout) {
+                return tp;
+            } else {
+                _state = State::kFailed;
+                _state_callback(_state);
+            }
+        }
+    }
+    return std::nullopt;
 }
 
 std::optional<Session::SrtpProfile> Session::GetSrtpProfile() const {
