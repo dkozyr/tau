@@ -56,8 +56,7 @@ protected:
     static void AssertDtls(const std::optional<Dtls>& target, const std::optional<Dtls>& actual) {
         if(target.has_value()) {
             ASSERT_TRUE(actual.has_value());
-            ASSERT_EQ(target->hash_func,   actual->hash_func);
-            ASSERT_EQ(target->fingerprint, actual->fingerprint);
+            ASSERT_EQ(target->fingerprint_sha256, actual->fingerprint_sha256);
         } else {
             ASSERT_FALSE(actual.has_value());
         }
@@ -105,7 +104,10 @@ TEST_F(ReaderTest, WebrtcAudioOnly) {
                 "1521601408 2 udp 1686052606 83.49.46.37 59844 typ srflx raddr 192.168.1.36 rport 59844 generation 0",
             }
         },
-        .dtls = std::nullopt,
+        .dtls = Dtls{
+            .setup = Setup::kActpass,
+            .fingerprint_sha256 = "BE:C0:9D:93:0B:56:8C:87:48:5F:57:F7:9F:A3:D2:07:D2:8C:15:3F:DC:CE:D7:96:2B:A7:6A:DE:B8:72:F0:76"
+        },
         .medias = {
             Media{
                 .type = MediaType::kAudio,
@@ -146,7 +148,10 @@ TEST_F(ReaderTest, WebrtcChrome) {
                 "1329961753 1 udp 1677729535 3.4.5.6 42867 typ srflx raddr 0.0.0.0 rport 0 generation 0 network-cost 999"
             }
         },
-        .dtls = std::nullopt,
+        .dtls = Dtls{
+            .setup = Setup::kActive,
+            .fingerprint_sha256 = "6B:E1:D7:60:D1:71:54:F5:54:95:95:09:28:E3:DF:FD:83:12:71:EA:D6:0C:D8:C2:2E:F8:CB:1C:F7:55:E1:6B"
+        },
         .medias = {
             Media{
                 .type = MediaType::kAudio,

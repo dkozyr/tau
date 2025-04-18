@@ -21,6 +21,8 @@ bool OnAttributeCandidate(Sdp& sdp, const std::string_view& value);
 bool OnAttributeIceUfrag(Sdp& sdp, const std::string_view& value);
 bool OnAttributeIcePwd(Sdp& sdp, const std::string_view& value);
 bool OnAttributeIceOptions(Sdp& sdp, const std::string_view& value);
+bool OnAttributeSetup(Sdp& sdp, const std::string_view& value);
+bool OnAttributeFingerprint(Sdp& sdp, const std::string_view& value);
 
 std::optional<Sdp> ParseSdp(std::string_view sdp_str) {
     Sdp sdp;
@@ -43,6 +45,8 @@ std::optional<Sdp> ParseSdp(std::string_view sdp_str) {
                 else if(attr_type == "ice-ufrag")   { return OnAttributeIceUfrag(sdp, attr_value); }
                 else if(attr_type == "ice-pwd")     { return OnAttributeIcePwd(sdp, attr_value); }
                 else if(attr_type == "ice-options") { return OnAttributeIceOptions(sdp, attr_value); }
+                else if(attr_type == "setup")       { return OnAttributeSetup(sdp, attr_value); }
+                else if(attr_type == "fingerprint") { return OnAttributeFingerprint(sdp, attr_value); }
             }
             return true;
         });
@@ -163,6 +167,39 @@ bool OnAttributeIceOptions(Sdp& sdp, const std::string_view& value) {
         sdp.ice = Ice{};
     }
     sdp.ice->trickle = (value == "trickle");
+    return true;
+}
+
+bool OnAttributeSetup(Sdp& sdp, const std::string_view& value) {
+    if(!sdp.dtls) {
+        sdp.dtls = Dtls{};
+    }
+    if(value == "actpass") {
+        sdp.dtls->setup = Setup::kActpass;
+    } else if(value == "active") {
+        sdp.dtls->setup = Setup::kActive;
+    } else if(value == "passive") {
+        sdp.dtls->setup = Setup::kPassive;
+    } else if(value == "holdconn") {
+        sdp.dtls->setup = Setup::kHoldconn;
+    } else {
+        return false;
+    }
+    return true;
+}
+
+bool OnAttributeFingerprint(Sdp& sdp, const std::string_view& value) {
+    if(!sdp.dtls) {
+        sdp.dtls = Dtls{};
+    }
+    auto pos = value.find(' ');
+    if(pos == std::string::npos) {
+        return false;
+    }
+    const auto func = value.substr(0, pos);
+    if(func == "sha-256") {
+        sdp.dtls->fingerprint_sha256 = value.substr(pos + 1);
+    }
     return true;
 }
 
