@@ -16,4 +16,5 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR})
 
+target_link_libraries(${PROJECT_NAME} common)
 target_link_libraries(${PROJECT_NAME} OpenSSL::Crypto OpenSSL::SSL)

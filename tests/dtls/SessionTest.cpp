@@ -86,8 +86,8 @@ public:
     }
 
 protected:
-    Certificate _client_certificate;
-    Certificate _server_certificate;
+    crypto::Certificate _client_certificate;
+    crypto::Certificate _server_certificate;
 
     std::optional<Session> _client;
     std::optional<Session> _server;
@@ -218,7 +218,7 @@ TEST_F(SessionTest, DISABLED_FailOnPacketLoss_BigTimeout) {
 }
 
 TEST_F(SessionTest, WrongRemoteCertificate) {
-    Certificate unknown_certificate;
+    crypto::Certificate unknown_certificate;
     _client_options.remote_peer_cert_digest = unknown_certificate.GetDigestSha256String();
     _server_options.remote_peer_cert_digest = _client_certificate.GetDigestSha256String();
     Init();

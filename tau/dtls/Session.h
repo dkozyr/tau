@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tau/dtls/Certificate.h"
+#include "tau/crypto/Certificate.h"
 #include "tau/memory/Buffer.h"
 #include <openssl/ssl.h>
 #include <vector>
@@ -41,7 +41,7 @@ public:
 
     struct Dependencies {
         Allocator& udp_allocator;
-        Certificate& certificate;
+        crypto::Certificate& certificate;
     };
 
     struct Options{
