@@ -4,6 +4,9 @@
 #include <boost/asio/strand.hpp>
 #include <boost/asio/ip/udp.hpp>
 #include <boost/asio/ip/tcp.hpp>
+#include <boost/beast/core.hpp>
+#include <boost/beast/http.hpp>
+#include <boost/beast/version.hpp>
 #include <boost/system/error_code.hpp>
 #include <functional>
 #include <memory>
@@ -22,5 +25,11 @@ using IpAddress = asio_ip::address;
 using IpAddressV4 = asio_ip::address_v4;
 using IpAddressV6 = asio_ip::address_v6;
 using Endpoint = asio_udp::endpoint;
+
+namespace beast = boost::beast;
+namespace beast_http = beast::http;
+using beast_ec = beast::error_code;
+using beast_request = beast_http::request<beast_http::dynamic_body>;
+using beast_response = beast_http::response<beast_http::dynamic_body>;
 
 }
