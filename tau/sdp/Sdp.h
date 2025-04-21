@@ -16,5 +16,6 @@ struct Sdp {
 };
 
 std::optional<Sdp> ParseSdp(std::string_view sdp_str);
+std::string WriteSdp(const Sdp& sdp);
 
 }

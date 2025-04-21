@@ -2,6 +2,7 @@
 #include "tau/sdp/Reader.h"
 #include "tau/sdp/line/Media.h"
 #include "tau/sdp/line/Attribute.h"
+#include "tau/sdp/line/Originator.h"
 #include "tau/sdp/line/attribute/Rtpmap.h"
 #include "tau/sdp/line/attribute/Fmtp.h"
 #include "tau/sdp/line/attribute/Extmap.h"
@@ -56,14 +57,63 @@ std::optional<Sdp> ParseSdp(std::string_view sdp_str) {
     return sdp;
 }
 
+std::string WriteSdp(const Sdp& sdp) {
+    std::string output = "v=0\n";
+    output += "o=" + OriginatorWriter::Write("IP4", "127.0.0.1") + "\n";
+    output += "s=-\n";
+    output += "t=0 0\n";
+    if(!sdp.bundle_mids.empty()) {
+        output += "a=group:BUNDLE";
+        for(auto& mid : sdp.bundle_mids) {
+            output += " " + mid;
+        }
+        output += "\n";
+    }
+    for(auto& media : sdp.medias) {
+        switch(media.type) {
+            case MediaType::kApplication:
+                output += "m=" + MediaWriter::Write(media.type, 9, "UDP/DTLS/SCTP", {});
+                output += " webrtc-datachannel\n";
+                output += "a=sctp-port:5000\n";
+                break;
+            default:
+                break; //TODO: fix it
+        }
+        output += "c=IN IP4 0.0.0.0\n";
+        output += "a=mid:" + media.mid + "\n";
+        if(sdp.ice) {
+            output += "a=" + AttributeWriter::Write("ice-ufrag", sdp.ice->ufrag) + "\n";
+            output += "a=" + AttributeWriter::Write("ice-pwd", sdp.ice->pwd) + "\n";
+            if(sdp.ice->trickle) {
+                output += "a=" + AttributeWriter::Write("ice-options", "trickle") + "\n";
+            }
+            for(auto& candidate : sdp.ice->candidates) {
+                output += "a=" + AttributeWriter::Write("candidate", candidate) + "\n";
+            }
+        }
+        if(sdp.dtls) {
+            if(sdp.dtls->setup) {
+                output += "a=" + AttributeWriter::Write("setup", ToString(*sdp.dtls->setup)) + "\n";
+            }
+            output += "a=" + AttributeWriter::Write("fingerprint", "sha-256 " + sdp.dtls->fingerprint_sha256) + "\n";
+        }
+    }
+    return output;
+}
+
 bool OnMedia(Sdp& sdp, const std::string_view& value) {
     if(!MediaReader::Validate(value)) {
         return false;
     }
 
+    const auto media_type = MediaReader::GetType(value);
     sdp.medias.push_back(Media{
-        .type = MediaReader::GetType(value)
+        .type = media_type
     });
+    if(media_type == MediaType::kApplication) {
+        return true;
+    }
+
     auto fmts = MediaReader::GetFmts(value);
     auto& codecs = sdp.medias.back().codecs;
     for(auto pt : fmts) {

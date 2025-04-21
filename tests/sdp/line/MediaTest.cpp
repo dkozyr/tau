@@ -7,7 +7,7 @@ TEST(MediaReaderTest, Validate) {
     ASSERT_TRUE(MediaReader::Validate("audio 0 RTP/AVP 96"));
     ASSERT_TRUE(MediaReader::Validate("video 1 RTP/AVP 96 97 98 99 100 101"));
     ASSERT_TRUE(MediaReader::Validate("text 65535 RTP/AVP 96"));
-    ASSERT_TRUE(MediaReader::Validate("application 0 RTP/AVP 96"));
+    ASSERT_TRUE(MediaReader::Validate("application 0 RTP/AVP webrtc-datachannel"));
     ASSERT_TRUE(MediaReader::Validate("message 0 RTP/AVP 127"));
     ASSERT_TRUE(MediaReader::Validate("video 0 ANY/PROFILE/HERE 96"));
 

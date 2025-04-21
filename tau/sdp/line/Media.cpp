@@ -34,13 +34,17 @@ bool MediaReader::Validate(const std::string_view& value) {
     if(tokens.size() < 4) {
         return false;
     }
-    if(MediaType::kUnknown == GetMediaTypeByName(tokens[0])) {
+    const auto media_type = GetMediaTypeByName(tokens[0]);
+    if(MediaType::kUnknown == media_type) {
         return false;
     }
     if(!StringToUnsigned<uint16_t>(tokens[1])) {
         return false; // format <port>/<number of ports> isn't supported
     }
 
+    if(MediaType::kApplication == media_type) {
+        return tokens[3] == "webrtc-datachannel";
+    }
     for(size_t i = 3; i < tokens.size(); ++i) {
         auto fmt = StringToUnsigned<uint8_t>(tokens[i]);
         if(!fmt || (*fmt > 127)) {
@@ -53,12 +57,12 @@ bool MediaReader::Validate(const std::string_view& value) {
 std::string MediaWriter::Write(MediaType type, uint16_t port, std::string_view protocol, const std::vector<uint8_t>& fmts) {
     std::stringstream ss;
     switch(type) {
-        case MediaType::kAudio: ss << "audio"; break;
-        case MediaType::kVideo: ss << "video"; break;
-        case MediaType::kText: ss << "text"; break;
+        case MediaType::kAudio:       ss << "audio"; break;
+        case MediaType::kVideo:       ss << "video"; break;
+        case MediaType::kText:        ss << "text"; break;
         case MediaType::kApplication: ss << "application"; break;
-        case MediaType::kMessage: ss << "message"; break;
-        case MediaType::kUnknown: ss << "-"; break;
+        case MediaType::kMessage:     ss << "message"; break;
+        case MediaType::kUnknown:     ss << "-"; break;
     }
     ss << " " << port << " " << protocol;
     for(auto pt : fmts) {
