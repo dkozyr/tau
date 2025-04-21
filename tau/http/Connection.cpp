@@ -17,8 +17,6 @@ Connection::Connection(Socket socket, RequestCallback request_callback)
 }
 
 Connection::~Connection() {
-    TAU_LOG_INFO("");
-
     beast_ec ec;
     _timeout.cancel(ec);
 
@@ -131,12 +129,8 @@ void Connection::OnShutdown(beast_ec ec) {
 void Connection::OnTimeout(beast_ec ec) {
     if(!ec) {
         std::visit(overloaded{
-            [&ec](SslSocketPtr& socket) {
-                socket->lowest_layer().close(ec);
-            },
-            [&ec](std::shared_ptr<asio_tcp::socket>& socket) {
-                socket->close(ec);
-            }
+            [&ec](SslSocketPtr& socket)                      { socket->lowest_layer().close(ec); },
+            [&ec](std::shared_ptr<asio_tcp::socket>& socket) { socket->close(ec); }
         }, _socket);
 
         _timeout.cancel(ec);

@@ -57,7 +57,6 @@ void Client::OnResolve(boost_ec ec, asio_tcp::resolver::results_type results) {
 }
 
 void Client::OnConnect(boost_ec ec) {
-    TAU_LOG_INFO("");
     if(ec) {
         LOG_WARNING << "ec: " << ec << ", " << ec.message();
         _timeout.cancel(ec);
@@ -73,7 +72,6 @@ void Client::OnConnect(boost_ec ec) {
 }
 
 void Client::OnHandshake(boost_ec ec) {
-    TAU_LOG_INFO("");
     if(ec) {
         TAU_LOG_WARNING("ec: " << ec << ", " << ec.message());
         Shutdown();

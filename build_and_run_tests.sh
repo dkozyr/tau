@@ -20,4 +20,5 @@ ninja -j 4
 ./bin/stun-test-app
 ./bin/ice-test-app
 ./bin/rtsp-test-app
+./bin/webrtc-test-app
 ./bin/video-test-app
