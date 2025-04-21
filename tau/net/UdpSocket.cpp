@@ -5,7 +5,7 @@ namespace tau::net {
 UdpSocket::UdpSocket(Options&& options)
     : _allocator(options.allocator)
     , _executor(std::move(options.executor))
-    , _socket(_executor, {asio_ip::make_address(options.local_address.address), options.local_address.port.value_or(0)})
+    , _socket(_executor, {asio_ip::make_address(options.local_address), options.local_port.value_or(0)})
     , _ctx(Context{.buffer = Buffer::Create(_allocator)}) {
     _socket.non_blocking(true);
 }

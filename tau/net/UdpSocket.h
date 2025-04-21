@@ -1,6 +1,5 @@
 #pragma once
 
-#include "tau/net/IpAddress.h"
 #include "tau/memory/Buffer.h"
 #include "tau/asio/Common.h"
 
@@ -11,7 +10,8 @@ public:
     struct Options {
         Allocator& allocator;
         Executor executor;
-        IpAddress local_address;
+        std::string local_address;
+        std::optional<uint16_t> local_port = std::nullopt;
     };
 
     using RecvCallback = std::function<void(Buffer&& packet, asio_udp::endpoint remote_endpoint)>;

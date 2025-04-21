@@ -77,7 +77,7 @@ void Session::InitSockets() {
     auto udp_sockets_pair = net::CreateUdpSocketsPair(net::UdpSocket::Options{
         .allocator = _udp_allocator,
         .executor = _executor,
-        .local_address = net::IpAddress{.address = "0.0.0.0"}
+        .local_address = "0.0.0.0"
     });
     _socket_rtp = std::move(udp_sockets_pair.first);
     _socket_rtcp = std::move(udp_sockets_pair.second);

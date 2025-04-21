@@ -14,7 +14,7 @@ inline UdpSocketsPair CreateUdpSocketsPair(UdpSocket::Options&& options, size_t 
             const auto port1 = socket1->GetLocalEndpoint().port();
 
             const bool odd_port = (port1 % 2 == 1);
-            options.local_address.port = port1 + (odd_port ? -1 : +1);
+            options.local_port = port1 + (odd_port ? -1 : +1);
             auto socket2 = UdpSocket::Create(UdpSocket::Options{options});
             if(odd_port) {
                 std::swap(socket1, socket2);
@@ -22,7 +22,7 @@ inline UdpSocketsPair CreateUdpSocketsPair(UdpSocket::Options&& options, size_t 
             return {std::move(socket1), std::move(socket2)};
         } catch(const std::exception&) {
             // perhaps next attempt will be successful
-            options.local_address.port.reset();
+            options.local_port.reset();
         }
     }
     return {nullptr, nullptr};

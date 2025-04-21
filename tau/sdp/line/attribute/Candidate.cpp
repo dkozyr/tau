@@ -67,7 +67,10 @@ std::string CandidateWriter::Write(uint32_t foundation, uint16_t component_id,
         uint16_t port, std::string_view type, std::string_view ext_parameters) {
     std::stringstream ss;
     ss << foundation << " " << component_id << " " << transport << " " << priority
-       << " " << address << " " << port << " typ " << type << " " << ext_parameters;
+       << " " << address << " " << port << " typ " << type;
+    if(!ext_parameters.empty()) {
+        ss << " " << ext_parameters;
+    }
     return ss.str();
 }
 

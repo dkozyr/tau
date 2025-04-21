@@ -9,6 +9,9 @@ namespace tau::net {
 
 class UdpSocketTest : public ::testing::Test {
 public:
+    static inline const std::string kLocalHost = "127.0.0.1";
+
+public:
     UdpSocketTest()
         : _io(std::thread::hardware_concurrency())
     {}
@@ -48,7 +51,7 @@ TEST_F(UdpSocketTest, Basic) {
         UdpSocket::Options{
             .allocator = g_udp_allocator,
             .executor = _io.GetExecutor(),
-            .local_address = IpAddress{.address = kLocalHost}
+            .local_address = kLocalHost
         });
     Event event1;
     socket1->SetRecvCallback([&](Buffer&& packet, asio_udp::endpoint remote_endpoint) {
@@ -61,7 +64,7 @@ TEST_F(UdpSocketTest, Basic) {
         UdpSocket::Options{
             .allocator = g_udp_allocator,
             .executor = _io.GetExecutor(),
-            .local_address = IpAddress{.address = kLocalHost}
+            .local_address = kLocalHost
         });
     Event event2;
     socket2->SetRecvCallback([&](Buffer&& packet, asio_udp::endpoint remote_endpoint) {
@@ -81,7 +84,7 @@ TEST_F(UdpSocketTest, PortsPair) {
     auto [socket1, socket2] = CreateUdpSocketsPair(UdpSocket::Options{
         .allocator = g_udp_allocator,
         .executor = _io.GetExecutor(),
-        .local_address = IpAddress{.address = kLocalHost}
+        .local_address = kLocalHost
     });
     auto endpoint1 = socket1->GetLocalEndpoint();
     auto endpoint2 = socket2->GetLocalEndpoint();
@@ -98,7 +101,7 @@ TEST_F(UdpSocketTest, DISABLED_MANUAL_Load) {
         auto [socket1, socket2] = CreateUdpSocketsPair(UdpSocket::Options{
             .allocator = g_udp_allocator,
             .executor = _io.GetExecutor(),
-            .local_address = IpAddress{.address = kLocalHost}
+            .local_address = kLocalHost
         });
 
         Event event1;
