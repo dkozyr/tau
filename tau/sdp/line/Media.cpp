@@ -60,9 +60,11 @@ std::string MediaWriter::Write(MediaType type, uint16_t port, std::string_view p
         case MediaType::kAudio:       ss << "audio"; break;
         case MediaType::kVideo:       ss << "video"; break;
         case MediaType::kText:        ss << "text"; break;
-        case MediaType::kApplication: ss << "application"; break;
         case MediaType::kMessage:     ss << "message"; break;
         case MediaType::kUnknown:     ss << "-"; break;
+        case MediaType::kApplication:
+            ss << "application 9 UDP/DTLS/SCTP webrtc-datachannel";
+            return ss.str();
     }
     ss << " " << port << " " << protocol;
     for(auto pt : fmts) {

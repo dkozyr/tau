@@ -72,8 +72,7 @@ std::string WriteSdp(const Sdp& sdp) {
     for(auto& media : sdp.medias) {
         switch(media.type) {
             case MediaType::kApplication:
-                output += "m=" + MediaWriter::Write(media.type, 9, "UDP/DTLS/SCTP", {});
-                output += " webrtc-datachannel\n";
+                output += "m=" + MediaWriter::Write(MediaType::kApplication, 9, "UDP/DTLS/SCTP", {}) + "\n";
                 output += "a=sctp-port:5000\n";
                 break;
             default:
