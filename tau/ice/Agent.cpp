@@ -94,6 +94,10 @@ void Agent::Recv(size_t socket_idx, Endpoint remote, Buffer&& message) {
     _check_list.Recv(socket_idx, remote, std::move(message));
 }
 
+const CandidatePair& Agent::GetBestCandidatePair() const {
+    return _check_list.GetBestCandidatePair();
+}
+
 void Agent::InitStunClients(const std::vector<Endpoint>& stun_servers) {
     for(auto& endpoint : stun_servers) {
         for(size_t i = 0; i < _interfaces.size(); ++i) {

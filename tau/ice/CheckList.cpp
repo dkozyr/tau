@@ -97,9 +97,11 @@ void CheckList::RecvRemoteCandidate(std::string candidate) {
         return;
     }
     if(sdp::attribute::CandidateReader::GetTransport(candidate) != "udp") {
+        TAU_LOG_WARNING(_log_ctx << "Unsupported transport: " << sdp::attribute::CandidateReader::GetTransport(candidate));
         return;
     }
     if(sdp::attribute::CandidateReader::GetComponentId(candidate) != 1) {
+        TAU_LOG_WARNING(_log_ctx << "Wrong component transport: " << sdp::attribute::CandidateReader::GetComponentId(candidate));
         return;
     }
     auto address = sdp::attribute::CandidateReader::GetAddress(candidate);
@@ -148,6 +150,10 @@ State CheckList::GetState() const {
     if(pair.state == CandidatePair::State::kNominated)  { return State::kCompleted; }
     if(pair.state == CandidatePair::State::kFailed)     { return State::kFailed; }
     return State::kRunning;
+}
+
+const CandidatePair& CheckList::GetBestCandidatePair() const {
+    return _pairs.front();
 }
 
 void CheckList::Nominating() {
@@ -245,7 +251,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
             case AttributeType::kIceControlled:  return (_role == Role::kControlling);
             case AttributeType::kIceControlling: return (_role == Role::kControlled);
             case AttributeType::kMessageIntegrity:
-                return MessageIntegrityReader::Validate(attr, view, _credentials.local.password);
+                return MessageIntegrityReader::Validate(attr, view, _credentials.remote.password);
             case AttributeType::kUseCandidate:
                 nominating = true;
                 break;
@@ -275,6 +281,8 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
                 TAU_LOG_WARNING(_log_ctx << "Ignore nomination, wrong role");
             }
         }
+    } else {
+        TAU_LOG_WARNING(_log_ctx << "Ignore response, ok: " << ok << ", transaction hash: " << HeaderReader::GetTransactionIdHash(view));
     }
 }
 
@@ -341,13 +349,13 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
         }
         XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress,
             remote.address().to_v4().to_uint(), remote.port());
-        MessageIntegrityWriter::Write(writer, _credentials.remote.password);
+        MessageIntegrityWriter::Write(writer, _credentials.local.password);
         FingerprintWriter::Write(writer);
         message.SetSize(writer.GetSize());
 
         _send_callback(socket_idx, remote, std::move(message));
     } else {
-        TAU_LOG_WARNING(_log_ctx << "Ignore malformed message, transcation hash: " << HeaderReader::GetTransactionIdHash(view));
+        TAU_LOG_WARNING(_log_ctx << "Ignore malformed message, transaction hash: " << HeaderReader::GetTransactionIdHash(view));
     }
 }
 

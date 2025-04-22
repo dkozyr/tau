@@ -49,6 +49,7 @@ public:
     void Recv(size_t socket_idx, Endpoint remote, Buffer&& message);
 
     State GetState() const;
+    const CandidatePair& GetBestCandidatePair() const;
 
 private:
     void Nominating();

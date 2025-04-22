@@ -43,6 +43,8 @@ public:
     void RecvRemoteCandidate(std::string candidate);
     void Recv(size_t socket_idx, Endpoint remote, Buffer&& message);
 
+    const CandidatePair& GetBestCandidatePair() const;
+
 private:
     void InitStunClients(const std::vector<Endpoint>& stun_servers);
     void InitTurnClients(const std::unordered_map<Endpoint, PeerCredentials>& turn_servers);
