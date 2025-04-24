@@ -3,6 +3,7 @@
 #include "tau/http/Client.h"
 #include "tau/asio/ThreadPool.h"
 #include "tau/common/File.h"
+#include "tau/common/Json.h"
 #include "tests/lib/Common.h"
 
 namespace tau::webrtc {
@@ -24,6 +25,9 @@ protected:
                 .clock = _clock,
                 .executor = _io.GetExecutor(),
                 .udp_allocator = g_udp_allocator
+            },
+            PeerConnection::Options{
+                .log_ctx = {}
             }
         );
         return _pc->ProcessSdpOffer(offer);
@@ -77,8 +81,27 @@ TEST_F(PeerConnectionTest, DISABLED_MANUAL_Localhost) {
 
                     callback(std::move(response));
                 } else if((request.method() == beast_http::verb::post) && (target == "/candidate")) {
-                    auto candidate = beast::buffers_to_string(request.body().data());
-                    TAU_LOG_INFO("candidate: " << candidate);
+                    auto candidates = beast::buffers_to_string(request.body().data());
+                    boost_ec ec;
+                    auto parsed = Json::parse(candidates, ec);
+                    if(!ec) {
+                        constexpr std::string_view kCandidatePrefix = "candidate:";
+                        if(parsed.is_array()) {
+                            for(auto& element : parsed.get_array()) {
+                                if(element.is_string()) {
+                                    const auto candidate = boost::json::value_to<std::string>(element);
+                                    //TODO: fix processing mDNS candidates
+                                    if(IsPrefix(candidate, kCandidatePrefix) && (candidate.find(".local") == std::string::npos)) {
+                                        _pc->SetRemoteIceCandidate(candidate.substr(kCandidatePrefix.size()));
+                                    } else {
+                                        TAU_LOG_WARNING("Skipped candidate: " << candidate);
+                                    }
+                                } else {
+                                    TAU_LOG_WARNING("Skipped element: " << element);
+                                }
+                            }
+                        }
+                    }
                     
                     beast_response response{beast_http::status::ok, request.version()};
                     auto local_ice_candidates = _pc->GetLocalCandidates();

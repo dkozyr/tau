@@ -6,6 +6,7 @@
 #include <vector>
 #include <functional>
 #include <optional>
+#include <ostream>
 
 namespace tau::dtls {
 
@@ -93,5 +94,15 @@ private:
     Callback _recv_callback;
     StateCallback _state_callback;
 };
+
+inline std::ostream& operator<<(std::ostream& s, const Session::State& x) {
+    switch(x) {
+        case Session::State::kWaiting:    return s << "waiting";
+        case Session::State::kConnecting: return s << "connecting";
+        case Session::State::kConnected:  return s << "connected";
+        case Session::State::kFailed:     return s << "failed";
+    }
+    return s << "unknown";
+}
 
 }
