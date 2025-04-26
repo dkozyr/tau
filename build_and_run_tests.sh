@@ -18,6 +18,7 @@ ninja -j 4
 ./bin/rtp-session-test-app
 ./bin/sdp-test-app
 ./bin/stun-test-app
+./bin/mdns-test-app
 ./bin/ice-test-app
 ./bin/rtsp-test-app
 ./bin/webrtc-test-app
