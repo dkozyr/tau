@@ -12,6 +12,7 @@ public:
         Executor executor;
         std::string local_address;
         std::optional<uint16_t> local_port = std::nullopt;
+        std::string multicast_address = {};
     };
 
     using RecvCallback = std::function<void(Buffer&& packet, asio_udp::endpoint remote_endpoint)>;

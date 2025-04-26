@@ -5,8 +5,19 @@ namespace tau::net {
 UdpSocket::UdpSocket(Options&& options)
     : _allocator(options.allocator)
     , _executor(std::move(options.executor))
-    , _socket(_executor, {asio_ip::make_address(options.local_address), options.local_port.value_or(0)})
+    , _socket(_executor)
     , _ctx(Context{.buffer = Buffer::Create(_allocator)}) {
+    if(options.multicast_address.empty()) {
+        Endpoint local_endpoint{asio_ip::make_address(options.local_address), options.local_port.value_or(0)};
+        _socket.open(local_endpoint.protocol());
+        _socket.bind(local_endpoint);
+    } else {
+        Endpoint local_endpoint(IpAddressV4::any(), options.local_port.value_or(0));
+        _socket.open(local_endpoint.protocol());
+        _socket.set_option(asio_udp::socket::reuse_address(true));
+        _socket.bind(local_endpoint);
+        _socket.set_option(asio_ip::multicast::join_group(IpAddress::from_string(options.multicast_address)));
+    }
     _socket.non_blocking(true);
 }
 

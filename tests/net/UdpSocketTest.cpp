@@ -54,7 +54,7 @@ TEST_F(UdpSocketTest, Basic) {
             .local_address = kLocalHost
         });
     Event event1;
-    socket1->SetRecvCallback([&](Buffer&& packet, asio_udp::endpoint remote_endpoint) {
+    socket1->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
         LOG_INFO << "[socket1] Received from: " << remote_endpoint << ", size: " << packet.GetSize();
         event1.Set();
         EXPECT_NO_FATAL_FAILURE(AssertPacket(packet, kPacketSize2));
@@ -67,7 +67,7 @@ TEST_F(UdpSocketTest, Basic) {
             .local_address = kLocalHost
         });
     Event event2;
-    socket2->SetRecvCallback([&](Buffer&& packet, asio_udp::endpoint remote_endpoint) {
+    socket2->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
         LOG_INFO << "[socket2] Received from: " << remote_endpoint << ", size: " << packet.GetSize();
         event2.Set();
         EXPECT_NO_FATAL_FAILURE(AssertPacket(packet, kPacketSize1));
@@ -93,6 +93,23 @@ TEST_F(UdpSocketTest, PortsPair) {
     ASSERT_EQ(endpoint1.port() + 1, endpoint2.port());
 }
 
+TEST_F(UdpSocketTest, DISABLED_MANUAL_Multicast) {
+    auto mdns_socket = UdpSocket::Create(
+        UdpSocket::Options{
+            .allocator = g_udp_allocator,
+            .executor = _io.GetExecutor(),
+            .local_address = {},
+            .local_port = 5353,                 // mDns port
+            .multicast_address = "224.0.0.251"  // mDns IPv4
+        });
+
+    mdns_socket->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
+        TAU_LOG_INFO("Multicast remote endpoint: " << remote_endpoint << ", packet size: " << packet.GetSize());
+    });
+
+    Event().WaitFor(600s);
+}
+
 TEST_F(UdpSocketTest, DISABLED_MANUAL_Load) {
     constexpr auto kPacketSize1 = 1234;
     constexpr auto kPacketSize2 = 800;
@@ -105,12 +122,12 @@ TEST_F(UdpSocketTest, DISABLED_MANUAL_Load) {
         });
 
         Event event1;
-        socket1->SetRecvCallback([&](Buffer&&, asio_udp::endpoint) {
+        socket1->SetRecvCallback([&](Buffer&&, Endpoint) {
             event1.Set();
         });
 
         Event event2;
-        socket2->SetRecvCallback([&](Buffer&&, asio_udp::endpoint) {
+        socket2->SetRecvCallback([&](Buffer&&, Endpoint) {
             event2.Set();
         });
 
