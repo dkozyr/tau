@@ -2,8 +2,7 @@
 
 #include "tau/stun/Header.h"
 #include "tau/stun/AttributeType.h"
-#include "tau/memory/BufferView.h"
-#include <string_view>
+#include "tau/memory/Writer.h"
 
 namespace tau::stun {
 
@@ -21,13 +20,13 @@ public:
     void Write(uint64_t value);
     void Write(std::string_view view);
 
-    size_t GetSize() const { return _size; }
+    size_t GetSize() const;
     size_t GetAvailableSize() const;
-    BufferViewConst GetView() { return BufferViewConst{.ptr = _view.ptr, .size = _size}; }
+    BufferViewConst GetView();
 
 private:
+    tau::Writer _writer;
     BufferView _view;
-    size_t _size = 0;
 };
 
 }

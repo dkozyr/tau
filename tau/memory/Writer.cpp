@@ -1,9 +1,9 @@
-#include "tau/mdns/Writer.h"
+#include "tau/memory/Writer.h"
 #include "tau/common/NetToHost.h"
 #include <cstring>
 #include <cassert>
 
-namespace tau::mdns {
+namespace tau {
 
 Writer::Writer(BufferView view) : _view(view) {
 }
@@ -36,6 +36,11 @@ void Writer::Write(std::string_view view) {
     assert(_size + view.size() <= _view.size);
     std::memcpy(_view.ptr + _size, view.data(), view.size());
     _size += view.size();
+}
+
+void Writer::MoveForward(size_t offset) {
+    assert(_size + offset <= _view.size);
+    _size += offset;
 }
 
 size_t Writer::GetAvailableSize() const {

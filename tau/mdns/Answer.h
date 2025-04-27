@@ -1,7 +1,7 @@
 #pragma once
 
-#include "tau/mdns/Writer.h"
 #include "tau/mdns/Header.h"
+#include "tau/memory/Writer.h"
 #include <string>
 #include <optional>
 

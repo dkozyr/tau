@@ -209,7 +209,7 @@ void CheckList::ProcessConnectivityChecks(size_t socket_idx) {
 void CheckList::SendStunRequest(size_t socket_idx, size_t pair_id, Endpoint remote, bool nominating) {
     auto stun_request = Buffer::Create(_deps.udp_allocator);
     auto view = stun_request.GetViewWithCapacity();
-    Writer writer(view, kBindingRequest);
+    stun::Writer writer(view, kBindingRequest);
     auto& transaction_tracker = _transcation_trackers.at(socket_idx);
     transaction_tracker.SetTransactionId(view, pair_id);
 
@@ -343,7 +343,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
         }
 
         // prepare response and send
-        Writer writer(message.GetViewWithCapacity(), kBindingResponse);
+        stun::Writer writer(message.GetViewWithCapacity(), kBindingResponse);
         if(nominating) {
             UseCandidateWriter::Write(writer);
         }

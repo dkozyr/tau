@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tau/mdns/Writer.h"
+#include "tau/memory/Writer.h"
 #include <cstdint>
 #include <cstddef>
 
