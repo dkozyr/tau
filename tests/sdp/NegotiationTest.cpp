@@ -122,8 +122,8 @@ TEST_F(NegotiationTest, Video) {
         .codecs = {
             {100, Codec{.index = 0, .name = "unknown", .clock_rate = 90000}},
             {101, Codec{.index = 1, .name = "nothing", .clock_rate = 90000}},
-            {102, Codec{.index = 2, .name = "H264", .clock_rate = 90000, .format = "profile-level-id=62002a"}},
-            {103, Codec{.index = 3, .name = "H264", .clock_rate = 90000, .format = "profile-level-id=4d0029"}},
+            {102, Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kPli, .format = "profile-level-id=62002a"}},
+            {103, Codec{.index = 3, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = "profile-level-id=4d0029"}},
         },
         .ssrc = g_random.Int<uint32_t>()
     };
@@ -141,7 +141,7 @@ TEST_F(NegotiationTest, Video) {
     ASSERT_EQ(0, codec.index);
     ASSERT_EQ("H264", codec.name);
     ASSERT_EQ(90000, codec.clock_rate);
-    ASSERT_EQ(kRtcpFbDefault, codec.rtcp_fb); //TODO: negotiate
+    ASSERT_EQ(RtcpFb::kNack, codec.rtcp_fb);
     ASSERT_EQ("level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d0029", codec.format);
 }
 
@@ -231,6 +231,17 @@ TEST_F(NegotiationTest, Direction) {
     ASSERT_EQ(Direction::kInactive, SelectDirection(Direction::kInactive, Direction::kRecv));
     ASSERT_EQ(Direction::kInactive, SelectDirection(Direction::kInactive, Direction::kSend));
     ASSERT_EQ(Direction::kInactive, SelectDirection(Direction::kInactive, Direction::kInactive));
+}
+
+TEST_F(NegotiationTest, RtcpFb) {
+    ASSERT_EQ(RtcpFb::kNone, SelectRtcpFb(kRtcpFbDefault, RtcpFb::kNone));
+    ASSERT_EQ(RtcpFb::kNack, SelectRtcpFb(kRtcpFbDefault, RtcpFb::kNack));
+    ASSERT_EQ(RtcpFb::kPli,  SelectRtcpFb(kRtcpFbDefault, RtcpFb::kPli));
+    ASSERT_EQ(RtcpFb::kFir,  SelectRtcpFb(kRtcpFbDefault, RtcpFb::kFir));
+
+    ASSERT_EQ(RtcpFb::kNack | RtcpFb::kPli, SelectRtcpFb(kRtcpFbDefault, RtcpFb::kNack | RtcpFb::kPli));
+
+    ASSERT_EQ(RtcpFb::kNone,  SelectRtcpFb(RtcpFb::kNack, RtcpFb::kPli | RtcpFb::kFir));
 }
 
 }

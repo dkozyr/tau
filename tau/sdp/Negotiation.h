@@ -9,6 +9,7 @@ inline constexpr std::string_view kH264BaseProfileLevel1_0{"42000a"};
 
 std::optional<Media> SelectMedia(const Media& remote, const Media& local);
 Direction SelectDirection(Direction remote, Direction local);
+uint8_t SelectRtcpFb(uint8_t remote, uint8_t local);
 
 // H264 specific
 CodecsMap FilterH264Codec(const CodecsMap& origin, bool asymmetry_allowed);

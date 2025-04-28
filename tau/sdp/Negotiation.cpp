@@ -34,6 +34,10 @@ Direction SelectDirection(Direction remote, Direction local) {
     return static_cast<Direction>((send ? Direction::kSend : 0) | (receive ? Direction::kRecv : 0));
 }
 
+uint8_t SelectRtcpFb(uint8_t remote, uint8_t local) {
+    return remote & local;
+}
+
 void SelectAudioMedia(Media& result, const Media& remote, const Media& local) {
     const auto pts = GetPtWithPriority(local.codecs);
     for(auto& pt_with_priority : pts) {
@@ -44,8 +48,8 @@ void SelectAudioMedia(Media& result, const Media& remote, const Media& local) {
                     .index = 0,
                     .name = remote_codec.name,
                     .clock_rate = remote_codec.clock_rate,
-                    .rtcp_fb = remote_codec.rtcp_fb, //TODO: negotiate?
-                    .format = {} //TODO: negotiate?
+                    .rtcp_fb = SelectRtcpFb(remote_codec.rtcp_fb, codec.rtcp_fb),
+                    .format = {}
                 }});
                 return;
             }
@@ -69,7 +73,7 @@ void SelectVideoMedia(Media& result, const Media& remote, const Media& local) {
                     .index = 0,
                     .name = remote_codec.name,
                     .clock_rate = remote_codec.clock_rate,
-                    .rtcp_fb = remote_codec.rtcp_fb, //TODO: negotiate?
+                    .rtcp_fb = SelectRtcpFb(remote_codec.rtcp_fb, codec.rtcp_fb),
                     .format = CreateH264Format(profile, level, asymmetry)
                 }});
                 return;

@@ -10,6 +10,7 @@
 namespace tau::sdp {
 
 enum RtcpFb : uint8_t {
+    kNone = 0,
     kNack = 1,
     kPli  = 2,
     kFir  = 4,
