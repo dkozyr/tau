@@ -18,6 +18,7 @@ bool OnAttributeRtpmap(Sdp& sdp, const std::string_view& value);
 bool OnAttributeFmtp(Sdp& sdp, const std::string_view& value);
 bool OnAttributeRtcpFb(Sdp& sdp, const std::string_view& value);
 bool OnAttributeGroup(Sdp& sdp, const std::string_view& value);
+bool OnAttributeSsrc(Sdp& sdp, const std::string_view& value);
 bool OnAttributeCandidate(Sdp& sdp, const std::string_view& value);
 bool OnAttributeIceUfrag(Sdp& sdp, const std::string_view& value);
 bool OnAttributeIcePwd(Sdp& sdp, const std::string_view& value);
@@ -37,11 +38,13 @@ std::optional<Sdp> ParseSdp(std::string_view sdp_str) {
                 if(attr_type == "rtpmap")           { return OnAttributeRtpmap(sdp, attr_value); }
                 else if(attr_type == "fmtp")        { return OnAttributeFmtp(sdp, attr_value); }
                 else if(attr_type == "rtcp-fb")     { return OnAttributeRtcpFb(sdp, attr_value); }
+                else if(attr_type == "sendrecv")    { sdp.medias.back().direction = Direction::kSendRecv; }
                 else if(attr_type == "sendonly")    { sdp.medias.back().direction = Direction::kSend; }
                 else if(attr_type == "recvonly")    { sdp.medias.back().direction = Direction::kRecv; }
                 else if(attr_type == "inactive")    { sdp.medias.back().direction = Direction::kInactive; }
                 else if(attr_type == "group")       { return OnAttributeGroup(sdp, attr_value); }
                 else if(attr_type == "mid")         { sdp.medias.back().mid = attr_value; }
+                else if(attr_type == "ssrc")        { return OnAttributeSsrc(sdp, attr_value); }
                 else if(attr_type == "candidate")   { return OnAttributeCandidate(sdp, attr_value); }
                 else if(attr_type == "ice-ufrag")   { return OnAttributeIceUfrag(sdp, attr_value); }
                 else if(attr_type == "ice-pwd")     { return OnAttributeIcePwd(sdp, attr_value); }
@@ -70,7 +73,14 @@ std::string WriteSdp(const Sdp& sdp) {
         output += "\n";
     }
     for(auto& media : sdp.medias) {
+        const auto pts = GetPtOrdered(media.codecs);
         switch(media.type) {
+            case MediaType::kAudio:
+                output += "m=" + MediaWriter::Write(MediaType::kAudio, 9, "UDP/TLS/RTP/SAVPF", pts) + "\n";
+                break;
+            case MediaType::kVideo:
+                output += "m=" + MediaWriter::Write(MediaType::kVideo, 9, "UDP/TLS/RTP/SAVPF", pts) + "\n";
+                break;
             case MediaType::kApplication:
                 output += "m=" + MediaWriter::Write(MediaType::kApplication, 9, "UDP/DTLS/SCTP", {}) + "\n";
                 output += "a=sctp-port:5000\n";
@@ -80,12 +90,19 @@ std::string WriteSdp(const Sdp& sdp) {
         }
         output += "c=IN IP4 0.0.0.0\n";
         output += "a=mid:" + media.mid + "\n";
+        switch(media.direction) {
+            case Direction::kSendRecv: output += "a=sendrecv\n"; break;
+            case Direction::kSend:     output += "a=send\n"; break;
+            case Direction::kRecv:     output += "a=recv\n"; break;
+            case Direction::kInactive: output += "a=inactive\n"; break;
+        }
+        output += "a=rtcp-mux\n";
         if(sdp.ice) {
-            output += "a=" + AttributeWriter::Write("ice-ufrag", sdp.ice->ufrag) + "\n";
-            output += "a=" + AttributeWriter::Write("ice-pwd", sdp.ice->pwd) + "\n";
             if(sdp.ice->trickle) {
                 output += "a=" + AttributeWriter::Write("ice-options", "trickle") + "\n";
             }
+            output += "a=" + AttributeWriter::Write("ice-ufrag", sdp.ice->ufrag) + "\n";
+            output += "a=" + AttributeWriter::Write("ice-pwd", sdp.ice->pwd) + "\n";
             for(auto& candidate : sdp.ice->candidates) {
                 output += "a=" + AttributeWriter::Write("candidate", candidate) + "\n";
             }
@@ -95,6 +112,26 @@ std::string WriteSdp(const Sdp& sdp) {
                 output += "a=" + AttributeWriter::Write("setup", ToString(*sdp.dtls->setup)) + "\n";
             }
             output += "a=" + AttributeWriter::Write("fingerprint", "sha-256 " + sdp.dtls->fingerprint_sha256) + "\n";
+        }
+        for(auto pt : pts) {
+            const auto& codec = media.codecs.at(pt);
+            const auto rtpmap_params = (codec.name == "opus") ? std::string_view{"2"} : std::string_view{};
+            output += "a=rtpmap:" + RtpmapWriter::Write(pt, codec.name, codec.clock_rate, rtpmap_params) + "\n";
+            if(codec.rtcp_fb & RtcpFb::kNack) {
+                output += "a=rtcp-fb:" + RtcpFbWriter::Write(pt, "nack") + "\n";
+            }
+            if(codec.rtcp_fb & RtcpFb::kPli) {
+                output += "a=rtcp-fb:" + RtcpFbWriter::Write(pt, "nack pli") + "\n";
+            }
+            if(codec.rtcp_fb & RtcpFb::kFir) {
+                output += "a=rtcp-fb:" + RtcpFbWriter::Write(pt, "ccm fir") + "\n";
+            }
+            if(!codec.format.empty()) {
+                output += "a=fmtp:" + FmtpWriter::Write(pt, codec.format) + "\n";
+            }
+        }
+        if(media.ssrc && !sdp.cname.empty()) {
+            output += "a=ssrc:" + std::to_string(*media.ssrc) + " cname:" + sdp.cname + "\n";
         }
     }
     return output;
@@ -171,6 +208,33 @@ bool OnAttributeGroup(Sdp& sdp, const std::string_view& value) {
         if(mids[0] == "BUNDLE") {
             for(size_t i = 1; i < mids.size(); ++i) {
                 sdp.bundle_mids.push_back(std::string{mids[i]});
+            }
+        }
+    }
+    return true;
+}
+
+bool OnAttributeSsrc(Sdp& sdp, const std::string_view& value) {
+    if(value.empty() || sdp.medias.empty()) {
+        return false;
+    }
+
+    auto values = Split(value, " ");
+    if(values.size() == 2) {
+        auto ssrc = StringToUnsigned<uint32_t>(values[0]);
+        if(!ssrc) {
+            return false;
+        }
+        auto cname_splits = Split(values[1], ":");
+        if((cname_splits.size() == 2) && (cname_splits[0] == "cname")) {
+            if(sdp.cname.empty()) {
+                sdp.cname = cname_splits[1];
+            } else if(sdp.cname != cname_splits[1]) {
+                return false;
+            }
+            auto& media = sdp.medias.back();
+            if(!media.ssrc) {
+                media.ssrc = *ssrc;
             }
         }
     }

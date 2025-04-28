@@ -15,6 +15,7 @@ enum RtcpFb : uint8_t {
     kFir  = 4,
     // kTwcc = 8, //TODO: impl transport-cc
 };
+inline constexpr uint8_t kRtcpFbDefault = RtcpFb::kNack | RtcpFb::kPli | RtcpFb::kFir;
 
 struct Codec {
     size_t index;
@@ -24,11 +25,21 @@ struct Codec {
     std::string format = {};
 };
 
+using CodecsMap = std::unordered_map<uint8_t, Codec>;
+
 struct Media {
     MediaType type;
     std::string mid = {};
     Direction direction = Direction::kSendRecv;
-    std::unordered_map<uint8_t, Codec> codecs = {};
+    CodecsMap codecs = {};
+    std::optional<uint32_t> ssrc = std::nullopt; //NOTE: should be revised for the case of several streams: video and rtx
 };
+
+struct PtWithPriority {
+    uint8_t pt;
+    size_t index;
+};
+std::vector<uint8_t> GetPtOrdered(const CodecsMap& codecs);
+std::vector<PtWithPriority> GetPtWithPriority(const CodecsMap& codecs);
 
 }

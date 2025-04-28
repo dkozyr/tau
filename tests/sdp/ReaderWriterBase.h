@@ -9,6 +9,7 @@ namespace tau::sdp {
 class ReaderWriterBase {
 protected:
     static void AssertSdp(const Sdp& target, const Sdp& actual) {
+        ASSERT_EQ(target.cname, actual.cname);
         ASSERT_EQ(target.bundle_mids.size(), actual.bundle_mids.size());
         for(size_t i = 0; i < target.bundle_mids.size(); ++i) {
             ASSERT_EQ(target.bundle_mids[i], actual.bundle_mids[i]);
@@ -28,6 +29,12 @@ protected:
         ASSERT_EQ(target.codecs.size(), actual.codecs.size());
         for(auto& [pt, codec] : target.codecs) {
             ASSERT_NO_FATAL_FAILURE(AssertCodec(codec, actual.codecs.at(pt)));
+        }
+        if(target.ssrc) {
+            ASSERT_TRUE(actual.ssrc.has_value());
+            ASSERT_EQ(*target.ssrc, *actual.ssrc);
+        } else {
+            ASSERT_FALSE(actual.ssrc.has_value());
         }
     }
 

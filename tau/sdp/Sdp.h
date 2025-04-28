@@ -9,6 +9,7 @@
 namespace tau::sdp {
 
 struct Sdp {
+    std::string cname = {};
     std::vector<std::string> bundle_mids = {};
     std::optional<Ice> ice = std::nullopt;
     std::optional<Dtls> dtls = std::nullopt;

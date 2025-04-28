@@ -10,6 +10,7 @@ TEST_F(ReaderTest, Rtsp) {
     ASSERT_TRUE(Reader::Validate(kRtspSdpExample));
 
     const Sdp target_sdp{
+        .cname = {},
         .bundle_mids = {},
         .ice = std::nullopt,
         .dtls = std::nullopt,
@@ -20,7 +21,8 @@ TEST_F(ReaderTest, Rtsp) {
                 .direction = Direction::kSendRecv,
                 .codecs = {
                     {96, Codec{.index = 0, .name = "H264", .clock_rate = 90000, .rtcp_fb = 0, .format = "packetization-mode=1;profile-level-id=640020;sprop-parameter-sets=Z2QAIKwsqAeAIl5ZuAgICgAAAwPoAACcQQg=,aO48sA=="}},
-                }
+                },
+                .ssrc = std::nullopt
             }
         }
     };
@@ -33,6 +35,7 @@ TEST_F(ReaderTest, WebrtcAudioOnly) {
     ASSERT_TRUE(Reader::Validate(kWebrtcAudioOnlySdpExample));
 
     const Sdp target_sdp{
+        .cname = "Wg8kdYwkkqzCZqko",
         .bundle_mids = {"audio"},
         .ice = Ice{
             .trickle = false,
@@ -67,7 +70,8 @@ TEST_F(ReaderTest, WebrtcAudioOnly) {
                     {105, Codec{.index = 7, .name = "CN", .clock_rate = 16000}},
                     { 13, Codec{.index = 8, .name = "CN", .clock_rate = 8000}},
                     {126, Codec{.index = 9, .name = "telephone-event", .clock_rate = 8000}},
-                }
+                },
+                .ssrc = 655607873
             }
         }
     };
@@ -79,8 +83,8 @@ TEST_F(ReaderTest, WebrtcAudioOnly) {
 TEST_F(ReaderTest, WebrtcChrome) {
     ASSERT_TRUE(Reader::Validate(kWebrtcChromeSdpExample));
 
-    constexpr uint8_t kRtcpFbDefault = RtcpFb::kNack | RtcpFb::kPli | RtcpFb::kFir;
     const Sdp target_sdp{
+        .cname = "YOXhcNpX+Cu3pUyF",
         .bundle_mids = {"0", "1"},
         .ice = Ice{
             .trickle = true,
@@ -109,7 +113,8 @@ TEST_F(ReaderTest, WebrtcChrome) {
                     { 13, Codec{.index = 5, .name = "CN", .clock_rate = 8000}},
                     {110, Codec{.index = 6, .name = "telephone-event", .clock_rate = 48000}},
                     {126, Codec{.index = 7, .name = "telephone-event", .clock_rate = 8000}},
-                }
+                },
+                .ssrc = 3461839429
             },
             Media{
                 .type = MediaType::kVideo,
@@ -139,7 +144,8 @@ TEST_F(ReaderTest, WebrtcChrome) {
                     {112, Codec{.index = 20, .name = "red",  .clock_rate = 90000}},
                     {113, Codec{.index = 21, .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=112"}},
                     {114, Codec{.index = 22, .name = "ulpfec", .clock_rate = 90000}},
-                }
+                },
+                .ssrc = 3218536253
             },
         }
     };
