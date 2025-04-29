@@ -8,10 +8,11 @@ bool Candidate::operator<(const Candidate& other) const {
     return priority > other.priority;
 }
 
-std::string ToCandidateAttributeString(CandidateType type, size_t socket_idx, asio_udp::endpoint endpoint) {
+std::string ToCandidateAttributeString(CandidateType type, size_t socket_idx, Endpoint endpoint, std::string_view mdns_name) {
     return sdp::attribute::CandidateWriter::Write(
         Foundation(type, socket_idx), 1, "udp", Priority(type, socket_idx),
-        endpoint.address().to_string(), endpoint.port(), CandidateTypeToString(type), {});
+        mdns_name.empty() ? endpoint.address().to_string() : mdns_name,
+        endpoint.port(), CandidateTypeToString(type), {});
 }
 
 CandidateType CandidateTypeFromString(const std::string_view& type) {

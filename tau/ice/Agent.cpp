@@ -48,6 +48,10 @@ void Agent::SetCandidateCallback(CandidateCallback callback) {
     _check_list.SetCandidateCallback(std::move(callback));
 }
 
+void Agent::SetMdnsEndpointCallback(MdnsEndpointCallback callback) {
+    _check_list.SetMdnsEndpointCallback(std::move(callback));
+}
+
 void Agent::Start() {
     _check_list.Start();
 }

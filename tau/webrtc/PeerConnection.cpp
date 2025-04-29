@@ -1,4 +1,5 @@
 #include "tau/webrtc/PeerConnection.h"
+#include "tau/sdp/Negotiation.h"
 #include "tau/net/Interface.h"
 #include "tau/crypto/Random.h"
 #include "tau/asio/Ssl.h"
@@ -10,7 +11,21 @@ namespace tau::webrtc {
 PeerConnection::PeerConnection(Dependencies&& deps, Options&& options)
     : _deps(std::move(deps))
     , _options(std::move(options))
-{}
+    , _mdns_socket(net::UdpSocket::Create(
+        net::UdpSocket::Options{
+            .allocator = _deps.udp_allocator,
+            .executor = _deps.executor,
+            .local_address = {},
+            .local_port = 5353,                 // mDns port
+            .multicast_address = "224.0.0.251"  // mDns IPv4
+        }))
+    , _mdns_client(mdns::Client::Dependencies{
+        .udp_allocator = _deps.udp_allocator,
+        .clock = _deps.clock
+    })
+{
+    InitMdnsClient();
+}
 
 void PeerConnection::Start() {
     if(_ice_agent) {
@@ -42,6 +57,7 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
     }
 
     _sdp_answer = sdp::Sdp{
+        .cname = crypto::RandomBase64(8), //TODO: align size with RTCP SDES to avoid padding
         .bundle_mids = _sdp_offer->bundle_mids,
         .ice = sdp::Ice{
             .trickle = true,
@@ -53,14 +69,37 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
             .setup = sdp::Setup::kActive, //TODO: make it flexible
             .fingerprint_sha256 = _dtls_cert.GetDigestSha256String()
         },
-        .medias = { //TODO: make it flexible 
-            sdp::Media{
-                .type = sdp::MediaType::kApplication,
-                .mid = "0",
-                .direction = sdp::Direction::kSendRecv
-            }
-        }
     };
+    for(auto& remote_media : _sdp_offer->medias) {
+        const sdp::Media kLocalAudio{ //TODO: move to options
+            .type = sdp::MediaType::kAudio,
+            .mid = {},
+            .direction = sdp::Direction::kSendRecv,
+            .codecs = {
+                { 8, sdp::Codec{.index = 0, .name = "PCMU", .clock_rate = 8000}},
+            },
+            .ssrc = _random.Int<uint32_t>()
+        };
+        const sdp::Media kLocalVideo{
+            .type = sdp::MediaType::kVideo,
+            .mid = {},
+            .direction = sdp::Direction::kSendRecv,
+            .codecs = {
+                {100, sdp::Codec{.index = 0, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault, .format = "profile-level-id=620028"}},
+                {101, sdp::Codec{.index = 1, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault, .format = "profile-level-id=4d0028"}},
+                {101, sdp::Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault, .format = "profile-level-id=420028"}},
+            },
+            .ssrc = _random.Int<uint32_t>()
+        };
+        auto& media_params = (remote_media.type == sdp::MediaType::kAudio) ? kLocalAudio : kLocalVideo;
+        auto local_media = sdp::SelectMedia(remote_media, media_params);
+        if(!local_media) {
+            TAU_LOG_WARNING(_options.log_ctx << "SDP negotiation failed");
+            _sdp_offer.reset();
+            return {};
+        }
+        _sdp_answer->medias.push_back(*local_media);
+    }
 
     StartIceAgent();
 
@@ -68,11 +107,9 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
 }
 
 void PeerConnection::SetRemoteIceCandidate(std::string candidate) {
-    if(!_ice_agent) {
-        TAU_LOG_WARNING(_options.log_ctx << "ICE agent isn't initialized");
-        return;
-    }
-    _ice_agent->RecvRemoteCandidate(std::move(candidate));
+    asio::dispatch(_deps.executor, [this, candidate = std::move(candidate)]() mutable {
+        SetRemoteIceCandidateInternal(std::move(candidate));
+    });
 }
 
 std::vector<std::string> PeerConnection::GetLocalCandidates() const {
@@ -144,6 +181,9 @@ void PeerConnection::StartIceAgent() {
     _ice_agent->SetSendCallback([this](size_t socket_idx, Endpoint remote, Buffer&& message) {
         _udp_sockets[socket_idx]->Send(std::move(message), remote);
     });
+    _ice_agent->SetMdnsEndpointCallback([this](Endpoint endpoint) {
+        return _mdns_client.CreateName(endpoint.address().to_v4());
+    });
     _ice_agent->Start();
 }
 
@@ -174,6 +214,35 @@ void PeerConnection::StartDtlsSession() {
     });
 
     _dtls_session->Process();
+}
+
+void PeerConnection::InitMdnsClient() {
+    _mdns_socket->SetRecvCallback([this](Buffer&& packet, Endpoint /*remote_endpoint*/) {
+        _mdns_client.Recv(std::move(packet));
+    });
+    _mdns_client.SetSendCallback([&](Buffer&& packet) {
+        _mdns_socket->Send(std::move(packet), Endpoint{IpAddressV4::from_string("224.0.0.251"), 5353}); //TODO: move endpoint data to callback argument?
+    });
+}
+
+void PeerConnection::SetRemoteIceCandidateInternal(std::string candidate) {
+    if(!_ice_agent) {
+        TAU_LOG_WARNING(_options.log_ctx << "ICE agent isn't initialized");
+        return;
+    }
+    if(auto pos = candidate.find(".local"); pos != std::string::npos) {
+        constexpr auto kUuidSize = 36; //TODO: move to Uuid;
+        if(pos > kUuidSize) {
+            auto mdns_name = candidate.substr(pos - kUuidSize, kUuidSize + 6);
+            _mdns_client.FindIpAddressByName(mdns_name,
+                [this, candidate = std::move(candidate), mdns_name](IpAddressV4 address) mutable {
+                    candidate.replace(candidate.find(mdns_name), mdns_name.size(), address.to_string());
+                    _ice_agent->RecvRemoteCandidate(std::move(candidate));
+                });
+        }
+    } else {
+        _ice_agent->RecvRemoteCandidate(std::move(candidate));
+    }
 }
 
 // https://datatracker.ietf.org/doc/html/rfc7983#section-7

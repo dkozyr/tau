@@ -4,8 +4,10 @@
 #include "tau/ice/Agent.h"
 #include "tau/dtls/Session.h"
 #include "tau/net/UdpSocket.h"
+#include "tau/mdns/Client.h"
 #include "tau/crypto/Certificate.h"
 #include "tau/common/Clock.h"
+#include "tau/common/Random.h"
 
 namespace tau::webrtc {
 
@@ -34,6 +36,9 @@ public:
 private:
     void StartIceAgent();
     void StartDtlsSession();
+    void InitMdnsClient();
+
+    void SetRemoteIceCandidateInternal(std::string candidate);
 
     void DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint);
 
@@ -42,6 +47,9 @@ private:
 private:
     Dependencies _deps;
     const Options _options;
+
+    net::UdpSocketPtr _mdns_socket;
+    mdns::Client _mdns_client;
 
     std::optional<sdp::Sdp> _sdp_offer;
     std::optional<sdp::Sdp> _sdp_answer;
@@ -58,6 +66,8 @@ private:
 
     crypto::Certificate _dtls_cert;
     std::optional<dtls::Session> _dtls_session;
+
+    Random _random;
 };
 
 }

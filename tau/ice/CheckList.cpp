@@ -84,7 +84,10 @@ void CheckList::AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoin
             }
         }
     }
-    if(type != CandidateType::kPeerRefl) {
+    if((type == CandidateType::kHost) && _mdns_endpoint_callback) {
+        auto mdns_name = _mdns_endpoint_callback(endpoint);
+        _candidate_callback(ToCandidateAttributeString(type, socket_idx, endpoint, mdns_name));
+    } else if(type != CandidateType::kPeerRefl) {
         _candidate_callback(ToCandidateAttributeString(type, socket_idx, endpoint));
     }
 }
@@ -110,7 +113,7 @@ void CheckList::RecvRemoteCandidate(std::string candidate) {
     if(!endpoint.address().is_v4()) {
         return;
     }
-    _remote_candidates.push_back(Candidate{
+    _remote_candidates.emplace_back(Candidate{
         .type = CandidateTypeFromString(sdp::attribute::CandidateReader::GetType(candidate)),
         .priority = sdp::attribute::CandidateReader::GetPriority(candidate),
         .endpoint = endpoint
@@ -401,6 +404,7 @@ CandidatePair& CheckList::GetPairById(size_t id) {
             return pair;
         }
     }
+    TAU_LOG_ERROR("id: " << id << ", pairs: " << _pairs.size()); //TODO: debugging
     assert(false && "Can't find pair id");
     return _pairs.front();
 }

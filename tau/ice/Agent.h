@@ -12,6 +12,7 @@ public:
     using StateCallback = std::function<void(State state)>;
     using CandidateCallback = CheckList::CandidateCallback;
     using SendCallback = CheckList::SendCallback;
+    using MdnsEndpointCallback = CheckList::MdnsEndpointCallback;
     using NominatingStrategy = CheckList::NominatingStrategy;
 
     struct Dependencies {
@@ -35,6 +36,7 @@ public:
 
     void SetStateCallback(StateCallback callback);
     void SetSendCallback(SendCallback callback);
+    void SetMdnsEndpointCallback(MdnsEndpointCallback callback);
     void SetCandidateCallback(CandidateCallback callback);
 
     void Start();

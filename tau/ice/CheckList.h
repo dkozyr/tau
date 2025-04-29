@@ -33,6 +33,7 @@ public:
 
     using CandidateCallback = std::function<void(std::string candidate)>;
     using SendCallback = std::function<void(size_t socket_idx, Endpoint remote, Buffer&& message)>;
+    using MdnsEndpointCallback = std::function<std::string(Endpoint local_endpoint)>;
 
 public:
     CheckList(Dependencies&& deps, Options&& options);
@@ -40,6 +41,7 @@ public:
 
     void SetSendCallback(SendCallback callback) { _send_callback = std::move(callback); }
     void SetCandidateCallback(CandidateCallback callback) { _candidate_callback = std::move(callback); }
+    void SetMdnsEndpointCallback(MdnsEndpointCallback callback) { _mdns_endpoint_callback = std::move(callback); }
 
     void Start();
     void Process();
@@ -84,6 +86,7 @@ private:
 
     CandidateCallback _candidate_callback;
     SendCallback _send_callback;
+    MdnsEndpointCallback _mdns_endpoint_callback;
 };
 
 }

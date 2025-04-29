@@ -26,7 +26,7 @@ struct Candidate {
 };
 using Candidates = std::vector<Candidate>;
 
-std::string ToCandidateAttributeString(CandidateType type, size_t socket_idx, Endpoint endpoint);
+std::string ToCandidateAttributeString(CandidateType type, size_t socket_idx, Endpoint endpoint, std::string_view mdns_name = {});
 CandidateType CandidateTypeFromString(const std::string_view& type);
 std::string CandidateTypeToString(CandidateType type);
 

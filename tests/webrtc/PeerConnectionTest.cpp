@@ -90,11 +90,8 @@ TEST_F(PeerConnectionTest, DISABLED_MANUAL_Localhost) {
                             for(auto& element : parsed.get_array()) {
                                 if(element.is_string()) {
                                     const auto candidate = boost::json::value_to<std::string>(element);
-                                    //TODO: fix processing mDNS candidates
-                                    if(IsPrefix(candidate, kCandidatePrefix) && (candidate.find(".local") == std::string::npos)) {
+                                    if(IsPrefix(candidate, kCandidatePrefix)) {
                                         _pc->SetRemoteIceCandidate(candidate.substr(kCandidatePrefix.size()));
-                                    } else {
-                                        TAU_LOG_WARNING("Skipped candidate: " << candidate);
                                     }
                                 } else {
                                     TAU_LOG_WARNING("Skipped element: " << element);
