@@ -72,7 +72,8 @@ std::string WriteSdp(const Sdp& sdp) {
         }
         output += "\n";
     }
-    for(auto& media : sdp.medias) {
+    for(size_t i = 0; i < sdp.medias.size(); ++i) {
+        auto& media = sdp.medias[i];
         const auto pts = GetPtOrdered(media.codecs);
         switch(media.type) {
             case MediaType::kAudio:
@@ -97,21 +98,23 @@ std::string WriteSdp(const Sdp& sdp) {
             case Direction::kInactive: output += "a=inactive\n"; break;
         }
         output += "a=rtcp-mux\n";
-        if(sdp.ice) {
-            if(sdp.ice->trickle) {
-                output += "a=" + AttributeWriter::Write("ice-options", "trickle") + "\n";
+        if(i == 0) {
+            if(sdp.ice) {
+                if(sdp.ice->trickle) {
+                    output += "a=" + AttributeWriter::Write("ice-options", "trickle") + "\n";
+                }
+                output += "a=" + AttributeWriter::Write("ice-ufrag", sdp.ice->ufrag) + "\n";
+                output += "a=" + AttributeWriter::Write("ice-pwd", sdp.ice->pwd) + "\n";
+                for(auto& candidate : sdp.ice->candidates) {
+                    output += "a=" + AttributeWriter::Write("candidate", candidate) + "\n";
+                }
             }
-            output += "a=" + AttributeWriter::Write("ice-ufrag", sdp.ice->ufrag) + "\n";
-            output += "a=" + AttributeWriter::Write("ice-pwd", sdp.ice->pwd) + "\n";
-            for(auto& candidate : sdp.ice->candidates) {
-                output += "a=" + AttributeWriter::Write("candidate", candidate) + "\n";
+            if(sdp.dtls) {
+                if(sdp.dtls->setup) {
+                    output += "a=" + AttributeWriter::Write("setup", ToString(*sdp.dtls->setup)) + "\n";
+                }
+                output += "a=" + AttributeWriter::Write("fingerprint", "sha-256 " + sdp.dtls->fingerprint_sha256) + "\n";
             }
-        }
-        if(sdp.dtls) {
-            if(sdp.dtls->setup) {
-                output += "a=" + AttributeWriter::Write("setup", ToString(*sdp.dtls->setup)) + "\n";
-            }
-            output += "a=" + AttributeWriter::Write("fingerprint", "sha-256 " + sdp.dtls->fingerprint_sha256) + "\n";
         }
         for(auto pt : pts) {
             const auto& codec = media.codecs.at(pt);
