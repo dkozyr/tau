@@ -3,6 +3,7 @@
 #include "tau/rtsp/RequestWriter.h"
 #include "tau/rtsp/ResponseReader.h"
 #include "tau/memory/SystemAllocator.h"
+#include "tau/common/Exception.h"
 #include "tau/common/Log.h"
 #include <array>
 
@@ -68,7 +69,7 @@ void Client::SendRequestSetup() {
     _server_rtp_port = ParseServerRtpPort(response);
     _session_id = ParseSessionId(response);
     if(!_server_rtp_port || _session_id.empty()) {
-        throw std::runtime_error("Wrong SETUP response");
+        TAU_EXCEPTION(std::runtime_error, "Wrong SETUP response");
     }
     TAU_LOG_INFO("RTSP server rtp port: " << *_server_rtp_port << ", session id: " << _session_id);
 }
@@ -106,10 +107,10 @@ void Client::SendRequestTeardown() {
 Response Client::SendRequestAndValidateResponse(Request&& request, const std::string& cseq) {
     auto response = SendRequest(std::move(request));
     if(!response) {
-        throw std::runtime_error("Wrong response, request CSeq: " + cseq);
+        TAU_EXCEPTION(std::runtime_error, "Wrong response, request CSeq: " << cseq);
     }
     if(cseq != GetHeaderValue(HeaderName::kCSeq, response->headers)) {
-        throw std::runtime_error("Wrong response CSeq, expected CSeq: " + cseq);
+        TAU_EXCEPTION(std::runtime_error, "Wrong response CSeq, expected CSeq: " << cseq);
     }
     return *response;
 }
@@ -153,18 +154,18 @@ std::optional<Response> Client::SendRequest(Request&& request) {
 void Client::ParseAndValidateSdp(const std::string_view& sdp_str) {
     _sdp = sdp::ParseSdp(sdp_str);
     if(!_sdp) {
-        throw std::runtime_error("Sdp parsing failed");
+        TAU_EXCEPTION(std::runtime_error, "Sdp parsing failed");
     }
     if(_sdp->medias.size() != 1) {
-        throw std::runtime_error("Sdp processing failed: expected only 1 media");
+        TAU_EXCEPTION(std::runtime_error, "Sdp processing failed: expected only 1 media");
     }
     const auto& video = _sdp->medias[0];
     if(video.type != sdp::MediaType::kVideo) {
-        throw std::runtime_error("Sdp processing failed: expected video media");
+        TAU_EXCEPTION(std::runtime_error, "Sdp processing failed: expected video media");
     }
     const auto& [_, codec] = *video.codecs.begin();
     if(codec.name != "H264") {
-        throw std::runtime_error("Sdp processing failed: expected H264 video media");
+        TAU_EXCEPTION(std::runtime_error, "Sdp processing failed: expected H264 video media");
     }
 }
 
