@@ -37,10 +37,12 @@ public:
             .key = _key
         });
 
-        _encryptor->SetCallback([this](Buffer&& encrypted) {
+        _encryptor->SetCallback([this](Buffer&& encrypted, bool is_rtp) {
+            ASSERT_EQ(is_rtp, !rtcp::IsRtcp(ToConst(encrypted.GetView())));
             _encrypted.emplace_back(std::move(encrypted));
         });
-        _decryptor->SetCallback([this](Buffer&& decrypted) {
+        _decryptor->SetCallback([this](Buffer&& decrypted, bool is_rtp) {
+            ASSERT_EQ(is_rtp, !rtcp::IsRtcp(ToConst(decrypted.GetView())));
             _decrypted.emplace_back(std::move(decrypted));
         });
     }

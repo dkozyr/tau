@@ -24,6 +24,7 @@ Session::Session(Options&& options) {
     policy.allow_repeat_tx = true;
 
     if(auto error = srtp_create(&_session, &policy)) {
+        // on srtp_err_status_init_fail try to init srtp first
         TAU_EXCEPTION(std::runtime_error, "srtp_create failed, error: " << error);
     }
 }
@@ -47,7 +48,7 @@ bool Session::Encrypt(Buffer&& packet, bool is_rtp) {
         }
     }
     packet.SetSize(encrypted_size);
-    _callback(std::move(packet));
+    _callback(std::move(packet), is_rtp);
     return true;
 }
 
@@ -66,7 +67,7 @@ bool Session::Decrypt(Buffer&& packet, bool is_rtp) {
         }
     }
     packet.SetSize(decrypted_size);
-    _callback(std::move(packet));
+    _callback(std::move(packet), is_rtp);
     return true;
 }
 

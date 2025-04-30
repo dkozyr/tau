@@ -22,7 +22,7 @@ public:
         std::vector<uint8_t> key;
     };
 
-    using Callback = std::function<void(Buffer&&)>;
+    using Callback = std::function<void(Buffer&& decrypted, bool is_rtp)>;
 
 public:
     explicit Session(Options&& options);
