@@ -184,8 +184,8 @@ void CheckList::ProcessConnectivityChecks(size_t socket_idx) {
     for(auto& pair : _pairs) {
         if(socket_idx == *pair.local.socket_idx) {
             if(pair.state == CandidatePair::State::kWaiting) {
-                SendStunRequest(socket_idx, pair.id, pair.remote.endpoint);
                 SetPairState(pair.id, CandidatePair::State::kInProgress);
+                SendStunRequest(socket_idx, pair.id, pair.remote.endpoint);
                 return;
             }
             if((pair.state == CandidatePair::State::kInProgress) || (pair.state == CandidatePair::State::kNominating)) {
@@ -378,7 +378,7 @@ void CheckList::PrunePairs() {
 }
 
 void CheckList::AddPair(const Candidate& local, const Candidate& remote) {
-    _pairs.push_back(CandidatePair{
+    _pairs.emplace_back(CandidatePair{
         .id = _next_pair_id++,
         .local = local,
         .remote = remote,
@@ -404,7 +404,6 @@ CandidatePair& CheckList::GetPairById(size_t id) {
             return pair;
         }
     }
-    TAU_LOG_ERROR("id: " << id << ", pairs: " << _pairs.size()); //TODO: debugging
     assert(false && "Can't find pair id");
     return _pairs.front();
 }
