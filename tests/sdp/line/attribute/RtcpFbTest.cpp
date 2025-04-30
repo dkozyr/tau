@@ -22,7 +22,7 @@ TEST(RtcpFbReaderTest, Basic) {
 
 TEST(RtcpFbWriterTest, Basic) {
     const auto value = RtcpFbWriter::Write(100, "nack pli");
-    LOG_INFO << "a=rtcp-fb:" << value;
+    TAU_LOG_INFO("a=rtcp-fb:" << value);
     ASSERT_TRUE(RtcpFbReader::Validate(value));
     ASSERT_EQ(100, RtcpFbReader::GetPt(value));
     ASSERT_EQ("nack pli", RtcpFbReader::GetValue(value));

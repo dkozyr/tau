@@ -21,7 +21,7 @@ TEST(BandwidthReaderTest, Basic) {
 
 TEST(BandwidthWriterTest, Basic) {
     const auto value = BandwidthWriter::Write("AS", 9876);
-    LOG_INFO << "b=" << value;
+    TAU_LOG_INFO("b=" << value);
     ASSERT_TRUE(BandwidthReader::Validate(value));
     ASSERT_EQ("AS", BandwidthReader::GetType(value));
     ASSERT_EQ(9876, BandwidthReader::GetKbps(value));

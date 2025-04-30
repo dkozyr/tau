@@ -58,7 +58,7 @@ void Client::OnResolve(boost_ec ec, asio_tcp::resolver::results_type results) {
 
 void Client::OnConnect(boost_ec ec) {
     if(ec) {
-        LOG_WARNING << "ec: " << ec << ", " << ec.message();
+        TAU_LOG_WARNING("ec: " << ec << ", " << ec.message());
         _timeout.cancel(ec);
         return;
     }

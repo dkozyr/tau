@@ -18,7 +18,7 @@ int main(int /*argc*/, char** /*argv*/) {
     char error_buffer[PCAP_ERRBUF_SIZE];
     auto pcap = pcap_open_offline(file.c_str(), error_buffer);
     if(!pcap) {
-        LOG_WARNING << "pcap_open_offline error: " << error_buffer;
+        TAU_LOG_WARNING("pcap_open_offline error: " << error_buffer);
         return -1;
     }
 
@@ -29,7 +29,7 @@ int main(int /*argc*/, char** /*argv*/) {
         if(pcap_next_ex(pcap, &header, &data) < 0) {
             break;
         }
-        LOG_TRACE << "Packet #" << (++packet_count) << ", " << "size: " << header->caplen << " bytes, " << "epoch: " << header->ts.tv_sec << "." << header->ts.tv_usec;
+        TAU_LOG_TRACE("Packet #" << (++packet_count) << ", " << "size: " << header->caplen << " bytes, " << "epoch: " << header->ts.tv_sec << "." << header->ts.tv_usec);
 
         const BufferViewConst packet_view{
             .ptr = data + udp_payload_offset,
@@ -39,11 +39,11 @@ int main(int /*argc*/, char** /*argv*/) {
             rtp::Reader reader(packet_view);
             if(target_pt == reader.Pt()) {
                 auto payload = reader.Payload();
-                LOG_INFO << "[rtp] pt: " << (size_t)reader.Pt() << ", ssrc: " << reader.Ssrc() << ", ts: " << reader.Ts() << ", sn: " << reader.Sn() << (reader.Marker() ? "*" : "") << ", payload: " << payload.size;
+                TAU_LOG_INFO("[rtp] pt: " << (size_t)reader.Pt() << ", ssrc: " << reader.Ssrc() << ", ts: " << reader.Ts() << ", sn: " << reader.Sn() << (reader.Marker() ? "*" : "") << ", payload: " << payload.size);
             }
         }
     }
     pcap_close(pcap);
-    LOG_INFO << "Done";
+    TAU_LOG_INFO("Done");
     return 0;
 }

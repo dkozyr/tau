@@ -21,7 +21,7 @@ TEST(FmtpReaderTest, Basic) {
 
 TEST(FmtpWriterTest, Basic) {
     const auto value = FmtpWriter::Write(100, "hello=world");
-    LOG_INFO << "a=extmap:" << value;
+    TAU_LOG_INFO("a=extmap:" << value);
     ASSERT_TRUE(FmtpReader::Validate(value));
     ASSERT_EQ(100, FmtpReader::GetPt(value));
     ASSERT_EQ("hello=world", FmtpReader::GetParameters(value));

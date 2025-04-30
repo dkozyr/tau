@@ -27,13 +27,13 @@ void StunClient::Process() {
 void StunClient::Recv(Buffer&& message) {
     auto view = ToConst(message.GetView());
     if(!Reader::Validate(view)) {
-        LOG_WARNING << "Invalid stun message";
+        TAU_LOG_WARNING("Invalid stun message");
         return;
     }
 
     const auto hash = HeaderReader::GetTransactionIdHash(view);
     if(!_transaction_tracker.HasTransaction(hash)) {
-        LOG_WARNING << "Unknown transaction, hash: " << hash;
+        TAU_LOG_WARNING("Unknown transaction, hash: " << hash;)
         return;
     }
     _transaction_tracker.RemoveTransaction(hash);

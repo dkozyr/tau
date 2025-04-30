@@ -10,16 +10,16 @@ using namespace std::chrono_literals;
 
 int main(int argc, char** argv) {
     if(argc < 2) {
-        LOG_WARNING << "No RTSP stream URI (rtsp:://ip-address/path-to-stream.h264)";
+        TAU_LOG_ERROR("No RTSP stream URI (rtsp:://ip-address/path-to-stream.h264)");
         return -1;
     }
     auto uri = net::GetUriFromString(argv[1]);
     if(!uri) {
-        LOG_WARNING << "Malformed RTSP stream URI: " << argv[1];
+        TAU_LOG_ERROR("Malformed RTSP stream URI: " << argv[1]);
         return -1;
     }
     if(uri->protocol != net::Protocol::kRtsp) {
-        LOG_WARNING << "Unsupported protocol, URI: " << argv[1];
+        TAU_LOG_ERROR("Unsupported protocol, URI: " << argv[1]);
         return -1;
     }
 
@@ -36,10 +36,10 @@ int main(int argc, char** argv) {
 
         client.SendRequestTeardown();
     } catch(const std::exception& e) {
-        LOG_ERROR << "Exception: " << e.what();
+        TAU_LOG_ERROR("Exception: " << e.what());
     }
 
     io.Join();
-    LOG_INFO << "Done";
+    TAU_LOG_INFO("Done");
     return 0;
 }

@@ -26,7 +26,7 @@ TEST(RtpmapReaderTest, Basic) {
 
 TEST(RtpmapWriterTest, Basic) {
     const auto value = RtpmapWriter::Write(100, "H264", 90000);
-    LOG_INFO << "a=rtpmap:" << value;
+    TAU_LOG_INFO("a=rtpmap:" << value);
     ASSERT_TRUE(RtpmapReader::Validate(value));
     ASSERT_EQ(100, RtpmapReader::GetPt(value));
     ASSERT_EQ("H264", RtpmapReader::GetEncodingName(value));
@@ -36,7 +36,7 @@ TEST(RtpmapWriterTest, Basic) {
 
 TEST(RtpmapWriterTest, Opus) {
     const auto value = RtpmapWriter::Write(96, "opus", 48000, "2");
-    LOG_INFO << "a=rtpmap:" << value;
+    TAU_LOG_INFO("a=rtpmap:" << value);
     ASSERT_TRUE(RtpmapReader::Validate(value));
     ASSERT_EQ(96, RtpmapReader::GetPt(value));
     ASSERT_EQ("opus", RtpmapReader::GetEncodingName(value));

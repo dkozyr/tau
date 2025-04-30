@@ -37,7 +37,7 @@ TEST(CandidateReaderTest, EmptyExtParameters) {
 
 TEST(CandidateWriterTest, Basic) {
     const auto value = CandidateWriter::Write(1234567890, 22, "udp", 1234567890, "ip-port", 12345, "HOST", "extended params:hello-world");
-    LOG_INFO << "a=candidate:" << value;
+    TAU_LOG_INFO("a=candidate:" << value);
     ASSERT_TRUE(CandidateReader::Validate(value));
     ASSERT_EQ("1234567890", CandidateReader::GetFoundation(value));
     ASSERT_EQ(22, CandidateReader::GetComponentId(value));

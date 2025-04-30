@@ -77,7 +77,7 @@ void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, uint3
                 std::string message_integrity_password(kLongTermPassword, 'x');
                 auto password_ptr = reinterpret_cast<uint8_t*>(message_integrity_password.data());
                 if(!CalcLongTermPassword({user_name, _options.password}, realm, password_ptr)) {
-                    LOG_WARNING << "CalcLongTermPassword failed";
+                    TAU_LOG_WARNING("CalcLongTermPassword failed");
                     return false;
                 }
                 message_integrity = MessageIntegrityReader::Validate(attr, view, message_integrity_password);
@@ -196,7 +196,7 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
                 std::string message_integrity_password(kLongTermPassword, 'x');
                 auto password_ptr = reinterpret_cast<uint8_t*>(message_integrity_password.data());
                 if(!CalcLongTermPassword({allocation.user_name, _options.password}, _realm, password_ptr)) {
-                    LOG_WARNING << "CalcLongTermPassword failed";
+                    TAU_LOG_WARNING("CalcLongTermPassword failed");
                     return false;
                 }
                 message_integrity = MessageIntegrityReader::Validate(attr, request_view, message_integrity_password);
@@ -293,7 +293,7 @@ void TurnServerEmulator::FinalizeStunMessage(Buffer& message, stun::Writer& writ
 }
 
 void TurnServerEmulator::DropPacket(const std::string& message) {
-    LOG_WARNING << message << ", drop packet";
+    TAU_LOG_WARNING(message << ", drop packet");
     _dropped_packets_count++;
 }
 

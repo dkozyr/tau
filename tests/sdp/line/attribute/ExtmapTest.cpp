@@ -31,7 +31,7 @@ TEST(ExtmapReaderTest, Direction) {
 
 TEST(ExtmapWriterTest, Basic) {
     const auto value = ExtmapWriter::Write(8, "uri:some:path");
-    LOG_INFO << "a=extmap:" << value;
+    TAU_LOG_INFO("a=extmap:" << value);
     ASSERT_TRUE(ExtmapReader::Validate(value));
     ASSERT_EQ(8, ExtmapReader::GetId(value));
     ASSERT_EQ(Direction::kSendRecv, ExtmapReader::GetDirection(value));
@@ -40,7 +40,7 @@ TEST(ExtmapWriterTest, Basic) {
 
 TEST(ExtmapWriterTest, BasicWithDirection) {
     const auto value = ExtmapWriter::Write(14, "uri:some:path", Direction::kSend);
-    LOG_INFO << "a=extmap:" << value;
+    TAU_LOG_INFO("a=extmap:" << value);
     ASSERT_TRUE(ExtmapReader::Validate(value));
     ASSERT_EQ(14, ExtmapReader::GetId(value));
     ASSERT_EQ(Direction::kSend, ExtmapReader::GetDirection(value));

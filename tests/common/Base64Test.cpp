@@ -18,7 +18,7 @@ TEST(Base64Test, Randomized) {
             ASSERT_EQ(data[i], static_cast<uint8_t>(decoded[i]));
         }
         ASSERT_EQ(size, decoded.size());
-        // LOG_INFO << encoded;
+        // TAU_LOG_INFO(encoded);
     }
 }
 
@@ -31,7 +31,7 @@ TEST(Base64Test, DecodeToHex) {
         for(auto v : decoded) {
             ss << ToHexString(static_cast<uint8_t>(v)) << " ";
         }
-        LOG_INFO << "[H264] sps: " << ss.str();
+        TAU_LOG_INFO("[H264] sps: " << ss.str());
     }
     {
         const std::string encoded = "aO48sA==";
@@ -40,7 +40,7 @@ TEST(Base64Test, DecodeToHex) {
         for(auto v : decoded) {
             ss << ToHexString(static_cast<uint8_t>(v)) << " ";
         }
-        LOG_INFO << "[H264] pps: " << ss.str();
+        TAU_LOG_INFO("[H264] pps: " << ss.str());
     }
 }
 

@@ -20,7 +20,7 @@ TEST(OriginatorReaderTest, Basic) {
 
 TEST(OriginatorWriterTest, Basic) {
     const auto value = OriginatorWriter::Write("IP4", "123.45.67.89");
-    LOG_INFO << "o=" << value;
+    TAU_LOG_INFO("o=" << value);
     ASSERT_TRUE(OriginatorReader::Validate(value));
     ASSERT_EQ("IP4", OriginatorReader::GetAddressType(value));
     ASSERT_EQ("123.45.67.89", OriginatorReader::GetAddress(value));

@@ -45,7 +45,7 @@ TEST(MediaReaderTest, Basic) {
 
 TEST(MediaWriterTest, Basic) {
     const auto value = MediaWriter::Write(MediaType::kVideo, 7777, "RTP/AVPF", {100, 96});
-    LOG_INFO << "m=" << value;
+    TAU_LOG_INFO("m=" << value);
     ASSERT_TRUE(MediaReader::Validate(value));
     ASSERT_EQ(MediaType::kVideo, MediaReader::GetType(value));
     ASSERT_EQ(7777, MediaReader::GetPort(value));

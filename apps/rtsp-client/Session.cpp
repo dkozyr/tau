@@ -37,7 +37,7 @@ Session::Session(Executor executor, Options&& options)
 }
 
 Session::~Session() {
-    LOG_INFO << "Output path: " << _output_path;
+    TAU_LOG_INFO("Output path: " << _output_path);
 }
 
 uint16_t Session::GetRtpPort() const {
@@ -56,7 +56,7 @@ void Session::InitPipeline() {
     _frame_processor.SetCallback([this](rtp::Frame&& frame, bool losses) {
         const auto ok = !losses && _h264_depacketizer.Process(std::move(frame));
         if(!ok) {
-            LOG_INFO << "Drop until key-frame, frame rtp packets: " << frame.size() << (losses ? ", losses" : "");
+            TAU_LOG_INFO("Drop until key-frame, frame rtp packets: " << frame.size() << (losses ? ", losses" : ""));
             _avc1_nalu_processor.DropUntilKeyFrame();
         }
     });
@@ -65,7 +65,7 @@ void Session::InitPipeline() {
     });
     _avc1_nalu_processor.SetCallback([this](Buffer&& nal_unit) {
         const auto header = reinterpret_cast<const h264::NaluHeader*>(&nal_unit.GetView().ptr[0]);
-        LOG_INFO << "[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << DurationSec(nal_unit.GetInfo().tp) << ", size: " << nal_unit.GetSize();
+        TAU_LOG_INFO("[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << DurationSec(nal_unit.GetInfo().tp) << ", size: " << nal_unit.GetSize());
         auto view = nal_unit.GetView();
         //TODO: ToStringView
         WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(h264::kAnnexB.data()), h264::kAnnexB.size()}, true);
@@ -81,8 +81,8 @@ void Session::InitSockets() {
     });
     _socket_rtp = std::move(udp_sockets_pair.first);
     _socket_rtcp = std::move(udp_sockets_pair.second);
-    _socket_rtp->SetErrorCallback([](boost_ec ec)  { LOG_WARNING << "[rtp socket] ec: " << ec.message(); });
-    _socket_rtcp->SetErrorCallback([](boost_ec ec) { LOG_WARNING << "[rtcp socket] ec: " << ec.message(); });
+    _socket_rtp->SetErrorCallback([](boost_ec ec)  { TAU_LOG_WARNING("[rtp socket] ec: " << ec.message()); });
+    _socket_rtcp->SetErrorCallback([](boost_ec ec) { TAU_LOG_WARNING("[rtcp socket] ec: " << ec.message()); });
 
     _socket_rtp->SetRecvCallback([&](Buffer&& packet, asio_udp::endpoint) {
         _rtp_session.RecvRtp(std::move(packet));
@@ -91,7 +91,7 @@ void Session::InitSockets() {
         _remote_endpoint_rtcp = remote_endpoint;
         _rtp_session.RecvRtcp(std::move(packet));
         const auto& stats = _rtp_session.GetStats().incoming;
-        LOG_INFO << "[rtp stats] packets: " << stats.rtp << ", jitter: " << stats.jitter << ", lost: " << stats.lost_packets << ", loss_rate: " << stats.loss_rate << ", discarded: " << stats.discarded;
+        TAU_LOG_INFO("[rtp stats] packets: " << stats.rtp << ", jitter: " << stats.jitter << ", lost: " << stats.lost_packets << ", loss_rate: " << stats.loss_rate << ", discarded: " << stats.discarded);
     });
 }
 

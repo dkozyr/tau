@@ -19,8 +19,8 @@ TEST(RandomTest, Basic) {
 }
 
 TEST(RandomTest, RandomBase64) {
-    LOG_INFO << "RandomBase64(4): " << RandomBase64(4);
-    LOG_INFO << "RandomBase64(42): " << RandomBase64(42);
+    TAU_LOG_INFO("RandomBase64(4): " << RandomBase64(4));
+    TAU_LOG_INFO("RandomBase64(42): " << RandomBase64(42));
     ASSERT_EQ(42, RandomBase64(42).size());
     ASSERT_EQ(4, RandomBase64(4).size());
     ASSERT_EQ(1, RandomBase64(1).size());

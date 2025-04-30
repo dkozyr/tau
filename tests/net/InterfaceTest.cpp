@@ -6,7 +6,7 @@ namespace tau::net {
 TEST(InterfaceTest, Basic) {
     auto interfaces = EnumerateInterfaces(true);
     for(auto& interface : interfaces) {
-        LOG_INFO << "Name: " << interface.name << ", address: " << interface.address;
+        TAU_LOG_INFO("Name: " << interface.name << ", address: " << interface.address);
     }
 }
 

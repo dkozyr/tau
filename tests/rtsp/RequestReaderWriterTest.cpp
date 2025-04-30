@@ -29,7 +29,7 @@ TEST_F(RequestReaderWriterTest, Options) {
         }
     };
     auto message = RequestWriter::Write(request);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertRequest(request, message));
 }
 
@@ -43,7 +43,7 @@ TEST_F(RequestReaderWriterTest, Describe) {
         }
     };
     auto message = RequestWriter::Write(request);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertRequest(request, message));
 }
 
@@ -57,7 +57,7 @@ TEST_F(RequestReaderWriterTest, Setup) {
         }
     };
     auto message = RequestWriter::Write(request);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertRequest(request, message));
 }
 
@@ -71,7 +71,7 @@ TEST_F(RequestReaderWriterTest, Play) {
         }
     };
     auto message = RequestWriter::Write(request);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertRequest(request, message));
 }
 
@@ -85,7 +85,7 @@ TEST_F(RequestReaderWriterTest, Teardown) {
         }
     };
     auto message = RequestWriter::Write(request);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertRequest(request, message));
 }
 

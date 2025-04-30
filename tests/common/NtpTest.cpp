@@ -6,7 +6,7 @@ namespace tau {
 TEST(NtpTest, Basic) {
     const auto tp = SystemClock().Now();
     const auto ntp = ToNtp(tp);
-    LOG_INFO << "tp: " << tp << ", ntp: " << ntp;
+    TAU_LOG_INFO("tp: " << tp << ", ntp: " << ntp);
     ASSERT_EQ(tp, FromNtp(ntp));
 
     auto tp2 = tp + kSec;
@@ -24,7 +24,7 @@ TEST(NtpTest, Basic) {
 TEST(NtpTest, DurationToNtp32) {
     const auto tp = kSec + 125 * kMs;
     const auto ntp = ntp32::ToNtp(tp);
-    LOG_INFO << "tp: " << tp << ", ntp: " << ntp;
+    TAU_LOG_INFO("tp: " << tp << ", ntp: " << ntp);
     ASSERT_EQ(tp, ntp32::FromNtp(ntp));
 
     auto tp2 = tp + kSec;

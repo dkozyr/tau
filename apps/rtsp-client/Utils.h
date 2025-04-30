@@ -40,11 +40,11 @@ inline std::string_view ParseSessionId(const rtsp::Response& response) {
 inline void PrintRtcp(const Buffer& packet) {
     const auto view = packet.GetView();
     if(!rtcp::Reader::Validate(view)) {
-        LOG_WARNING << "Invalid RTCP, size: " << view.size;
+        TAU_LOG_WARNING("Invalid RTCP, size: " << view.size);
         return;
     };
     rtcp::Reader::ForEachReport(view, [](rtcp::Type type, BufferViewConst report) {
-        LOG_INFO << "Rtcp report type: " << (size_t)type << ", size: " << report.size;
+        TAU_LOG_INFO("Rtcp report type: " << (size_t)type << ", size: " << report.size);
         return true;
     });
 }

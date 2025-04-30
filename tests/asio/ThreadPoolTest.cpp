@@ -40,7 +40,7 @@ TEST_F(ThreadPoolTest, Basic) {
     const size_t kTestValues = 10;
     for(size_t i = 0; i < 10; ++i) {
         asio::post(executor, [i, &output, &mutex]() {
-            LOG_INFO << "i: " << i;
+            TAU_LOG_INFO("i: " << i);
             std::lock_guard lock(mutex);
             output.Push(i);
         });
@@ -63,7 +63,7 @@ TEST_F(ThreadPoolTest, Strand) {
     const size_t kTestValues = 10;
     for(size_t i = 0; i < 10; ++i) {
         asio::post(executor, [i, &output]() {
-            LOG_INFO << "i: " << i;
+            TAU_LOG_INFO("i: " << i);
             output.Push(i); // mutex not needed with strand
         });
     }

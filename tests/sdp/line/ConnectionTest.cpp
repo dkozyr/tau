@@ -21,7 +21,7 @@ TEST(ConnectionReaderTest, Basic) {
 
 TEST(ConnectionWriterTest, Basic) {
     const auto value = ConnectionWriter::Write("98.76.54.32.10.00");
-    LOG_INFO << "c=" << value;
+    TAU_LOG_INFO("c=" << value);
     ASSERT_TRUE(ConnectionReader::Validate(value));
     ASSERT_EQ("IP4", ConnectionReader::GetAddressType(value));
     ASSERT_EQ("98.76.54.32.10.00", ConnectionReader::GetAddress(value));

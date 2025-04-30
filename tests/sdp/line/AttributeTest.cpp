@@ -29,7 +29,7 @@ TEST(AttributeReaderTest, Basic) {
 
 TEST(AttributeWriterTest, Basic) {
     const auto value = AttributeWriter::Write("hello", "world");
-    LOG_INFO << "a=" << value;
+    TAU_LOG_INFO("a=" << value);
     ASSERT_TRUE(AttributeReader::Validate(value));
     ASSERT_EQ("hello", AttributeReader::GetType(value));
     ASSERT_EQ("world", AttributeReader::GetValue(value));
@@ -37,7 +37,7 @@ TEST(AttributeWriterTest, Basic) {
 
 TEST(AttributeWriterTest, KnownAttribute) {
     const auto value = AttributeWriter::Write("rtcp-fb", attribute::RtcpFbWriter::Write(100, "hello world"));
-    LOG_INFO << "a=" << value;
+    TAU_LOG_INFO("a=" << value);
     ASSERT_TRUE(AttributeReader::Validate(value));
     ASSERT_EQ("rtcp-fb", AttributeReader::GetType(value));
     const auto parsed_value = AttributeReader::GetValue(value);

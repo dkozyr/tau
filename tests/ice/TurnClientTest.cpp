@@ -233,14 +233,14 @@ TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
     net::UdpSocketPtr udp_socket;
     auto interfaces = net::EnumerateInterfaces(true);
     for(auto& interface : interfaces) {
-        LOG_INFO << "Name: " << interface.name << ", address: " << interface.address;
+        TAU_LOG_INFO("Name: " << interface.name << ", address: " << interface.address);
         if(IsPrefix(interface.name, "wlo")) {
             udp_socket = net::UdpSocket::Create(net::UdpSocket::Options{
                 .allocator = g_udp_allocator,
                 .executor = io.GetExecutor(),
                 .local_address = {.address = interface.address.to_string()}
             });
-            LOG_INFO << "Local endpoint: " << udp_socket->GetLocalEndpoint();
+            TAU_LOG_INFO("Local endpoint: " << udp_socket->GetLocalEndpoint());
             break;
         }
     }
@@ -259,17 +259,17 @@ TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
         });
 
     client.SetCandidateCallback([&](Endpoint relayed) {
-        LOG_INFO << "candidate relayed: " << relayed;
+        TAU_LOG_INFO("candidate relayed: " << relayed);
     });
     client.SetSendCallback([&](Endpoint remote, Buffer&& message) {
         udp_socket->Send(std::move(message), remote);
     });
     udp_socket->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
-        LOG_INFO << "[Recv] remote: " << remote_endpoint << ", packet: " << packet.GetSize();
+        TAU_LOG_INFO("[Recv] remote: " << remote_endpoint << ", packet: " << packet.GetSize());
         if(client.IsServerEndpoint(remote_endpoint)) {
             client.Recv(std::move(packet));
         } else {
-            LOG_WARNING << "Wrong server endpoint";
+            TAU_LOG_WARNING("Wrong server endpoint");
         }
     });
 

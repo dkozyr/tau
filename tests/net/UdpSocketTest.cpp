@@ -55,7 +55,7 @@ TEST_F(UdpSocketTest, Basic) {
         });
     Event event1;
     socket1->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
-        LOG_INFO << "[socket1] Received from: " << remote_endpoint << ", size: " << packet.GetSize();
+        TAU_LOG_INFO("[socket1] Received from: " << remote_endpoint << ", size: " << packet.GetSize());
         event1.Set();
         EXPECT_NO_FATAL_FAILURE(AssertPacket(packet, kPacketSize2));
     });
@@ -68,7 +68,7 @@ TEST_F(UdpSocketTest, Basic) {
         });
     Event event2;
     socket2->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
-        LOG_INFO << "[socket2] Received from: " << remote_endpoint << ", size: " << packet.GetSize();
+        TAU_LOG_INFO("[socket2] Received from: " << remote_endpoint << ", size: " << packet.GetSize());
         event2.Set();
         EXPECT_NO_FATAL_FAILURE(AssertPacket(packet, kPacketSize1));
     });
@@ -88,8 +88,8 @@ TEST_F(UdpSocketTest, PortsPair) {
     });
     auto endpoint1 = socket1->GetLocalEndpoint();
     auto endpoint2 = socket2->GetLocalEndpoint();
-    LOG_INFO << "[socket1] endpoint: " << endpoint1;
-    LOG_INFO << "[socket2] endpoint: " << endpoint2;
+    TAU_LOG_INFO("[socket1] endpoint: " << endpoint1);
+    TAU_LOG_INFO("[socket2] endpoint: " << endpoint2);
     ASSERT_EQ(endpoint1.port() + 1, endpoint2.port());
 }
 
@@ -138,7 +138,7 @@ TEST_F(UdpSocketTest, DISABLED_MANUAL_Load) {
         EXPECT_TRUE(event2.WaitFor(1000ms));
 
         if(i % 1000 == 0) {
-            LOG_INFO << "Iteration: #" << i;
+            TAU_LOG_INFO("Iteration: #" << i);
         }
     }
 }

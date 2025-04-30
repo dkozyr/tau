@@ -13,7 +13,7 @@ Client::Client(Executor executor, Options&& options)
     , _uri("rtsp://" + options.uri.host + "/" + options.uri.path)
     , _endpoints(asio_tcp::resolver(_executor).resolve(options.uri.host, std::to_string(options.uri.port))) {
     for(auto& endpoint : _endpoints) {
-        LOG_INFO << "RTSP endpoint: " << endpoint.endpoint();
+        TAU_LOG_INFO("RTSP endpoint: " << endpoint.endpoint());
     }
 }
 
@@ -43,7 +43,7 @@ void Client::SendRequestDescribe() {
             }
         },
         cseq);
-    LOG_INFO << "RTSP SDP:" << std::endl << response.body;
+    TAU_LOG_INFO("RTSP SDP:" << std::endl << response.body);
     ParseAndValidateSdp(response.body);
 }
 
@@ -51,7 +51,7 @@ void Client::SendRequestSetup() {
     _session.emplace(_executor, CreateSessionOptions());
     const auto rtp_port = _session->GetRtpPort();
     const auto rtcp_port = rtp_port + 1;
-    LOG_INFO << "Rtp port: " << rtp_port << ", rtcp port: " << rtcp_port;
+    TAU_LOG_INFO("Rtp port: " << rtp_port << ", rtcp port: " << rtcp_port);
 
     _cseq++;
     const auto cseq = std::to_string(_cseq);
@@ -70,7 +70,7 @@ void Client::SendRequestSetup() {
     if(!_server_rtp_port || _session_id.empty()) {
         throw std::runtime_error("Wrong SETUP response");
     }
-    LOG_INFO << "RTSP server rtp port: " << *_server_rtp_port << ", session id: " << _session_id;
+    TAU_LOG_INFO("RTSP server rtp port: " << *_server_rtp_port << ", session id: " << _session_id);
 }
 
 void Client::SendRequestPlay() {
@@ -119,15 +119,15 @@ std::optional<Response> Client::SendRequest(Request&& request) {
     asio_tcp::socket socket(_executor);
     asio::connect(socket, _endpoints, ec);
     if(ec) {
-        LOG_WARNING << "connect error: " << ec.value() << ", ec: " << ec.message();
+        TAU_LOG_WARNING("connect error: " << ec.value() << ", ec: " << ec.message());
         return {};
     }
 
     const auto request_str = RequestWriter::Write(request);
-    LOG_INFO << "Request: " << std::endl << request_str;
+    TAU_LOG_INFO("Request: " << std::endl << request_str);
     asio::write(socket, asio::buffer(request_str), ec);
     if(ec) {
-        LOG_WARNING << "write error: " << ec.value() << ", message: " << ec.message();
+        TAU_LOG_WARNING("write error: " << ec.value() << ", message: " << ec.message());
         return {};
     }
 
@@ -138,7 +138,7 @@ std::optional<Response> Client::SendRequest(Request&& request) {
         auto bytes = socket.read_some(asio::buffer(buffer), ec);
         if(ec) {
             if(ec != asio::error::eof) {
-                LOG_WARNING << "read_some error: " << ec.value() << ", message: " << ec.message();
+                TAU_LOG_WARNING("read_some error: " << ec.value() << ", message: " << ec.message());
             }
             break;
         }
@@ -146,7 +146,7 @@ std::optional<Response> Client::SendRequest(Request&& request) {
     } while(socket.available() > 0);
     socket.close(ec);
 
-    LOG_INFO << "Response: " << std::endl << response;
+    TAU_LOG_INFO("Response: " << std::endl << response);
     return ResponseReader::Read(response);
 }
 

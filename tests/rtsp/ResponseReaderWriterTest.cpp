@@ -31,7 +31,7 @@ TEST_F(ResponseReaderWriterTest, Options) {
         }
     };
     auto message = ResponseWriter::Write(response);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertResponse(response, message));
 }
 
@@ -48,7 +48,7 @@ TEST_F(ResponseReaderWriterTest, Describe) {
         .body = "v=0\r\no=- 1741809999999999 1 IN IP4 192.168.0.1\r\ns=Session\r\ni=stream.h264\r\nt=0 0\r\na=tool:Tool v2025.03.13\r\na=type:broadcast\r\na=control:*\r\na=range:npt=now-\r\nm=video 0 RTP/AVP 96\r\nc=IN IP4 0.0.0.0\r\nb=AS:700\r\na=rtpmap:96 H264/90000\r\na=fmtp:96 packetization-mode=1;profile-level-id=640020\r\n"
     };
     auto message = ResponseWriter::Write(response);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertResponse(response, message));
 }
 
@@ -63,7 +63,7 @@ TEST_F(ResponseReaderWriterTest, Setup) {
         },
     };
     auto message = ResponseWriter::Write(response);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertResponse(response, message));
 }
 
@@ -78,7 +78,7 @@ TEST_F(ResponseReaderWriterTest, Play) {
         },
     };
     auto message = ResponseWriter::Write(response);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertResponse(response, message));
 }
 
@@ -91,7 +91,7 @@ TEST_F(ResponseReaderWriterTest, Teardown) {
         },
     };
     auto message = ResponseWriter::Write(response);
-    LOG_INFO << std::endl << message;
+    TAU_LOG_INFO(std::endl << message);
     ASSERT_NO_FATAL_FAILURE(ParseAndAssertResponse(response, message));
 }
 
