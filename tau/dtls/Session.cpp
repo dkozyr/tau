@@ -69,27 +69,63 @@ Session::Session(Dependencies&& deps, Options&& options)
 
 Session::~Session() {
     TAU_LOG_DEBUG(_options.log_ctx << "SSL_state: " << SSL_state_string(_ssl));
+    _state = State::kFailed;
     SSL_free(_ssl);
     SSL_CTX_free(_ctx);
 }
 
 void Session::Process() {
-    if(_state == State::kFailed) { return; }
-    if((_options.type == Type::kClient) && (_state == State::kWaiting)) {
-        _state = State::kConnecting;
-        _state_callback(_state);
+    switch(_state) {
+        case State::kWaiting:
+            if(_options.type == Type::kClient) {
+                _state = State::kConnecting;
+                _state_callback(_state);
+            }
+            break;
+        case State::kConnecting:
+            break;
+        case State::kConnected: return;
+        case State::kFailed: return;
     }
 
     const auto code = (_options.type == Type::kServer) ? SSL_accept(_ssl) : SSL_connect(_ssl);
     if(code <= 0) {
         const auto error = SSL_get_error(_ssl, code);
-        TAU_LOG_DEBUG(_options.log_ctx << "code: " << code << ", error: " << error);
+        TAU_LOG_DEBUG(_options.log_ctx << "code: " << code << ", error: " << error << ", state: " << SSL_state_string(_ssl));
         switch(error) {
+            case SSL_ERROR_WANT_READ:
+                while((SSL_pending(_ssl) > 0) || (BIO_ctrl_pending(_bio_read))) {
+                    TAU_LOG_INFO("SSL_pending(_ssl): " << SSL_pending(_ssl) << ", BIO_ctrl_pending(_bio_read): " << BIO_ctrl_pending(_bio_read));
+                    auto packet = Buffer::Create(_deps.udp_allocator);
+                    auto view = packet.GetViewWithCapacity();
+                    auto recv_read = SSL_read(_ssl, view.ptr, view.size);
+                    if(recv_read > 0) {
+                        packet.SetSize(recv_read);
+                        _recv_callback(std::move(packet));
+                    } else {
+                        break;
+                    }
+                }
+                break;
+            case SSL_ERROR_WANT_WRITE:
+                if(auto pending_size = BIO_ctrl_pending(_bio_write)) {
+                    auto packet = Buffer::Create(_deps.udp_allocator);
+                    auto view = packet.GetViewWithCapacity();
+                    auto size = BIO_read(_bio_write, view.ptr, pending_size);
+                    if(size > 0) {
+                        packet.SetSize(size);
+                        _send_callback(std::move(packet));
+                    } else {
+                        TAU_LOG_WARNING(_options.log_ctx << "BIO_read size: " << size);
+                    }
+                }
+                break;
             case SSL_ERROR_SSL:
-            case SSL_ERROR_SYSCALL:
                 _state = State::kFailed;
                 _state_callback(_state);
                 break;
+            case SSL_ERROR_SYSCALL:
+                return;
             default:
                 break;
         }
@@ -97,18 +133,6 @@ void Session::Process() {
         if(_state == State::kConnecting) {
             _state = State::kConnected;
             _state_callback(_state);
-        }
-
-        while((SSL_pending(_ssl) > 0) || (BIO_ctrl_pending(_bio_read))) {
-            auto packet = Buffer::Create(_deps.udp_allocator);
-            auto view = packet.GetViewWithCapacity();
-            auto recv_read = SSL_read(_ssl, view.ptr, view.size);
-            if(recv_read > 0) {
-                packet.SetSize(recv_read);
-                _recv_callback(std::move(packet));
-            } else {
-                break;
-            }
         }
     }
 
