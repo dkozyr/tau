@@ -84,7 +84,7 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
         const sdp::Media kLocalAudio{ //TODO: move to options
             .type = sdp::MediaType::kAudio,
             .mid = {},
-            .direction = sdp::Direction::kSendRecv,
+            .direction = sdp::Direction::kInactive,
             .codecs = {
                 { 8, sdp::Codec{.index = 0, .name = "PCMU", .clock_rate = 8000}},
             },
@@ -254,8 +254,49 @@ void PeerConnection::InitMdnsClient() {
 void PeerConnection::InitMediaDemuxer() {
     _media_demuxer.emplace(MediaDemuxer::Options{.sdp = *_sdp_offer, .log_ctx = _options.log_ctx});
     _media_demuxer->SetCallback([this](size_t idx, Buffer&& packet, bool is_rtp) {
-        TAU_LOG_DEBUG_THR(128, "Media idx: " << idx << ", is_rtp: " << is_rtp << ", packet size: " << packet.GetSize());
+        auto& rtp_session = _rtp_sessions.at(idx);
+        if(is_rtp) {
+            rtp_session.RecvRtp(std::move(packet));
+        } else {
+            rtp_session.RecvRtcp(std::move(packet));
+        }
     });
+
+    _rtp_sessions.reserve(_sdp_answer->medias.size());
+    for(auto& media : _sdp_answer->medias) {
+        if((media.type == sdp::MediaType::kAudio) || (media.type == sdp::MediaType::kVideo)) {
+            const auto idx = _rtp_sessions.size();
+            auto& [pt, codec] = *media.codecs.begin();
+            _rtp_sessions.emplace_back(
+                rtp::Session::Dependencies{
+                    .allocator = _deps.udp_allocator,
+                    .media_clock = _deps.clock,
+                    .system_clock = _system_clock
+                },
+                rtp::Session::Options{
+                    .rate = codec.clock_rate,
+                    .sender_ssrc = *media.ssrc,
+                    .base_ts = 0, //TODO: fix it
+                    .rtx = false //TODO: fix it
+                }
+            );
+            auto& rtp_session = _rtp_sessions.back();
+            rtp_session.SetEventCallback([this, idx](rtp::session::Event&& event) {
+                TAU_LOG_INFO("RTP session idx: " << idx << ", event: " << event);
+            });
+            rtp_session.SetSendRtpCallback([this](Buffer&& packet) {
+                _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
+            });
+            rtp_session.SetSendRtcpCallback([this](Buffer&& packet) {
+                _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
+            });
+            rtp_session.SetRecvRtpCallback([this, idx](Buffer&& packet) {
+                _recv_rtp_callback(idx, std::move(packet));
+            });
+        } else {
+            break;
+        }
+    }
 }
 
 void PeerConnection::SetRemoteIceCandidateInternal(std::string candidate) {
@@ -280,7 +321,7 @@ void PeerConnection::SetRemoteIceCandidateInternal(std::string candidate) {
 
 // https://datatracker.ietf.org/doc/html/rfc7983#section-7
 void PeerConnection::DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint) {
-    if(rand() % 10 == 7) { return; } //TODO: remove or add option
+    // if(rand() % 10 == 7) { return; } //TODO: remove or add option
 
     const auto view = packet.GetView();
     if(view.size == 0) {

@@ -7,4 +7,4 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR})
 
-target_link_libraries(${PROJECT_NAME} net sdp ice dtls)
+target_link_libraries(${PROJECT_NAME} net mdns sdp ice dtls srtp rtp rtcp rtp-session)

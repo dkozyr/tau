@@ -1,9 +1,15 @@
 #include "tau/webrtc/PeerConnection.h"
 #include "tau/http/Server.h"
 #include "tau/http/Client.h"
+#include "tau/rtp-session/FrameProcessor.h"
+#include "tau/rtp-packetization/H264Depacketizer.h"
+#include "tau/video/h264/Avc1NaluProcessor.h"
+#include "tau/video/h264/AnnexB.h"
 #include "tau/asio/ThreadPool.h"
 #include "tau/common/File.h"
 #include "tau/common/Json.h"
+#include "tau/common/File.h"
+#include "tau/common/Ntp.h"
 #include "tests/lib/Common.h"
 
 namespace tau::webrtc {
@@ -31,6 +37,36 @@ protected:
                 .log_ctx = {}
             }
         );
+        _ctx.emplace(PcContext{
+            .frame_processor{},
+            .h264_depacketizer = rtp::H264Depacketizer{g_system_allocator},
+            .avc1_nalu_processor{h264::Avc1NaluProcessor::Options{}},
+            .output_path = std::to_string(ToNtp(_clock.Now())) + ".h264"
+        });
+        _ctx->frame_processor.SetCallback([this](rtp::Frame&& frame, bool losses) {
+            const auto ok = !losses && _ctx->h264_depacketizer.Process(std::move(frame));
+            if(!ok) {
+                TAU_LOG_INFO("Drop until key-frame, frame rtp packets: " << frame.size() << (losses ? ", losses" : ""));
+                _ctx->avc1_nalu_processor.DropUntilKeyFrame();
+            }
+        });
+        _ctx->h264_depacketizer.SetCallback([this](Buffer&& nal_unit) {
+            _ctx->avc1_nalu_processor.Push(std::move(nal_unit));
+        });
+        _ctx->avc1_nalu_processor.SetCallback([this](Buffer&& nal_unit) {
+            const auto header = reinterpret_cast<const h264::NaluHeader*>(&nal_unit.GetView().ptr[0]);
+            TAU_LOG_INFO("[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << DurationSec(nal_unit.GetInfo().tp) << ", size: " << nal_unit.GetSize());
+            auto view = nal_unit.GetView();
+            //TODO: ToStringView
+            WriteFile(_ctx->output_path, std::string_view{reinterpret_cast<const char*>(h264::kAnnexB.data()), h264::kAnnexB.size()}, true);
+            WriteFile(_ctx->output_path, std::string_view{reinterpret_cast<const char*>(view.ptr), view.size}, true);
+        });
+
+        _pc->SetRecvRtpCallback([this](size_t idx, Buffer&& packet) {
+            if(idx == 1) {
+                _ctx->frame_processor.PushRtp(std::move(packet));
+            }
+        });
         return _pc->ProcessSdpOffer(offer);
     }
 
@@ -46,6 +82,14 @@ protected:
     SteadyClock _clock;
     std::mutex _mutex;
     std::optional<PeerConnection> _pc;
+
+    struct PcContext {
+        rtp::session::FrameProcessor frame_processor;
+        rtp::H264Depacketizer h264_depacketizer;
+        h264::Avc1NaluProcessor avc1_nalu_processor;
+        std::filesystem::path output_path;
+    };
+    std::optional<PcContext> _ctx;
 };
 
 TEST_F(PeerConnectionTest, DISABLED_MANUAL_Localhost) {

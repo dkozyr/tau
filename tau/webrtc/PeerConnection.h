@@ -4,6 +4,7 @@
 #include "tau/ice/Agent.h"
 #include "tau/dtls/Session.h"
 #include "tau/srtp/Session.h"
+#include "tau/rtp-session/Session.h"
 #include "tau/net/UdpSocket.h"
 #include "tau/mdns/Client.h"
 #include "tau/crypto/Certificate.h"
@@ -24,9 +25,13 @@ public:
         std::string log_ctx = {};
     };
 
+    using Callback = std::function<void(size_t media_idx, Buffer&& packet)>;
+
 public:
     PeerConnection(Dependencies&& deps, Options&& options);
     ~PeerConnection();
+
+    void SetRecvRtpCallback(Callback callback) { _recv_rtp_callback = std::move(callback); }
 
     void Start();
     void Process();
@@ -51,6 +56,7 @@ private:
 private:
     Dependencies _deps;
     const Options _options;
+    SystemClock _system_clock;
 
     net::UdpSocketPtr _mdns_socket;
     mdns::Client _mdns_client;
@@ -73,6 +79,9 @@ private:
     std::optional<srtp::Session> _srtp_decryptor;
 
     std::optional<MediaDemuxer> _media_demuxer;
+    std::vector<rtp::Session> _rtp_sessions;
+
+    Callback _recv_rtp_callback;
 
     Random _random;
 };
