@@ -7,13 +7,17 @@
 
 namespace tau::dtls {
 
-const std::unordered_map<Session::SrtpProfile, size_t> kProfileKeyingMaterialSize = {
-    {Session::SrtpProfile::kAes128CmSha1_80, 20 + 10},
-    {Session::SrtpProfile::kAes128CmSha1_32, 20 + 10},
-    // {Session::SrtpProfile::kAes256CmSha1_80, 20 + 10},
-    // {Session::SrtpProfile::kAes256CmSha1_32, 20 + 10},
-    // {Session::SrtpProfile::kAeadAes128Gcm,   16 + 12},
-    // {Session::SrtpProfile::kAeadAes256Gcm,   32 + 12},
+struct KeyingMaterialSize {
+    size_t key;
+    size_t salt;
+};
+const std::unordered_map<Session::SrtpProfile, KeyingMaterialSize> kProfileKeyingMaterialSize = {
+    {Session::SrtpProfile::kAes128CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
+    {Session::SrtpProfile::kAes128CmSha1_32, KeyingMaterialSize{.key = 16, .salt = 14}},
+    // {Session::SrtpProfile::kAes256CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
+    // {Session::SrtpProfile::kAes256CmSha1_32, KeyingMaterialSize{.key = 16, .salt = 14}},
+    // {Session::SrtpProfile::kAeadAes128Gcm,   KeyingMaterialSize{.key = 16, .salt = 12}},
+    // {Session::SrtpProfile::kAeadAes256Gcm,   KeyingMaterialSize{.key = 32, .salt = 12}},
 };
 
 Session::Session(Dependencies&& deps, Options&& options)
@@ -51,6 +55,10 @@ Session::Session(Dependencies&& deps, Options&& options)
     if(!_ssl) {
         TAU_EXCEPTION(std::runtime_error, "SSL_new failed, error: " << ERR_error_string(ERR_get_error(), NULL));
     }
+
+    constexpr auto kDtlsMtuLimit = 1100;
+    SSL_set_mtu(_ssl, kDtlsMtuLimit);
+    DTLS_set_link_mtu(_ssl, kDtlsMtuLimit);
 
     _bio_read = BIO_new(BIO_s_mem());
     _bio_write = BIO_new(BIO_s_mem());
@@ -134,7 +142,6 @@ bool Session::Send(const BufferViewConst& packet_view) {
         TAU_LOG_WARNING(_options.log_ctx << "size: " << size << ", error: " << ERR_error_string(ERR_get_error(), NULL));
         return false;
     }
-    Process();
     return true;
 }
 
@@ -149,8 +156,6 @@ void Session::Recv(Buffer&& packet) {
     if(size <= 0) {
         TAU_LOG_WARNING(_options.log_ctx << "BIO_write size: " << size);
     }
-
-    Process();
 }
 
 std::optional<Timepoint> Session::GetTimeout() {
@@ -195,17 +200,20 @@ std::vector<uint8_t> Session::GetKeyingMaterial(bool encryption) const {
     }
 
     constexpr std::string_view kLabel = "EXTRACTOR-dtls_srtp";
-    const auto keying_material_size = kProfileKeyingMaterialSize.at(*profile);
-    std::vector<uint8_t> keying_material(2 * keying_material_size);
+    const auto& [key_size, salt_size] = kProfileKeyingMaterialSize.at(*profile);
+    std::vector<uint8_t> keying_material(2 * (key_size + salt_size));
     if(!SSL_export_keying_material(_ssl, keying_material.data(), keying_material.size(), kLabel.data(), kLabel.size(), NULL, 0, 0)) {
         return {};
     }
 
+    // https://www.rfc-editor.org/rfc/rfc5764.html#section-4.2
     if((encryption && (_options.type == Type::kClient)) || (!encryption && (_options.type == Type::kServer))) {
-        keying_material.resize(keying_material_size);
+        std::memcpy(keying_material.data() + key_size, keying_material.data() + 2 * key_size, salt_size);
     } else {
-        keying_material.erase(keying_material.begin() + keying_material_size);
+        std::memcpy(keying_material.data(), keying_material.data() + key_size, key_size);
+        std::memcpy(keying_material.data() + key_size, keying_material.data() + 2 * key_size + salt_size, salt_size);
     }
+    keying_material.resize(key_size + salt_size);
     return keying_material;
 }
 
