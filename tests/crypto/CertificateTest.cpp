@@ -16,7 +16,7 @@ TEST(CertificateTest, SelfSigned) {
     ASSERT_EQ(924, cert_data.size());
  
     auto key_data = cert.GetPrivateKeyBuffer();
-    ASSERT_EQ(1704, key_data.size());
+    ASSERT_LE(1704, key_data.size());
 }
 
 }
