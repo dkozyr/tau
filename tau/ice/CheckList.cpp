@@ -100,11 +100,11 @@ void CheckList::RecvRemoteCandidate(std::string candidate) {
         return;
     }
     if(sdp::attribute::CandidateReader::GetTransport(candidate) != "udp") {
-        TAU_LOG_WARNING(_log_ctx << "Unsupported transport: " << sdp::attribute::CandidateReader::GetTransport(candidate));
+        TAU_LOG_INFO(_log_ctx << "Unsupported transport: " << sdp::attribute::CandidateReader::GetTransport(candidate));
         return;
     }
     if(sdp::attribute::CandidateReader::GetComponentId(candidate) != 1) {
-        TAU_LOG_WARNING(_log_ctx << "Wrong component transport: " << sdp::attribute::CandidateReader::GetComponentId(candidate));
+        TAU_LOG_INFO(_log_ctx << "Wrong component transport: " << sdp::attribute::CandidateReader::GetComponentId(candidate));
         return;
     }
     auto address = sdp::attribute::CandidateReader::GetAddress(candidate);

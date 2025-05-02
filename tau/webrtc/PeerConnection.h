@@ -1,8 +1,9 @@
 #pragma once
 
-#include "tau/sdp/Sdp.h"
+#include "tau/webrtc/MediaDemuxer.h"
 #include "tau/ice/Agent.h"
 #include "tau/dtls/Session.h"
+#include "tau/srtp/Session.h"
 #include "tau/net/UdpSocket.h"
 #include "tau/mdns/Client.h"
 #include "tau/crypto/Certificate.h"
@@ -25,6 +26,7 @@ public:
 
 public:
     PeerConnection(Dependencies&& deps, Options&& options);
+    ~PeerConnection();
 
     void Start();
     void Process();
@@ -37,10 +39,12 @@ private:
     void StartIceAgent();
     void StartDtlsSession();
     void InitMdnsClient();
+    void InitMediaDemuxer();
 
     void SetRemoteIceCandidateInternal(std::string candidate);
 
     void DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint);
+    void OnIncomingRtpRtcp(Buffer&& packet);
 
     static bool ValidateSdpOffer(const sdp::Sdp& sdp, const std::string& log_ctx);
 
@@ -66,6 +70,9 @@ private:
 
     crypto::Certificate _dtls_cert;
     std::optional<dtls::Session> _dtls_session;
+    std::optional<srtp::Session> _srtp_decryptor;
+
+    std::optional<MediaDemuxer> _media_demuxer;
 
     Random _random;
 };

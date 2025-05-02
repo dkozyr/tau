@@ -1,5 +1,7 @@
 #include "tau/webrtc/PeerConnection.h"
 #include "tau/sdp/Negotiation.h"
+#include "tau/rtp/Reader.h"
+#include "tau/rtcp/Header.h"
 #include "tau/net/Interface.h"
 #include "tau/crypto/Random.h"
 #include "tau/asio/Ssl.h"
@@ -27,6 +29,16 @@ PeerConnection::PeerConnection(Dependencies&& deps, Options&& options)
     InitMdnsClient();
 }
 
+PeerConnection::~PeerConnection() {
+    _mdns_socket.reset();
+    _udp_sockets.clear();
+    _ice_agent.reset();
+    if(_dtls_session) {
+        _dtls_session->Stop();
+        _dtls_session.reset();
+    }
+}
+
 void PeerConnection::Start() {
     if(_ice_agent) {
         TAU_LOG_WARNING(_options.log_ctx << "Already started");
@@ -36,16 +48,14 @@ void PeerConnection::Start() {
 }
 
 void PeerConnection::Process() {
-    if(_ice_agent) {
-        _ice_agent->Process();
-    }
-    if(_dtls_session) {
-        if(auto timeout = _dtls_session->GetTimeout()) {
-            TAU_LOG_INFO("DTLS timeout: " << *timeout); //TODO: remove it
-            //TODO: store timeout value and check it for Process() executing. Maybe move this logic inside dtls::Session
+    asio::post(_deps.executor, [this]() {
+        if(_ice_agent) {
+            _ice_agent->Process();
+        }
+        if(_dtls_session) {
             _dtls_session->Process();
         }
-    }
+    });
 }
 
 std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
@@ -66,7 +76,7 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
             .candidates = {}
         },
         .dtls = sdp::Dtls{
-            .setup = sdp::Setup::kActive, //TODO: make it flexible
+            .setup = (_sdp_offer->dtls->setup != sdp::Setup::kActive) ? sdp::Setup::kActive : sdp::Setup::kPassive,
             .fingerprint_sha256 = _dtls_cert.GetDigestSha256String()
         },
     };
@@ -101,6 +111,7 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
         _sdp_answer->medias.push_back(*local_media);
     }
 
+    InitMediaDemuxer();
     StartIceAgent();
 
     return sdp::WriteSdp(*_sdp_answer);
@@ -188,32 +199,47 @@ void PeerConnection::StartIceAgent() {
 }
 
 void PeerConnection::StartDtlsSession() {
-    if(!_dtls_session) {
-        _dtls_session.emplace(
-            dtls::Session::Dependencies{
-                .udp_allocator = _deps.udp_allocator,
-                .certificate = _dtls_cert
-            },
-            dtls::Session::Options{
-                .type = dtls::Session::Type::kClient, //TODO: fix it
-                .srtp_profiles = dtls::Session::kSrtpProfilesDefault,
-                .remote_peer_cert_digest = _sdp_offer->dtls->fingerprint_sha256,
-                .log_ctx = _options.log_ctx
-            }
-        );
+    if(_dtls_session) {
+        return;
     }
+
+    _dtls_session.emplace(
+        dtls::Session::Dependencies{
+            .udp_allocator = _deps.udp_allocator,
+            .certificate = _dtls_cert
+        },
+        dtls::Session::Options{
+            .type = (_sdp_answer->dtls->setup == sdp::Setup::kActive) ? dtls::Session::Type::kClient : dtls::Session::Type::kServer,
+            .srtp_profiles = dtls::Session::kSrtpProfilesDefault,
+            .remote_peer_cert_digest = _sdp_offer->dtls->fingerprint_sha256,
+            .log_ctx = _options.log_ctx
+        }
+    );
     _dtls_session->SetStateCallback([this](dtls::Session::State state) {
         TAU_LOG_INFO(_options.log_ctx << "DTLS state: " << state);
+        if(state == dtls::Session::State::kConnected) {
+            auto srtp_profile = _dtls_session->GetSrtpProfile();
+            try {
+                _srtp_decryptor.emplace(srtp::Session::Options{
+                    .type = srtp::Session::Type::kDecryptor,
+                    .profile = static_cast<srtp_profile_t>(srtp_profile.value()),
+                    .key = _dtls_session->GetKeyingMaterial(false)
+                });
+                _srtp_decryptor->SetCallback([this](Buffer&& packet, bool is_rtp) {
+                    _media_demuxer->Process(std::move(packet), is_rtp);
+                });
+            } catch(const std::exception& e) {
+                TAU_LOG_WARNING("Srtp session creating failed, exception: " << e.what());
+            }
+        }
     });
     _dtls_session->SetRecvCallback([this](Buffer&& packet) {
-        TAU_LOG_INFO(_options.log_ctx << "[DTLS] recv packet: " << packet.GetSize());
+        TAU_LOG_DEBUG(_options.log_ctx << "[DTLS] recv packet: " << packet.GetSize()); //TODO: trace
     });
-    _dtls_session->SetSendCallback([this](Buffer&& packet){
-        TAU_LOG_INFO(_options.log_ctx << "[DTLS] socket_idx: " << _ice_pair->socket_idx << ", remote: " << _ice_pair->remote_endpoint);
+    _dtls_session->SetSendCallback([this](Buffer&& packet) {
+        TAU_LOG_TRACE(_options.log_ctx << "[DTLS] socket_idx: " << _ice_pair->socket_idx << ", remote: " << _ice_pair->remote_endpoint);
         _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
     });
-
-    _dtls_session->Process();
 }
 
 void PeerConnection::InitMdnsClient() {
@@ -222,6 +248,13 @@ void PeerConnection::InitMdnsClient() {
     });
     _mdns_client.SetSendCallback([&](Buffer&& packet) {
         _mdns_socket->Send(std::move(packet), Endpoint{IpAddressV4::from_string("224.0.0.251"), 5353}); //TODO: move endpoint data to callback argument?
+    });
+}
+
+void PeerConnection::InitMediaDemuxer() {
+    _media_demuxer.emplace(MediaDemuxer::Options{.sdp = *_sdp_offer, .log_ctx = _options.log_ctx});
+    _media_demuxer->SetCallback([this](size_t idx, Buffer&& packet, bool is_rtp) {
+        TAU_LOG_DEBUG_THR(128, "Media idx: " << idx << ", is_rtp: " << is_rtp << ", packet size: " << packet.GetSize());
     });
 }
 
@@ -247,25 +280,46 @@ void PeerConnection::SetRemoteIceCandidateInternal(std::string candidate) {
 
 // https://datatracker.ietf.org/doc/html/rfc7983#section-7
 void PeerConnection::DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint) {
+    if(rand() % 10 == 7) { return; } //TODO: remove or add option
+
     const auto view = packet.GetView();
     if(view.size == 0) {
         return;
     }
     const auto byte = view.ptr[0];
     if((byte <= 3) || ((64 <= byte) && (byte <= 79))) {
-        TAU_LOG_TRACE(_options.log_ctx << "[STUN/TURN] size: " << view.size);
-        _ice_agent->Recv(socket_idx, remote_endpoint, std::move(packet));
+        TAU_LOG_DEBUG(_options.log_ctx << "[STUN/TURN] size: " << view.size << ", socket: " << socket_idx << ", remote: " << remote_endpoint);
+        if(_ice_agent) {
+            _ice_agent->Recv(socket_idx, remote_endpoint, std::move(packet));
+        } else {
+            TAU_LOG_WARNING(_options.log_ctx << "[STUN/TURN] No ice agent, packet size: " << view.size << ", skipped");
+        }
     } else if((20 <= byte) && (byte <= 63)) {
         TAU_LOG_DEBUG(_options.log_ctx << "[DTLS] size: " << view.size);
         if(_dtls_session) {
             _dtls_session->Recv(std::move(packet));
         } else {
-            TAU_LOG_WARNING(_options.log_ctx << "[DTLS] No session, incoming packet size: " << view.size);
+            TAU_LOG_WARNING(_options.log_ctx << "[DTLS] No session, packet size: " << view.size);
         }
     } else if((128 <= byte) && (byte <= 192)) {
-        TAU_LOG_DEBUG(_options.log_ctx << "[RTP/RTCP] size: " << view.size);
+        OnIncomingRtpRtcp(std::move(packet));
     } else {
         TAU_LOG_DEBUG(_options.log_ctx << "Unknown first byte: " <<(size_t)byte << ", size: " << view.size);
+    }
+}
+
+void PeerConnection::OnIncomingRtpRtcp(Buffer&& packet) {
+    if(!_srtp_decryptor) {
+        TAU_LOG_WARNING("Skip srtp packet"); //TODO: queue packet
+        return;
+    }
+    const auto view = ToConst(packet.GetView());
+    if(rtcp::IsRtcp(view)) {
+        _srtp_decryptor->Decrypt(std::move(packet), false);
+    } else {
+        if(rtp::Reader::Validate(view)) {
+            _srtp_decryptor->Decrypt(std::move(packet), true);
+        }
     }
 }
 
@@ -284,7 +338,7 @@ bool PeerConnection::ValidateSdpOffer(const sdp::Sdp& sdp, const std::string& lo
         TAU_LOG_WARNING(log_ctx << "Sdp offer ICE validation failed");
         return false;
     }
-    if(!sdp.dtls || !sdp.dtls->setup.has_value() || sdp.dtls->fingerprint_sha256.empty()) {
+    if(!sdp.dtls || !sdp.dtls->setup || sdp.dtls->fingerprint_sha256.empty()) {
         TAU_LOG_WARNING(log_ctx << "Sdp offer DTLS validation failed");
         return false;
     }

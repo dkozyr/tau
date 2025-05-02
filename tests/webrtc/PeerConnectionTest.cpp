@@ -20,10 +20,11 @@ public:
 
 protected:
     std::string ProcessSdpOffer(const std::string& offer) {
+        _pc.reset();
         _pc.emplace(
             PeerConnection::Dependencies{
                 .clock = _clock,
-                .executor = _io.GetExecutor(),
+                .executor = _io.GetStrand(),
                 .udp_allocator = g_udp_allocator
             },
             PeerConnection::Options{
@@ -33,9 +34,17 @@ protected:
         return _pc->ProcessSdpOffer(offer);
     }
 
+    void Process() {
+        std::lock_guard lock{_mutex};
+        if(_pc) {
+            _pc->Process();
+        }
+    }
+
 protected:
     ThreadPool _io;
     SteadyClock _clock;
+    std::mutex _mutex;
     std::optional<PeerConnection> _pc;
 };
 
@@ -72,6 +81,7 @@ TEST_F(PeerConnectionTest, DISABLED_MANUAL_Localhost) {
 
                     callback(std::move(response));
                 } else if((request.method() == beast_http::verb::post) && (target == "/offer")) {
+                    std::lock_guard lock{_mutex};
                     auto offer = beast::buffers_to_string(request.body().data());
                     auto answer = ProcessSdpOffer(offer);
 
@@ -81,6 +91,7 @@ TEST_F(PeerConnectionTest, DISABLED_MANUAL_Localhost) {
 
                     callback(std::move(response));
                 } else if((request.method() == beast_http::verb::post) && (target == "/candidate")) {
+                    std::lock_guard lock{_mutex};
                     auto candidates = beast::buffers_to_string(request.body().data());
                     boost_ec ec;
                     auto parsed = Json::parse(candidates, ec);
@@ -130,9 +141,7 @@ TEST_F(PeerConnectionTest, DISABLED_MANUAL_Localhost) {
 
     while(true) {
         std::this_thread::sleep_for(5ms);
-        if(_pc) {
-            _pc->Process();
-        }
+        Process();
     }
     // Event().WaitFor(600s);
 }
