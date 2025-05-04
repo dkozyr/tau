@@ -2,6 +2,8 @@
 
 #include "tau/asio/Common.h"
 #include <boost/asio/ssl.hpp>
+#include <boost/beast/ssl.hpp>
+#include <boost/beast/websocket/ssl.hpp>
 #include <vector>
 
 namespace tau {

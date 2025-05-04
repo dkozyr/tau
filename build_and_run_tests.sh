@@ -10,6 +10,8 @@ ninja -j 4
 ./bin/asio-test-app
 ./bin/crypto-test-app
 ./bin/net-test-app
+./bin/http-test-app
+./bin/ws-test-app
 ./bin/rtp-test-app
 ./bin/rtcp-test-app
 ./bin/rtp-packetization-test-app
