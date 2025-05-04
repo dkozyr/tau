@@ -108,14 +108,14 @@ TEST_F(ClientServerTest, SeveralClients) {
     std::atomic<size_t> clients_done{0};
     constexpr auto kTestClients = 42;
     for(size_t i = 0; i < kTestClients; ++i) {
-        auto client = std::make_shared<Client>(Client::Options{kLocalHost, kWsPortTest}, _io.GetExecutor(), *_client_ssl_ctx);
+        auto client = std::make_shared<Client>(Client::Options{kLocalHost, kWsPortTest}, _io.GetStrand(), *_client_ssl_ctx);
         client->SetOnConnectedCallback([weak_self = std::weak_ptr<Client>(client)]() {
             if(auto self = weak_self.lock()) {
                 self->PostMessage("Hello world");
             }
         });
         client->SetOnMessageCallback([&done, &clients_done](std::string&&) {
-            clients_done.fetch_add(1, std::memory_order_relaxed);
+            clients_done.fetch_add(1, std::memory_order_seq_cst);
             if(clients_done.load() == kTestClients) {
                 done.Set();
             }
@@ -123,7 +123,7 @@ TEST_F(ClientServerTest, SeveralClients) {
         client->Start();
     }
 
-    ASSERT_TRUE(done.WaitFor(3s)) << "clients_done: " << clients_done << "/" << kTestClients;
+    ASSERT_TRUE(done.WaitFor(2s)) << "clients_done: " << clients_done << "/" << kTestClients;
 }
 
 }

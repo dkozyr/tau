@@ -12,6 +12,8 @@ Client::Client(Options&& options, Executor executor, asio_ssl::context& ssl_ctx)
 }
 
 Client::~Client() {
+    beast_ec ec;
+    _socket.next_layer().lowest_layer().close(ec);
 }
 
 void Client::Start() {
@@ -107,7 +109,10 @@ void Client::OnHandshake(beast_ec ec) {
 
 void Client::DoRead() {
     _buffer.clear();
-    _socket.async_read(_buffer, beast::bind_front_handler(&Client::OnRead, shared_from_this()));
+    _socket.async_read(_buffer,
+        [self = shared_from_this()](beast_ec ec, std::size_t bytes_transferred) {
+            self->OnRead(ec, bytes_transferred);
+        });
 }
 
 void Client::OnRead(beast_ec ec, std::size_t bytes_transferred) {

@@ -13,10 +13,15 @@ Connection::Connection(asio_tcp::socket&& socket, SslContext& ssl_ctx)
 
 Connection::~Connection() {
     TAU_LOG_DEBUG(_log_ctx);
+    beast_ec ec;
+    _socket.next_layer().lowest_layer().close(ec);
 }
 
 void Connection::Start() {
-    asio::dispatch(_socket.get_executor(), beast::bind_front_handler(&Connection::OnStart, shared_from_this()));
+    asio::dispatch(_socket.get_executor(),
+        [self = this->shared_from_this()]() {
+            self->OnStart();
+        });
 }
 
 void Connection::Close() {
@@ -39,7 +44,10 @@ void Connection::PostMessage(std::string message) {
 
 void Connection::OnStart() {
     beast::get_lowest_layer(_socket).expires_after(std::chrono::seconds(30));
-    _socket.next_layer().async_handshake(asio_ssl::stream_base::server, beast::bind_front_handler(&Connection::OnHandshake, shared_from_this()));
+    _socket.next_layer().async_handshake(asio_ssl::stream_base::server,
+        [self = shared_from_this()](beast_ec ec) {
+            self->OnHandshake(ec);
+        });
 }
 
 void Connection::OnHandshake(beast_ec ec) {
@@ -57,28 +65,27 @@ void Connection::OnHandshake(beast_ec ec) {
         }));
 
     beast_http::async_read(_socket.next_layer(), _buffer, _request,
-        beast::bind_front_handler(&Connection::OnFirstRequest, shared_from_this()));
+        [self = shared_from_this()](beast_ec ec, std::size_t bytes_transferred) {
+            self->OnFirstRequest(ec, bytes_transferred);
+        });
 }
 
 void Connection::OnFirstRequest(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
-        TAU_LOG_WARNING("Error: " << ec.message());
+        TAU_LOG_WARNING(_log_ctx<< "Error: " << ec.message());
         return;
     }
 
-    //TODO: check options
 
-    _socket.accept(_request, ec);
-    if(ec) {
-        TAU_LOG_WARNING("Error: " << ec.message());
-    } else {
-        DoRead();
-    }
+    _socket.async_accept(_request,
+        [self = shared_from_this()](beast_ec ec) {
+            self->OnAccept(ec);
+        });
 }
 
 void Connection::OnAccept(beast_ec ec) {
     if(ec) {
-        TAU_LOG_WARNING("Error: " << ec.message());
+        TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message());
     } else {
         DoRead();
     }
@@ -86,14 +93,17 @@ void Connection::OnAccept(beast_ec ec) {
 
 void Connection::DoRead() {
     _buffer.clear();
-    _socket.async_read(_buffer, beast::bind_front_handler(&Connection::OnRead, shared_from_this()));
+    _socket.async_read(_buffer,
+        [self = shared_from_this()](beast_ec ec, std::size_t bytes_transferred) {
+            self->OnRead(ec, bytes_transferred);
+        });
 }
 
-void Connection::OnRead(beast_ec ec, std::size_t /*bytes_transferred*/) {
+void Connection::OnRead(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
         //TODO: remove logging
         if((ec != beast_ws::error::closed) && (ec != asio::error::eof) && (ec != boost::system::errc::operation_canceled)) {
-            TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message());
+            TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
         }
         return;
     }
@@ -119,10 +129,16 @@ void Connection::DoWriteLoop() {
     auto& message = _message_queue.front();
     std::visit(overloaded{
         [this](std::string& msg) {
-            _socket.async_write(asio::buffer(msg), beast::bind_front_handler(&Connection::OnWrite, shared_from_this()));
+            _socket.async_write(asio::buffer(msg),
+                [self = shared_from_this()](beast_ec ec, std::size_t bytes_transferred) {
+                    self->OnWrite(ec, bytes_transferred);
+                });
         },
         [this](CloseMessage) {
-            _socket.async_close(beast_ws::close_code::normal, beast::bind_front_handler(&Connection::OnClose, shared_from_this()));
+            _socket.async_close(beast_ws::close_code::normal,
+                [self = shared_from_this()](beast_ec ec) {
+                    self->OnClose(ec);
+                });
         },
         [this](DoNothingMessage) {
             _message_queue.pop_front();
@@ -131,9 +147,9 @@ void Connection::DoWriteLoop() {
     }, message);
 }
 
-void Connection::OnWrite(beast_ec ec, std::size_t /*bytes_transferred*/) {
+void Connection::OnWrite(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
-        TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message());
+        TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
         return;
     }
 
@@ -143,10 +159,10 @@ void Connection::OnWrite(beast_ec ec, std::size_t /*bytes_transferred*/) {
 
 void Connection::OnClose(beast_ec ec) {
     if(ec) {
-        if(ec != boost::asio::ssl::error::stream_truncated) {
-            TAU_LOG_WARNING("Error: " << ec.message());
+        if(ec != asio_ssl::error::stream_truncated) {
+            TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message());
         } else {
-            TAU_LOG_DEBUG("Error: " << ec.message());
+            TAU_LOG_DEBUG(_log_ctx << "Error: " << ec.message());
         }
     }
     _message_queue.pop_front();

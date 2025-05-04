@@ -4,7 +4,7 @@
 namespace tau::ws {
 
 Server::Server(Options&& options, Executor executor, SslContext& ssl_ctx)
-    : _executor(asio::make_strand(executor)) //TODO: check strand here
+    : _executor(asio::make_strand(executor))
     , _ssl_ctx(ssl_ctx)
     , _acceptor(_executor) {
     asio_tcp::endpoint endpoint{asio_ip::make_address(options.host), options.port};
@@ -26,7 +26,10 @@ void Server::Start() {
 }
 
 void Server::DoAccept() {
-    _acceptor.async_accept(beast::bind_front_handler(&Server::OnAccept, this));
+    _acceptor.async_accept(
+        [this](beast_ec ec, asio_tcp::socket socket) {
+            OnAccept(ec, std::move(socket));
+        });
 }
 
 void Server::OnAccept(beast_ec ec, asio_tcp::socket socket) {
