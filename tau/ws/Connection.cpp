@@ -72,7 +72,7 @@ void Connection::OnHandshake(beast_ec ec) {
 
 void Connection::OnFirstRequest(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
-        TAU_LOG_WARNING(_log_ctx<< "Error: " << ec.message());
+        TAU_LOG_WARNING(_log_ctx<< "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
         return;
     }
 

@@ -40,6 +40,7 @@ private:
     void OnRead(beast_ec ec, std::size_t bytes_transferred);
     void DoPostMessage(std::string&& msg);
     void DoWriteLoop();
+    void OnWrite(beast_ec ec, size_t bytes_transferred);
 
     void OnClose(beast_ec ec);
 

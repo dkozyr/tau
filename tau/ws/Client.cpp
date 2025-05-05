@@ -6,9 +6,9 @@ namespace tau::ws {
 
 Client::Client(Options&& options, Executor executor, asio_ssl::context& ssl_ctx)
     : _options(std::move(options))
-    , _executor(executor)
-    , _resolver(executor)
-    , _socket(asio::make_strand(executor), ssl_ctx) {
+    , _executor(asio::make_strand(executor))
+    , _resolver(_executor)
+    , _socket(_executor, ssl_ctx) {
 }
 
 Client::~Client() {
@@ -143,17 +143,21 @@ void Client::DoWriteLoop() {
 
     _socket.async_write(
         asio::buffer(_message_queue.front()),
-        [self = shared_from_this(), this] (beast_ec ec, size_t bytes_transferred) {
-            if(ec) {
-                if(ec != boost::system::errc::operation_canceled) {
-                    TAU_LOG_WARNING("Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
-                }
-                return;
-            }
-
-            _message_queue.pop_front();
-            DoWriteLoop();
+        [self = shared_from_this()] (beast_ec ec, size_t bytes_transferred) {
+            self->OnWrite(ec, bytes_transferred);
         });
+}
+
+void Client::OnWrite(beast_ec ec, size_t bytes_transferred) {
+    if(ec) {
+        if(ec != boost::system::errc::operation_canceled) {
+            TAU_LOG_WARNING("Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
+        }
+        return;
+    }
+
+    _message_queue.pop_front();
+    DoWriteLoop();
 }
 
 void Client::OnClose(beast_ec ec) {

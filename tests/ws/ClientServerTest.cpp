@@ -64,6 +64,7 @@ TEST_F(ClientServerTest, Basic) {
 
     client->PostMessage("Hello world");
     ASSERT_TRUE(on_done.WaitFor(1s));
+    client.reset();
 }
 
 TEST_F(ClientServerTest, CloseConnection) {
@@ -93,6 +94,7 @@ TEST_F(ClientServerTest, CloseConnection) {
     connection_ptr->Close();
     client->PostMessage("Hello world");
     ASSERT_FALSE(on_done.WaitFor(100ms));
+    client.reset();
 }
 
 TEST_F(ClientServerTest, SeveralClients) {
@@ -107,6 +109,7 @@ TEST_F(ClientServerTest, SeveralClients) {
     Event done;
     std::atomic<size_t> clients_done{0};
     constexpr auto kTestClients = 42;
+    std::vector<std::shared_ptr<Client>> clients;
     for(size_t i = 0; i < kTestClients; ++i) {
         auto client = std::make_shared<Client>(Client::Options{kLocalHost, kWsPortTest}, _io.GetStrand(), *_client_ssl_ctx);
         client->SetOnConnectedCallback([weak_self = std::weak_ptr<Client>(client)]() {
@@ -121,9 +124,11 @@ TEST_F(ClientServerTest, SeveralClients) {
             }
         });
         client->Start();
+        clients.push_back(std::move(client));
     }
 
-    ASSERT_TRUE(done.WaitFor(2s)) << "clients_done: " << clients_done << "/" << kTestClients;
+    EXPECT_TRUE(done.WaitFor(2s)) << "clients_done: " << clients_done << "/" << kTestClients;
+    clients.clear();
 }
 
 }
