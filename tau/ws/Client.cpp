@@ -4,11 +4,11 @@
 
 namespace tau::ws {
 
-Client::Client(Options&& options, Executor executor, asio_ssl::context& ssl_ctx)
+Client::Client(Executor executor, Options&& options)
     : _options(std::move(options))
     , _executor(asio::make_strand(executor))
     , _resolver(_executor)
-    , _socket(_executor, ssl_ctx) {
+    , _socket(_executor, _options.ssl_ctx) {
 }
 
 Client::~Client() {

@@ -11,16 +11,17 @@ public:
     static inline const std::chrono::seconds kHandshakeTimeout{2};
     static inline const std::chrono::seconds kIdleTimeout{30};
 
-    using OnConnectedCallback = std::function<void(void)>;
-    using OnMessageCallback = std::function<void(std::string&&)>;
-
     struct Options{
         std::string host;
         uint16_t port;
+        SslContext& ssl_ctx;
     };
 
+    using OnConnectedCallback = std::function<void(void)>;
+    using OnMessageCallback = std::function<void(std::string&&)>;
+
 public:
-    Client(Options&& options, Executor executor, asio_ssl::context& ssl_ctx);
+    Client(Executor executor, Options&& options);
     ~Client();
 
     void SetOnConnectedCallback(OnConnectedCallback&& callback) { _on_connected_callback = std::move(callback); }
@@ -52,7 +53,7 @@ private:
     Executor _executor;
     asio_tcp::resolver _resolver;
     SocketType _socket;
-    beast_http::response<beast_http::string_body> _response; //TODO: do we need it?
+    beast_http::response<beast_http::string_body> _response;
     beast::flat_buffer _buffer;
     std::deque<std::string> _message_queue;
     bool _closed = false;

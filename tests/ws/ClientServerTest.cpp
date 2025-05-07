@@ -40,7 +40,10 @@ protected:
 };
 
 TEST_F(ClientServerTest, Basic) {
-    Server server(Server::Options{kLocalHost, kWsPortTest}, _io.GetExecutor(), *_server_ssl_ctx);
+    Server server(
+        Server::Dependencies{.executor = _io.GetExecutor()},
+        Server::Options{kLocalHost, kWsPortTest, *_server_ssl_ctx}
+    );
     server.SetOnNewConnectionCallback([](ConnectionPtr connection) {
         connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
             return request;
@@ -51,7 +54,7 @@ TEST_F(ClientServerTest, Basic) {
     Event on_ready;
     Event on_done;
 
-    auto client = std::make_shared<Client>(Client::Options{kLocalHost, kWsPortTest}, _io.GetExecutor(), *_client_ssl_ctx);
+    auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx});
     client->SetOnConnectedCallback([&on_ready]() {
         on_ready.Set();
     });
@@ -68,7 +71,10 @@ TEST_F(ClientServerTest, Basic) {
 }
 
 TEST_F(ClientServerTest, CloseConnection) {
-    Server server(Server::Options{kLocalHost, kWsPortTest}, _io.GetExecutor(), *_server_ssl_ctx);
+    Server server(
+        Server::Dependencies{.executor = _io.GetExecutor()},
+        Server::Options{kLocalHost, kWsPortTest, *_server_ssl_ctx}
+    );
     ConnectionPtr connection_ptr = nullptr;
     server.SetOnNewConnectionCallback([&connection_ptr](ConnectionPtr connection) {
         connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
@@ -80,7 +86,7 @@ TEST_F(ClientServerTest, CloseConnection) {
 
     Event on_ready;
     Event on_done;
-    auto client = std::make_shared<Client>(Client::Options{kLocalHost, kWsPortTest}, _io.GetExecutor(), *_client_ssl_ctx);
+    auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx});
     client->SetOnConnectedCallback([&on_ready]() {
         on_ready.Set();
     });
@@ -98,7 +104,10 @@ TEST_F(ClientServerTest, CloseConnection) {
 }
 
 TEST_F(ClientServerTest, SeveralClients) {
-    Server server(Server::Options{kLocalHost, kWsPortTest}, _io.GetExecutor(), *_server_ssl_ctx);
+    Server server(
+        Server::Dependencies{.executor = _io.GetExecutor()},
+        Server::Options{kLocalHost, kWsPortTest, *_server_ssl_ctx}
+    );
     server.SetOnNewConnectionCallback([](ConnectionPtr connection) {
         connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
             return request;
@@ -111,7 +120,7 @@ TEST_F(ClientServerTest, SeveralClients) {
     constexpr auto kTestClients = 42;
     std::vector<std::shared_ptr<Client>> clients;
     for(size_t i = 0; i < kTestClients; ++i) {
-        auto client = std::make_shared<Client>(Client::Options{kLocalHost, kWsPortTest}, _io.GetStrand(), *_client_ssl_ctx);
+        auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx});
         client->SetOnConnectedCallback([weak_self = std::weak_ptr<Client>(client)]() {
             if(auto self = weak_self.lock()) {
                 self->PostMessage("Hello world");

@@ -3,9 +3,9 @@
 
 namespace tau::ws {
 
-Server::Server(Options&& options, Executor executor, SslContext& ssl_ctx)
-    : _executor(asio::make_strand(executor))
-    , _ssl_ctx(ssl_ctx)
+Server::Server(Dependencies&& deps, Options&& options)
+    : _executor(asio::make_strand(deps.executor))
+    , _ssl_ctx(options.ssl_ctx)
     , _acceptor(_executor) {
     asio_tcp::endpoint endpoint{asio_ip::make_address(options.host), options.port};
     _acceptor.open(endpoint.protocol());

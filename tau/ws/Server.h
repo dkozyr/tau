@@ -7,15 +7,20 @@ namespace tau::ws {
 
 class Server {
 public:
-    using OnNewConnectionCallback = std::function<void(ConnectionPtr)>;
-
-    struct Options{
-        std::string host;
-        uint16_t port;
+    struct Dependencies {
+        Executor executor;
     };
 
+    struct Options {
+        std::string host;
+        uint16_t port;
+        SslContext& ssl_ctx;
+    };
+
+    using OnNewConnectionCallback = std::function<void(ConnectionPtr)>;
+
 public:
-    Server(Options&& options, Executor executor, SslContext& ssl_ctx);
+    Server(Dependencies&& deps, Options&& options);
     ~Server();
 
     void SetOnNewConnectionCallback(OnNewConnectionCallback&& callback) { _on_new_connection_callback = std::move(callback); }
@@ -32,7 +37,6 @@ private:
 private:
     Executor _executor;
     SslContext& _ssl_ctx;
-    // asio_ssl::context& _ssl_ctx;
     asio_tcp::acceptor _acceptor;
     std::list<ConnectionWeakPtr> _connections;
 
