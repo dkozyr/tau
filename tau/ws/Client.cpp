@@ -83,11 +83,14 @@ void Client::OnSslHandshake(beast_ec ec) {
         .keep_alive_pings = true
     };
     _socket.set_option(timeouts);
-
     _socket.set_option(beast_ws::stream_base::decorator(
-        [](beast_ws::request_type& request) {
-            request.set(beast_http::field::user_agent, std::string("ws-client-") + std::string(BOOST_BEAST_VERSION_STRING));
-            request.set(beast_http::field::origin, std::string("origin-custom-value"));
+        [this](beast_ws::request_type& request) {
+            request.set(beast_http::field::user_agent, std::string("tau-ws-client-") + std::string(BOOST_BEAST_VERSION_STRING));
+            for(auto& http_field : _options.http_fields) {
+                std::visit([&](auto name) {
+                    request.set(name, http_field.value);
+                }, http_field.name);
+            }
         }));
 
     _socket.async_handshake(_response, _options.host, "/",

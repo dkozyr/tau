@@ -60,8 +60,9 @@ void Connection::OnHandshake(beast_ec ec) {
 
     _socket.set_option(beast_ws::stream_base::timeout::suggested(beast::role_type::server));
     _socket.set_option(beast_ws::stream_base::decorator(
-        [](beast_ws::response_type& response) {
-            //TODO: add options
+        [this](beast_ws::response_type& response) {
+            response.set(beast_http::field::user_agent, std::string("tau-ws-server-") + std::string(BOOST_BEAST_VERSION_STRING));
+            _process_response_callback(response);
         }));
 
     beast_http::async_read(_socket.next_layer(), _buffer, _request,
@@ -76,6 +77,9 @@ void Connection::OnFirstRequest(beast_ec ec, std::size_t bytes_transferred) {
         return;
     }
 
+    if(_validate_request_callback && !_validate_request_callback(_request)) {
+        return;
+    }
 
     _socket.async_accept(_request,
         [self = shared_from_this()](beast_ec ec) {
@@ -101,7 +105,6 @@ void Connection::DoRead() {
 
 void Connection::OnRead(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
-        //TODO: remove logging
         if((ec != beast_ws::error::closed) && (ec != asio::error::eof) && (ec != boost::system::errc::operation_canceled)) {
             TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
         }

@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tau/ws/Field.h" //TODO: move to http
+
 #include "tau/asio/Ssl.h"
 #include <chrono>
 #include <deque>
@@ -11,10 +13,11 @@ public:
     static inline const std::chrono::seconds kHandshakeTimeout{2};
     static inline const std::chrono::seconds kIdleTimeout{30};
 
-    struct Options{
+    struct Options {
         std::string host;
         uint16_t port;
         SslContext& ssl_ctx;
+        http::Fields http_fields = {};
     };
 
     using OnConnectedCallback = std::function<void(void)>;

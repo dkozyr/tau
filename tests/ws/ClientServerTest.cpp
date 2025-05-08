@@ -70,6 +70,80 @@ TEST_F(ClientServerTest, Basic) {
     client.reset();
 }
 
+TEST_F(ClientServerTest, ServerValidateRequestOrigin) {
+    Server server(
+        Server::Dependencies{.executor = _io.GetExecutor()},
+        Server::Options{kLocalHost, kWsPortTest, *_server_ssl_ctx, http::Fields{
+            http::Field{beast_http::field::server, "example.com"},
+            http::Field{beast_http::field::access_control_allow_origin, "https://www.example.com"},
+            http::Field{"custom-name", "custom-value"},
+        }}
+    );
+    server.SetValidateRequestCallback([](const beast_request& request) {
+        TAU_LOG_INFO("Request: " << request);
+        const auto it_origin = request.find("Origin");
+        if(it_origin == request.end()) {
+            TAU_LOG_WARNING("No Origin header");
+            return false;
+        }
+        if(it_origin->value() != "example.com") {
+            TAU_LOG_WARNING("Wrong Origin: " << it_origin->value());
+            return false;
+        }
+        return true;
+    });
+    server.SetOnNewConnectionCallback([](ConnectionPtr connection) {
+        connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
+            return request;
+        });
+    });
+    server.Start();
+
+    {
+        Event on_ready;
+        Event on_done;
+
+        auto good_client = std::make_shared<Client>(_io.GetExecutor(),
+            Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx, {
+                http::Field{beast_http::field::origin, "example.com"},
+                http::Field{beast_http::field::host, "https://www.example.com:443"},
+                http::Field{"custom-name", "custom-value"},
+            }
+        });
+        good_client->SetOnConnectedCallback([&on_ready]() {
+            on_ready.Set();
+        });
+        good_client->SetOnMessageCallback([&on_done](std::string&& message) {
+            TAU_LOG_INFO("[client] incoming message: " << message);
+            on_done.Set();
+        });
+        good_client->Start();
+        ASSERT_TRUE(on_ready.WaitFor(1s));
+
+        good_client->PostMessage("Hello world");
+        ASSERT_TRUE(on_done.WaitFor(1s));
+    }
+    {
+        Event on_ready;
+
+        auto bad_client = std::make_shared<Client>(_io.GetExecutor(),
+            Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx, {
+                http::Field{beast_http::field::origin, "wrong-origin-domain.com"},
+                http::Field{beast_http::field::host, "https://www.example.com:443"},
+                http::Field{"custom-name", "custom-value"},
+            }
+        });
+        bad_client->SetOnConnectedCallback([&on_ready]() {
+            on_ready.Set();
+        });
+        bad_client->SetOnMessageCallback([](std::string&&) {
+            ASSERT_TRUE(false);
+        });
+        bad_client->Start();
+        ASSERT_FALSE(on_ready.WaitFor(100ms));
+    }
+}
+
 TEST_F(ClientServerTest, CloseConnection) {
     Server server(
         Server::Dependencies{.executor = _io.GetExecutor()},

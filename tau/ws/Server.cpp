@@ -5,9 +5,9 @@ namespace tau::ws {
 
 Server::Server(Dependencies&& deps, Options&& options)
     : _executor(asio::make_strand(deps.executor))
-    , _ssl_ctx(options.ssl_ctx)
+    , _options(std::move(options))
     , _acceptor(_executor) {
-    asio_tcp::endpoint endpoint{asio_ip::make_address(options.host), options.port};
+    asio_tcp::endpoint endpoint{asio_ip::make_address(_options.host), _options.port};
     _acceptor.open(endpoint.protocol());
     _acceptor.set_option(asio_tcp::acceptor::reuse_address(true));
     _acceptor.bind(endpoint);
@@ -39,7 +39,13 @@ void Server::OnAccept(beast_ec ec, asio_tcp::socket socket) {
         }
     } else {
         try {
-            auto connection = std::make_shared<Connection>(std::move(socket), _ssl_ctx);
+            auto connection = std::make_shared<Connection>(std::move(socket), _options.ssl_ctx);
+            connection->SetValidateRequest([this](const beast_request& request) {
+                return ValidateRequest(request);
+            });
+            connection->SetProcessResponseCallback([this](beast_ws::response_type& response) {
+                ProcessResponse(response);
+            });
             _on_new_connection_callback(connection);
             connection->Start();
 
@@ -50,6 +56,21 @@ void Server::OnAccept(beast_ec ec, asio_tcp::socket socket) {
 
         ClearConnections();
         DoAccept();
+    }
+}
+
+bool Server::ValidateRequest(const beast_request& request) const {
+    if(_validate_request_callback) {
+        return _validate_request_callback(request);
+    }
+    return true;
+}
+
+void Server::ProcessResponse(beast_ws::response_type& response) const {
+    for(auto& http_field : _options.http_fields) {
+        std::visit([&](auto name) {
+            response.set(name, http_field.value);
+        }, http_field.name);
     }
 }
 

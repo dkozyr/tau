@@ -1,5 +1,7 @@
 #pragma once
 
+#include "tau/ws/Field.h" //TODO: move to http
+
 #include "tau/asio/Ssl.h"
 #include <string>
 #include <deque>
@@ -13,12 +15,16 @@ public:
     struct DoNothingMessage{};
     using Message = std::variant<std::string, CloseMessage, DoNothingMessage>;
 
+    using ValidateRequestCallback = std::function<bool(const beast_request& request)>;
+    using ProcessResponseCallback = std::function<void(beast_ws::response_type& request)>;
     using ProcessMessageCallback = std::function<Message(std::string&&)>;
 
 public:
     Connection(asio_tcp::socket&& socket, SslContext& ssl_ctx);
     ~Connection();
 
+    void SetValidateRequest(ValidateRequestCallback callback) { _validate_request_callback = std::move(callback); }
+    void SetProcessResponseCallback(ProcessResponseCallback callback) { _process_response_callback = std::move(callback); }
     void SetProcessMessageCallback(ProcessMessageCallback callback) { _process_message_callback = std::move(callback); }
 
     void Start();
@@ -49,6 +55,8 @@ private:
     std::deque<Message> _message_queue;
     bool _is_closed = false;
 
+    ValidateRequestCallback _validate_request_callback;
+    ProcessResponseCallback _process_response_callback;
     ProcessMessageCallback _process_message_callback;
 
     beast_request _request;
