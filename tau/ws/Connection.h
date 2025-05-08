@@ -1,11 +1,8 @@
 #pragma once
 
-#include "tau/ws/Field.h" //TODO: move to http
-
+#include "tau/http/Field.h"
 #include "tau/asio/Ssl.h"
-#include <string>
 #include <deque>
-#include <variant>
 
 namespace tau::ws {
 
