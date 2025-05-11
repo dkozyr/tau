@@ -2,6 +2,7 @@
 
 #include "tau/memory/Allocator.h"
 #include "tau/memory/BufferView.h"
+#include "tau/memory/Flags.h"
 #include "tau/common/Clock.h"
 #include <utility>
 
@@ -11,18 +12,19 @@ class Buffer {
 public:
     struct Info {
         Timepoint tp = 0;
+        Flags flags = kFlagsNone;
 
         bool operator==(const Info& other) const {
-            return tp == other.tp;
+            return (tp == other.tp) && (flags == other.flags);
         }
     };
 
 public:
-    static Buffer Create(Allocator& allocator, size_t capacity, Info info = Info{.tp = 0}) {
+    static Buffer Create(Allocator& allocator, size_t capacity, Info info = Info{.tp = 0, .flags = kFlagsNone}) {
         return Buffer(allocator, capacity, info);
     }
 
-    static Buffer Create(Allocator& allocator, Info info = Info{.tp = 0}) {
+    static Buffer Create(Allocator& allocator, Info info = Info{.tp = 0, .flags = kFlagsNone}) {
         return Buffer(allocator, info);
     }
 
@@ -61,6 +63,6 @@ private:
     Info _info;
 };
 
-Buffer CreateBufferFromBase64(Allocator& allocator, std::string_view str, Buffer::Info info = Buffer::Info{.tp = 0});
+Buffer CreateBufferFromBase64(Allocator& allocator, std::string_view str, Buffer::Info info = Buffer::Info{.tp = 0, .flags = kFlagsNone});
 
 }

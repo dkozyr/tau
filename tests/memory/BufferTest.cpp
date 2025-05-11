@@ -3,7 +3,7 @@
 namespace tau {
 
 TEST(BufferTest, Basic) {
-    auto buffer = Buffer::Create(g_system_allocator, 256, Buffer::Info{.tp = 42});
+    auto buffer = Buffer::Create(g_system_allocator, 256, Buffer::Info{.tp = 42, .flags = kFlagsLast});
     ASSERT_EQ(SystemAllocator::kDefaultSize, g_system_allocator.GetChunkSize());
 
     auto view = buffer.GetView();
@@ -36,7 +36,7 @@ TEST(BufferTest, Size) {
 }
 
 TEST(BufferTest, Move) {
-    const Buffer::Info info{.tp = 1234567890};
+    const Buffer::Info info{.tp = 1234567890, .flags = kFlagsLast};
     auto buffer = Buffer::Create(g_system_allocator, 256, info);
     buffer.SetSize(42);
 
@@ -48,7 +48,7 @@ TEST(BufferTest, Move) {
 }
 
 TEST(BufferTest, MakeCopy) {
-    const Buffer::Info info{.tp = 1234567890};
+    const Buffer::Info info{.tp = 1234567890, .flags = kFlagsLast};
     auto buffer = Buffer::Create(g_system_allocator, 256, info);
     buffer.SetSize(42);
     for(size_t i = 0; i < 42; ++i) {
@@ -71,7 +71,7 @@ TEST(BufferTest, FromBase64_Randomized) {
         data.back() = g_random.Int<uint8_t>(1, 255);
         const auto encoded = Base64Encode(data.data(), data.size());
 
-        Buffer::Info info{.tp = g_random.Int<Timepoint>()};
+        Buffer::Info info{.tp = g_random.Int<Timepoint>(), .flags = g_random.Int<Flags>()};
         auto buffer = CreateBufferFromBase64(g_system_allocator, encoded, info);
         ASSERT_EQ(data.size(), buffer.GetSize());
         for(size_t i = 0; i < data.size(); ++i) {
