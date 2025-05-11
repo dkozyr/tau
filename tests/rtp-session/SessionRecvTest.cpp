@@ -56,7 +56,7 @@ TEST_F(SessionRecvTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(AssertRtcpRr(ToConst(view), 0, 0));
 }
 
-TEST_F(SessionRecvTest, WitRegularLosses) {
+TEST_F(SessionRecvTest, WithRegularLosses) {
     size_t counter = 0;
     _source->SetCallback([&](Buffer&& rtp_packet) {
         counter++;

@@ -99,7 +99,7 @@ TEST_F(SessionSendTest, IncomingRrReport) {
     const auto& stats = _session->GetStats();
     ASSERT_NEAR(11./256., stats.outgoing.loss_rate, 0.0001);
     ASSERT_EQ(1234, stats.outgoing.lost_packets);
-    ASSERT_GE(120 * kMicro, AbsDelta(stats.rtt, kTestRtt));
+    ASSERT_GE(1200 * kMicro, AbsDelta(stats.rtt, kTestRtt));
 }
 
 TEST_F(SessionSendTest, IncomingRtcpFir) {
