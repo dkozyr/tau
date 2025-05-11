@@ -15,7 +15,8 @@ protected:
         return packet;
     }
 
-    static void AssertNalUnit(const Buffer& nal_unit, NaluType target_type, size_t target_size, Timepoint target_tp) {
+    static void AssertNalUnit(const Buffer& nal_unit, NaluType target_type, size_t target_size,
+                              Timepoint target_tp, Flags target_flags = kFlagsNone) {
         ASSERT_EQ(target_size, nal_unit.GetSize());
         auto view = nal_unit.GetView();
         const auto header = reinterpret_cast<const NaluHeader*>(&view.ptr[0]);
@@ -24,6 +25,7 @@ protected:
             ASSERT_EQ(static_cast<uint8_t>(i), view.ptr[i]);
         }
         ASSERT_EQ(target_tp, nal_unit.GetInfo().tp);
+        ASSERT_EQ(target_flags, nal_unit.GetInfo().flags);
     }
 };
 
@@ -49,7 +51,7 @@ TEST_F(H264DepacketizerTest, StapA) {
     ASSERT_EQ(3, _nal_units.size());
     ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[0], NaluType::kSps, 2, tp));
     ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[1], NaluType::kPps, 3, tp));
-    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[2], NaluType::kIdr, 4, tp));
+    ASSERT_NO_FATAL_FAILURE(AssertNalUnit(_nal_units[2], NaluType::kIdr, 4, tp, kFlagsLast));
 }
 
 TEST_F(H264DepacketizerTest, StapA_Incomplete) {

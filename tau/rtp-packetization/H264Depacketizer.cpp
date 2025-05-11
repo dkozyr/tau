@@ -16,14 +16,16 @@ H264Depacketizer::H264Depacketizer(Allocator& allocator)
 bool H264Depacketizer::Process(Frame&& frame) {
     bool ok = true;
     _nalu_max_size = GetNaluMaxSize(frame);
-    for(const auto& packet : frame) {
+    for(size_t i = 0; i < frame.size(); ++i) {
+        const auto& packet = frame[i];
         Reader reader(packet.GetView());
-        ok &= Process(reader.Payload(), packet.GetInfo().tp);
+        const auto last = reader.Marker() || ((i + 1) == frame.size());
+        ok &= Process(reader.Payload(), packet.GetInfo().tp, last);
     }
     return ok;
 }
 
-bool H264Depacketizer::Process(BufferViewConst rtp_payload_view, Timepoint tp) {
+bool H264Depacketizer::Process(BufferViewConst rtp_payload_view, Timepoint tp, bool last) {
     if(rtp_payload_view.size == 0) {
         return false;
     }
@@ -33,35 +35,36 @@ bool H264Depacketizer::Process(BufferViewConst rtp_payload_view, Timepoint tp) {
     }
 
     if(header->type == NaluType::kFuA) {
-        return ProcessFuA(rtp_payload_view, tp);
+        return ProcessFuA(rtp_payload_view, tp, last);
     }
     _fua_nal_unit.reset();
 
     if(header->type == NaluType::kStapA) {
-        return ProcessStapA(rtp_payload_view, tp);
+        return ProcessStapA(rtp_payload_view, tp, last);
     }
     if(header->type < NaluType::kStapA) {
-        return ProcessSingle(rtp_payload_view, tp);
+        return ProcessSingle(rtp_payload_view, tp, last);
     }
     return false;
 }
 
-bool H264Depacketizer::ProcessSingle(BufferViewConst rtp_payload_view, Timepoint tp) {
-    auto nalu = Buffer::Create(_allocator, rtp_payload_view.size, Buffer::Info{.tp = tp});
+bool H264Depacketizer::ProcessSingle(BufferViewConst rtp_payload_view, Timepoint tp, bool last) {
+    auto nalu = Buffer::Create(_allocator, rtp_payload_view.size,
+        Buffer::Info{.tp = tp, .flags = last ? kFlagsLast : kFlagsNone});
     std::memcpy(nalu.GetView().ptr, rtp_payload_view.ptr, rtp_payload_view.size);
     nalu.SetSize(rtp_payload_view.size);
     _callback(std::move(nalu));
     return true;
 }
 
-bool H264Depacketizer::ProcessFuA(BufferViewConst rtp_payload_view, Timepoint tp) {
+bool H264Depacketizer::ProcessFuA(BufferViewConst rtp_payload_view, Timepoint tp, bool last) {
     if(!ValidateFuA(rtp_payload_view)) {
         _fua_nal_unit.reset();
         return false;
     }
     const auto fua_header = reinterpret_cast<const FuAHeader*>(&rtp_payload_view.ptr[1]);
     if(fua_header->start) {
-        _fua_nal_unit.emplace(Buffer::Create(_allocator, _nalu_max_size, Buffer::Info{.tp = tp}));
+        _fua_nal_unit.emplace(Buffer::Create(_allocator, _nalu_max_size, Buffer::Info{.tp = tp, .flags = kFlagsNone}));
 
         const auto fua_indicator = reinterpret_cast<const FuAIndicator*>(&rtp_payload_view.ptr[0]);
         _fua_nal_unit->GetView().ptr[0] = CreateNalUnitHeader(fua_header->type, fua_indicator->nri);
@@ -75,13 +78,16 @@ bool H264Depacketizer::ProcessFuA(BufferViewConst rtp_payload_view, Timepoint tp
     _fua_nal_unit->SetSize(_fua_nal_unit->GetSize() + rtp_payload_view.size);
 
     if(fua_header->end) {
+        if(last) {
+            _fua_nal_unit->GetInfo().flags = kFlagsLast;
+        }
         _callback(std::move(*_fua_nal_unit));
         _fua_nal_unit.reset();
     }
     return true;
 }
 
-bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view, Timepoint tp) {
+bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view, Timepoint tp, bool last) {
     rtp_payload_view.ForwardPtrUnsafe(sizeof(NaluHeader));
     while(rtp_payload_view.size > sizeof(uint16_t)) {
         const auto nalu_size = Read16(rtp_payload_view.ptr);
@@ -93,8 +99,11 @@ bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view, Timepoint 
         auto nalu = Buffer::Create(_allocator, nalu_size, Buffer::Info{.tp = tp});
         std::memcpy(nalu.GetView().ptr, rtp_payload_view.ptr, nalu_size);
         nalu.SetSize(nalu_size);
-        _callback(std::move(nalu));
         rtp_payload_view.ForwardPtrUnsafe(nalu_size);
+        if(last && (rtp_payload_view.size == 0)) {
+            nalu.GetInfo().flags = kFlagsLast;
+        }
+        _callback(std::move(nalu));
     }
     return (rtp_payload_view.size == 0);
 }

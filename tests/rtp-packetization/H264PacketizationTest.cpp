@@ -22,6 +22,7 @@ TEST_F(H264PacketizationTest, Randomized) {
 
             ASSERT_EQ(i + 1, _nal_units.size());
             ASSERT_NO_FATAL_FAILURE(AssertBufferView(nalu.GetView(), _nal_units[i].GetView()));
+            ASSERT_EQ(kFlagsLast, _nal_units[i].GetInfo().flags);
         }
     }
 }
