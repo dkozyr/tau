@@ -5,6 +5,7 @@
 #include "tau/rtcp/PliReader.h"
 #include "tau/rtcp/FirReader.h"
 #include "tau/rtcp/NackReader.h"
+#include "tau/rtcp/SdesReader.h"
 #include "tau/common/NetToHost.h"
 
 namespace tau::rtcp {
@@ -43,9 +44,10 @@ bool Reader::ForEachReport(const BufferViewConst& view, ReportCallback callback)
 bool Reader::Validate(const BufferViewConst& view) {
     return ForEachReport(view, [](Type type, const BufferViewConst& report) {
         switch(type) {
-            case Type::kRr:  return RrReader::Validate(report);
-            case Type::kSr:  return SrReader::Validate(report);
-            case Type::kBye: return ByeReader::Validate(report);
+            case Type::kRr:   return RrReader::Validate(report);
+            case Type::kSr:   return SrReader::Validate(report);
+            case Type::kSdes: return SdesReader::Validate(report);
+            case Type::kBye:  return ByeReader::Validate(report);
             case Type::kRtpfb: {
                 const auto fmt = GetRc(report.ptr[0]);
                 switch(fmt) {

@@ -7,4 +7,4 @@ add_library(${PROJECT_NAME} STATIC ${SOURCES})
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR})
 
-target_link_libraries(${PROJECT_NAME} asio memory rtp)
+target_link_libraries(${PROJECT_NAME} asio memory rtp crypto)

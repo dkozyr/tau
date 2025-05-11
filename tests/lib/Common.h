@@ -10,6 +10,7 @@
 #include "tau/common/Base64.h"
 #include "tau/common/Container.h"
 #include "tau/common/Random.h"
+#include "tau/crypto/Random.h"
 #include "tau/common/Log.h"
 
 #include <gtest/gtest.h>

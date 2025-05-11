@@ -2,6 +2,7 @@
 
 #include "tau/rtcp/Header.h"
 #include "tau/memory/BufferView.h"
+#include <string_view>
 
 namespace tau::rtcp {
 
@@ -15,6 +16,7 @@ public:
     void Write(uint16_t value);
     void Write(uint32_t value);
     void Write(uint64_t value);
+    void Write(std::string_view view);
 
     size_t GetSize() const { return _size; }
     size_t GetAvailableSize() const;

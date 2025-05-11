@@ -12,6 +12,8 @@
 #include "tau/rtcp/FirWriter.h"
 #include "tau/rtcp/NackReader.h"
 #include "tau/rtcp/NackWriter.h"
+#include "tau/rtcp/SdesReader.h"
+#include "tau/rtcp/SdesWriter.h"
 #include "tau/memory/Buffer.h"
 #include "tests/lib/Common.h"
 
@@ -203,6 +205,51 @@ TEST_F(ReaderWriterTest, WrongNack_EmptySns) {
     ASSERT_FALSE(NackWriter::Write(writer, _sender_ssrc, _media_ssrc, {}));
 }
 
+TEST_F(ReaderWriterTest, Sdes) {
+    auto packet = Buffer::Create(g_system_allocator, 1500);
+
+    const SdesChunks chunks = {
+        SdesChunk{
+            .ssrc = _sender_ssrc,
+            .items = {
+                SdesItem{.type = SdesType::kCname, .data = "test_cname"},
+                SdesItem{.type = SdesType::kTool, .data = "some-tool-v.1.2.3.4"},
+                SdesItem{.type = SdesType::kNote, .data = "notes"},
+            }
+        },
+        SdesChunk{
+            .ssrc = _sender_ssrc + 1,
+            .items = {
+                SdesItem{.type = SdesType::kEmail, .data = "test@email.com"},
+                SdesItem{.type = SdesType::kLoc, .data = "location 123.45"},
+                SdesItem{.type = SdesType::kName, .data = "my name is"},
+                SdesItem{.type = SdesType::kPhone, .data = "+0(00)000-00-00"},
+            }
+        },
+        SdesChunk{
+            .ssrc = _sender_ssrc + 2,
+            .items = {}
+        },
+    };
+
+    Writer writer(packet.GetViewWithCapacity());
+    ASSERT_TRUE(SdesWriter::Write(writer, chunks));
+    packet.SetSize(writer.GetSize());
+
+    const auto view = ToConst(packet.GetView());
+    ASSERT_TRUE(Reader::Validate(view));
+    const auto parsed_chunks = SdesReader::GetChunks(view);
+    ASSERT_EQ(chunks.size(), parsed_chunks.size());
+    for(size_t i = 0; i < chunks.size(); ++i) {
+        ASSERT_EQ(chunks[i].ssrc, parsed_chunks[i].ssrc);
+        ASSERT_EQ(chunks[i].items.size(), parsed_chunks[i].items.size());
+        for(size_t j = 0; j < chunks[i].items.size(); ++j) {
+            ASSERT_EQ(chunks[i].items[j].type, parsed_chunks[i].items[j].type);
+            ASSERT_EQ(chunks[i].items[j].data, parsed_chunks[i].items[j].data);
+        }
+    }
+}
+
 TEST_F(ReaderWriterTest, Compound_Randomized) {
     for(size_t i = 0; i < 100; ++i) {
         auto packet = Buffer::Create(g_system_allocator, 1500);
@@ -211,6 +258,8 @@ TEST_F(ReaderWriterTest, Compound_Randomized) {
         const auto bye_ssrcs = ByeSsrcs(g_random.Int<size_t>(0, 30));
         const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 100));
         const auto fir_sn = g_random.Int<uint8_t>();
+        const auto cname = crypto::RandomBase64(g_random.Int<uint8_t>());
+        const auto tool = crypto::RandomBase64(g_random.Int<uint8_t>());
 
         Writer writer(packet.GetViewWithCapacity());
         size_t reports_count = 0;
@@ -236,6 +285,18 @@ TEST_F(ReaderWriterTest, Compound_Randomized) {
         }
         if(g_random.Bool() || (reports_count == 0))  {
             ASSERT_TRUE(FirWriter::Write(writer, _sender_ssrc, _media_ssrc, fir_sn));
+            reports_count++;
+        }
+        if(g_random.Bool() || (reports_count == 0))  {
+            ASSERT_TRUE(SdesWriter::Write(writer, SdesChunks{
+                SdesChunk{
+                    .ssrc = _sender_ssrc,
+                    .items = {
+                        SdesItem{.type = SdesType::kCname, .data = cname},
+                        SdesItem{.type = SdesType::kTool, .data = tool},
+                    }
+                }
+            }));
             reports_count++;
         }
         packet.SetSize(writer.GetSize());
@@ -276,6 +337,23 @@ TEST_F(ReaderWriterTest, Compound_Randomized) {
                         checks_count++;
                         break;
                 }
+            } else if(type == Type::kSdes) {
+                const auto sdes_chunks = SdesReader::GetChunks(report);
+                EXPECT_EQ(1, sdes_chunks.size());
+                const auto& sdes_chunk = sdes_chunks[0];
+                EXPECT_EQ(_sender_ssrc, sdes_chunk.ssrc);
+                EXPECT_EQ(2, sdes_chunk.items.size());
+                {
+                    const auto& sdes_item = sdes_chunk.items[0];
+                    EXPECT_EQ(SdesType::kCname, sdes_item.type);
+                    EXPECT_EQ(cname, sdes_item.data);
+                }
+                {
+                    const auto& sdes_item = sdes_chunk.items[1];
+                    EXPECT_EQ(SdesType::kTool, sdes_item.type);
+                    EXPECT_EQ(tool, sdes_item.data);
+                }
+                checks_count++;
             }
             return true;
         });

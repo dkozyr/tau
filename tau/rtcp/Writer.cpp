@@ -1,5 +1,6 @@
 #include "tau/rtcp/Writer.h"
 #include "tau/common/NetToHost.h"
+#include <cstring>
 #include <cassert>
 
 namespace tau::rtcp {
@@ -39,6 +40,12 @@ void Writer::Write(uint64_t value) {
     assert(_size + sizeof(uint64_t) <= _view.size);
     Write64(_view.ptr + _size, value);
     _size += sizeof(uint64_t);
+}
+
+void Writer::Write(std::string_view view) {
+    assert(_size + view.size() <= _view.size);
+    std::memcpy(_view.ptr + _size, view.data(), view.size());
+    _size += view.size();
 }
 
 size_t Writer::GetAvailableSize() const {
