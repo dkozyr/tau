@@ -23,19 +23,20 @@ public:
 public:
     Source(Options&& options)
         : _options(std::move(options))
-        , _allocator(RtpAllocator::Options{
-            .header = Writer::Options{
-                .pt = _options.pt,
-                .ssrc = _options.ssrc,
-                .ts = _options.base_ts,
-                .sn = _options.sn,
-                .marker = false,
-                .extension_length_in_words = 0
-            },
-            .base_tp = _options.base_tp,
-            .clock_rate = _options.clock_rate,
-            .size = _options.max_packet_size
-        })
+        , _udp_allocator(_options.max_packet_size)
+        , _allocator(_udp_allocator,
+            RtpAllocator::Options{
+                .header = Writer::Options{
+                    .pt = _options.pt,
+                    .ssrc = _options.ssrc,
+                    .ts = _options.base_ts,
+                    .sn = _options.sn,
+                    .marker = false,
+                    .extension_length_in_words = 0
+                },
+                .base_tp = _options.base_tp,
+                .clock_rate = _options.clock_rate,
+            })
     {}
 
     void SetCallback(Callback callback) { _callback = std::move(callback); }
@@ -59,6 +60,7 @@ public:
 
 public:
     const Options _options;
+    PoolAllocator _udp_allocator;
     RtpAllocator _allocator;
 
     Callback _callback;

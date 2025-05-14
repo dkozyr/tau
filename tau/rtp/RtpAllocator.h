@@ -14,18 +14,17 @@ public:
         Writer::Options header;
         Timepoint base_tp;
         size_t clock_rate;
-        size_t size = 1500; //TODO: name constant
     };
 
 public:
-    explicit RtpAllocator(Options&& options)
-        : _options(std::move(options))
+    explicit RtpAllocator(PoolAllocator& allocator, Options&& options)
+        : _pool(allocator)
+        , _options(std::move(options))
         , _ts_producer(TsConverter::Options{
             .rate = _options.clock_rate,
             .ts_base = _options.header.ts,
             .tp_base = _options.base_tp
         })
-        , _pool(_options.size)
     {}
 
     Buffer Allocate(Timepoint tp, bool marker = false) {
@@ -45,18 +44,18 @@ public:
         _pool.Deallocate(buffer.GetView().ptr);
     }
 
-    size_t MaxRtpPayload() const {
-        //TODO: do we need to subtract TURN header size?
+    size_t MaxRtpPayload() const { //TODO: TURN, SRTP, MTU options
         constexpr size_t kSrtpMaxAuthSize = 16;
-        return _options.size - kFixedHeaderSize
+        constexpr size_t kTurnMessageHeaderSize = 20 + 12; // Header + XOR-MAPPED-ADDRESS(IpV4)
+        return _pool.GetChunkSize() - kFixedHeaderSize
                - HeaderExtensionSize(_options.header.extension_length_in_words)
-               - kSrtpMaxAuthSize;
+               - kSrtpMaxAuthSize - kTurnMessageHeaderSize;
     }
 
 private:
+    PoolAllocator& _pool;
     Options _options;
     TsConverter _ts_producer;
-    PoolAllocator _pool;
 };
 
 }

@@ -54,16 +54,18 @@ protected:
 
     struct Context {
         Context(const Writer::Options& options, Timepoint tp, size_t allocator_chunk_size)
-            : allocator(RtpAllocator::Options{
-                .header = options,
-                .base_tp = tp,
-                .clock_rate = kDefaultClockRate,
-                .size = allocator_chunk_size
-            })
+            : udp_allocator(allocator_chunk_size)
+            , allocator(udp_allocator,
+                    RtpAllocator::Options{
+                    .header = options,
+                    .base_tp = tp,
+                    .clock_rate = kDefaultClockRate
+                })
             , packetizer(allocator)
             , depacketizer(g_system_allocator)
         {}
 
+        PoolAllocator udp_allocator;
         RtpAllocator allocator;
         H264Packetizer packetizer;
         H264Depacketizer depacketizer;

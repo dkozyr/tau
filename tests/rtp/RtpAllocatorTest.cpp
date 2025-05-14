@@ -1,11 +1,7 @@
 #include "tau/rtp/RtpAllocator.h"
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
-#include "tau/common/Random.h"
-#include "tau/common/Log.h"
-#include <gtest/gtest.h>
-#include <vector>
-#include <thread>
+#include "tests/lib/Common.h"
 
 namespace tau::rtp {
 
@@ -24,14 +20,15 @@ protected:
 };
 
 TEST_F(RtpAllocatorTest, Basic) {
+    PoolAllocator udp_allocator(1200);
     const auto start_tp = SteadyClock().Now();
-    RtpAllocator allocator(RtpAllocator::Options{
-        .header = _header_options,
-        .base_tp = start_tp,
-        .clock_rate = kDefaultClockRate,
-        .size = 1200
-    });
-    ASSERT_EQ(1172, allocator.MaxRtpPayload());
+    RtpAllocator allocator(udp_allocator,
+        RtpAllocator::Options{
+            .header = _header_options,
+            .base_tp = start_tp,
+            .clock_rate = kDefaultClockRate
+        });
+    ASSERT_EQ(1140, allocator.MaxRtpPayload());
 
     {
         auto packet = allocator.Allocate(start_tp, false);
@@ -63,15 +60,16 @@ TEST_F(RtpAllocatorTest, Basic) {
 }
 
 TEST_F(RtpAllocatorTest, TsOverflow) {
+    PoolAllocator udp_allocator(600);
     const auto start_tp = SteadyClock().Now();
     _header_options.ts = 0;
-    RtpAllocator allocator(RtpAllocator::Options{
-        .header = _header_options,
-        .base_tp = start_tp,
-        .clock_rate = kDefaultClockRate,
-        .size = 600
-    });
-    ASSERT_EQ(572, allocator.MaxRtpPayload());
+    RtpAllocator allocator(udp_allocator,
+        RtpAllocator::Options{
+            .header = _header_options,
+            .base_tp = start_tp,
+            .clock_rate = kDefaultClockRate,
+        });
+    ASSERT_EQ(540, allocator.MaxRtpPayload());
 
     auto prev_ts = _header_options.ts;
     const auto max_seconds = 1 + std::numeric_limits<uint32_t>::max() / kDefaultClockRate;

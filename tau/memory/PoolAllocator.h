@@ -7,7 +7,7 @@
 
 namespace tau {
 
-inline constexpr size_t kUdpMtuSize = 1500;
+inline constexpr size_t kUdpMtuSize = 1400;
 
 class PoolAllocator : public Allocator {
 public:
