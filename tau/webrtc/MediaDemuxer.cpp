@@ -9,10 +9,13 @@ namespace tau::webrtc {
 
 MediaDemuxer::MediaDemuxer(Options&& options)
     : _log_ctx(options.log_ctx) {
-    for(size_t i = 0; i < options.sdp.medias.size(); ++i) {
-        auto& media = options.sdp.medias[i];
-        if(media.ssrc) {
-            _ssrc_to_media_idx.insert({*media.ssrc, i});
+    for(size_t i = 0; i < options.local_sdp.medias.size(); ++i) {
+        auto& media_local = options.local_sdp.medias[i];
+        if(media_local.direction & sdp::Direction::kRecv) {
+            auto& media_remote = options.remote_sdp.medias[i];
+            if(media_remote.ssrc) {
+                _ssrc_to_media_idx.insert({*media_remote.ssrc, i});
+            }
         }
     }
 }
@@ -37,7 +40,7 @@ void MediaDemuxer::Process(Buffer&& packet, bool is_rtp) {
         const auto& idx = it->second;
         _callback(idx, std::move(packet), is_rtp);
     } else {
-        TAU_LOG_WARNING_THR(128, _log_ctx << "Media not found, ssrc: " << ssrc << ", is_rtp: " << is_rtp);
+        TAU_LOG_WARNING_THR(128, _log_ctx << "Unexpected media, ssrc: " << ssrc << ", is_rtp: " << is_rtp);
     }
 }
 

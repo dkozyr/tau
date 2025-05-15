@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tau/webrtc/State.h"
 #include "tau/webrtc/MediaDemuxer.h"
 #include "tau/ice/Agent.h"
 #include "tau/dtls/Session.h"
@@ -22,23 +23,40 @@ public:
     };
 
     struct Options {
+        struct Sdp {
+            sdp::Media audio; //TODO: optional?
+            sdp::Media video; //TODO: optional?
+        };
+        Sdp sdp;
         std::string log_ctx = {};
     };
 
+    using StateCallback = std::function<void(State state)>;
+    using IceCandidateCallback = std::function<void(std::string candidate)>;
     using Callback = std::function<void(size_t media_idx, Buffer&& packet)>;
 
 public:
     PeerConnection(Dependencies&& deps, Options&& options);
     ~PeerConnection();
 
+    void SetStateCallback(StateCallback callback) { _state_callback = std::move(callback); }
+    void SetIceCandidateCallback(IceCandidateCallback callback) { _ice_candidate_callback = std::move(callback); }
     void SetRecvRtpCallback(Callback callback) { _recv_rtp_callback = std::move(callback); }
 
-    void Start();
+    void Stop();
     void Process();
 
+    std::string CreateSdpOffer();
     std::string ProcessSdpOffer(const std::string& offer);
+    bool ProcessSdpAnswer(const std::string& answer);
+
     void SetRemoteIceCandidate(std::string candidate);
-    std::vector<std::string> GetLocalCandidates() const; //TODO: SetIceCandidateCallback
+
+    void SendRtp(size_t media_idx, Buffer&& packet);
+
+    const sdp::Sdp& GetLocalSdp() const;
+    const sdp::Sdp& GetRemoteSdp() const;
+    State GetState() const;
 
 private:
     void StartIceAgent();
@@ -51,6 +69,7 @@ private:
     void DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint);
     void OnIncomingRtpRtcp(Buffer&& packet);
 
+    static ice::Credentials CreateIceCredentials(const sdp::Sdp& local, const sdp::Sdp& remote);
     static bool ValidateSdpOffer(const sdp::Sdp& sdp, const std::string& log_ctx);
 
 private:
@@ -59,14 +78,16 @@ private:
     SystemClock _system_clock;
 
     net::UdpSocketPtr _mdns_socket;
-    mdns::Client _mdns_client;
+    mdns::Client _mdns_client; //TODO: optional
 
+    State _state = State::kInitial;
+
+    std::optional<bool> _offerer; 
     std::optional<sdp::Sdp> _sdp_offer;
     std::optional<sdp::Sdp> _sdp_answer;
 
     std::optional<ice::Agent> _ice_agent;
     std::vector<net::UdpSocketPtr> _udp_sockets;
-    std::vector<std::string> _local_ice_candidates;
 
     struct IcePair{
         size_t socket_idx;
@@ -77,10 +98,13 @@ private:
     crypto::Certificate _dtls_cert;
     std::optional<dtls::Session> _dtls_session;
     std::optional<srtp::Session> _srtp_decryptor;
+    std::optional<srtp::Session> _srtp_encryptor;
 
     std::optional<MediaDemuxer> _media_demuxer;
     std::vector<rtp::Session> _rtp_sessions;
 
+    StateCallback _state_callback;
+    IceCandidateCallback _ice_candidate_callback;
     Callback _recv_rtp_callback;
 
     Random _random;

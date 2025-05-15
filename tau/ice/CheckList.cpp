@@ -160,6 +160,9 @@ const CandidatePair& CheckList::GetBestCandidatePair() const {
 }
 
 void CheckList::Nominating() {
+    if(_pairs.empty()) {
+        return;
+    }
     auto& best_pair = _pairs.front();
     if((_role != Role::kControlling) || (best_pair.state != CandidatePair::State::kSucceeded)) {
         return;

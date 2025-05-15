@@ -12,7 +12,8 @@ namespace tau::webrtc {
 class MediaDemuxer {
 public:
     struct Options {
-        const sdp::Sdp& sdp;
+        const sdp::Sdp& local_sdp;
+        const sdp::Sdp& remote_sdp;
         std::string log_ctx = {};
     };
 

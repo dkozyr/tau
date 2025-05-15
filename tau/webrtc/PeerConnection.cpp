@@ -30,21 +30,20 @@ PeerConnection::PeerConnection(Dependencies&& deps, Options&& options)
 }
 
 PeerConnection::~PeerConnection() {
-    _mdns_socket.reset();
-    _udp_sockets.clear();
-    _ice_agent.reset();
-    if(_dtls_session) {
-        _dtls_session->Stop();
-        _dtls_session.reset();
-    }
+    Stop();
 }
 
-void PeerConnection::Start() {
-    if(_ice_agent) {
-        TAU_LOG_WARNING(_options.log_ctx << "Already started");
-        return;
-    }
-    StartIceAgent();
+void PeerConnection::Stop() {
+    asio::post(_deps.executor, [this]() {
+        _mdns_socket.reset();
+        _udp_sockets.clear();
+        _ice_agent.reset();
+        if(_dtls_session) {
+            _dtls_session->Stop();
+            _dtls_session.reset();
+        }
+    });
+    asio::post(_deps.executor, asio::use_future).wait_for(std::chrono::seconds(1));
 }
 
 void PeerConnection::Process() {
@@ -58,8 +57,37 @@ void PeerConnection::Process() {
     });
 }
 
+std::string PeerConnection::CreateSdpOffer() {
+    _offerer = true;
+    _sdp_offer = sdp::Sdp{
+        .cname = crypto::RandomBase64(8),
+        .bundle_mids = {"0", "1"},
+        .ice = sdp::Ice{
+            .trickle = true,
+            .ufrag = crypto::RandomBase64(4),
+            .pwd = crypto::RandomBase64(24),
+            .candidates = {}
+        },
+        .dtls = sdp::Dtls{
+            .setup = sdp::Setup::kPassive, //TODO: sdp::Setup::kActpass ?
+            .fingerprint_sha256 = _dtls_cert.GetDigestSha256String()
+        },
+        .medias = {
+            _options.sdp.audio,
+            _options.sdp.video
+        }
+    };
+    for(size_t i = 0; i < 2; ++i) {
+        _sdp_offer->medias[i].mid = std::to_string(i);
+        _sdp_offer->medias[i].ssrc = _random.Int<uint32_t>();
+    }
+
+    return sdp::WriteSdp(*_sdp_offer);
+}
+
 std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
-    TAU_LOG_INFO(_options.log_ctx << "offer:\n" << offer);
+    TAU_LOG_INFO(_options.log_ctx << "SDP offer:\n" << offer);
+    _offerer = false;
     _sdp_offer = sdp::ParseSdp(offer);
     if(!_sdp_offer || !ValidateSdpOffer(*_sdp_offer, _options.log_ctx)) {
         _sdp_offer.reset();
@@ -67,7 +95,7 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
     }
 
     _sdp_answer = sdp::Sdp{
-        .cname = crypto::RandomBase64(8), //TODO: align size with RTCP SDES to avoid padding
+        .cname = crypto::RandomBase64(8),
         .bundle_mids = _sdp_offer->bundle_mids,
         .ice = sdp::Ice{
             .trickle = true,
@@ -81,33 +109,14 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
         },
     };
     for(auto& remote_media : _sdp_offer->medias) {
-        const sdp::Media kLocalAudio{ //TODO: move to options
-            .type = sdp::MediaType::kAudio,
-            .mid = {},
-            .direction = sdp::Direction::kInactive,
-            .codecs = {
-                { 8, sdp::Codec{.index = 0, .name = "PCMU", .clock_rate = 8000}},
-            },
-            .ssrc = _random.Int<uint32_t>()
-        };
-        const sdp::Media kLocalVideo{
-            .type = sdp::MediaType::kVideo,
-            .mid = {},
-            .direction = sdp::Direction::kSendRecv,
-            .codecs = {
-                {100, sdp::Codec{.index = 0, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault, .format = "profile-level-id=620028"}},
-                {101, sdp::Codec{.index = 1, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault, .format = "profile-level-id=4d0028"}},
-                {101, sdp::Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault, .format = "profile-level-id=420028"}},
-            },
-            .ssrc = _random.Int<uint32_t>()
-        };
-        auto& media_params = (remote_media.type == sdp::MediaType::kAudio) ? kLocalAudio : kLocalVideo;
+        auto& media_params = (remote_media.type == sdp::MediaType::kAudio) ? _options.sdp.audio : _options.sdp.video;
         auto local_media = sdp::SelectMedia(remote_media, media_params);
         if(!local_media) {
             TAU_LOG_WARNING(_options.log_ctx << "SDP negotiation failed");
             _sdp_offer.reset();
             return {};
         }
+        local_media->ssrc = _random.Int<uint32_t>();
         _sdp_answer->medias.push_back(*local_media);
     }
 
@@ -117,14 +126,69 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
     return sdp::WriteSdp(*_sdp_answer);
 }
 
+bool PeerConnection::ProcessSdpAnswer(const std::string& answer) {
+    TAU_LOG_INFO(_options.log_ctx << "SDP answer:\n" << answer);
+
+    if(_offerer.value_or(false) == false) {
+        TAU_LOG_INFO(_options.log_ctx << "SDP answer processing failed, no SDP offer");
+        return false;
+    }
+
+    const auto sdp_answer = sdp::ParseSdp(answer);
+    if(!sdp_answer || !ValidateSdpOffer(*sdp_answer, _options.log_ctx)) {
+        TAU_LOG_INFO(_options.log_ctx << "SDP validation failed");
+        return false;
+    }
+
+    if(_sdp_offer->medias.size() != sdp_answer->medias.size()) {
+        TAU_LOG_INFO(_options.log_ctx << "SDP has wrong medias, offer: " << _sdp_offer->medias.size()  << ", answer: " << sdp_answer->medias.size());
+        return false;
+    }
+
+    for(size_t i = 0; i < _sdp_offer->medias.size(); ++i) {
+        auto& local_media = _sdp_offer->medias[i];
+        auto& remote_media = sdp_answer->medias[i];
+        if(local_media.type != remote_media.type) {
+            TAU_LOG_INFO(_options.log_ctx << "Media wrong type, line: " << i);
+            return false;
+        }
+        auto negotiated_media = sdp::SelectMedia(remote_media, local_media);
+        if(!negotiated_media) {
+            TAU_LOG_WARNING(_options.log_ctx << "SDP negotiation failed");
+            return false;
+        }
+        _sdp_offer->medias[i] = *negotiated_media;
+    }
+    _sdp_answer = sdp_answer;
+
+    InitMediaDemuxer();
+    StartIceAgent();
+
+    TAU_LOG_INFO(_options.log_ctx << "SDP negotiated: " << sdp::WriteSdp(*_sdp_offer)); //TODO: remove it
+    return true;
+}
+
 void PeerConnection::SetRemoteIceCandidate(std::string candidate) {
     asio::dispatch(_deps.executor, [this, candidate = std::move(candidate)]() mutable {
         SetRemoteIceCandidateInternal(std::move(candidate));
     });
 }
 
-std::vector<std::string> PeerConnection::GetLocalCandidates() const {
-    return _local_ice_candidates;
+void PeerConnection::SendRtp(size_t media_idx, Buffer&& packet) {
+    auto& rtp_session = _rtp_sessions.at(media_idx);
+    rtp_session.SendRtp(std::move(packet));
+}
+
+const sdp::Sdp& PeerConnection::GetLocalSdp() const {
+    return *_offerer ? *_sdp_offer : *_sdp_answer;
+}
+
+const sdp::Sdp& PeerConnection::GetRemoteSdp() const {
+    return *_offerer ? *_sdp_answer : *_sdp_offer;
+}
+
+State PeerConnection::GetState() const {
+    return _state;
 }
 
 void PeerConnection::StartIceAgent() {
@@ -155,17 +219,12 @@ void PeerConnection::StartIceAgent() {
             .udp_allocator = _deps.udp_allocator
         },
         ice::Agent::Options{
-            .role = ice::Role::kControlled,
-            .credentials = {
-                .local = ice::PeerCredentials{
-                    .ufrag    = _sdp_answer->ice->ufrag,
-                    .password = _sdp_answer->ice->pwd
-                },
-                .remote = ice::PeerCredentials{
-                    .ufrag    = _sdp_offer->ice->ufrag,
-                    .password = _sdp_offer->ice->pwd
-                }
-            },
+            .role = *_offerer
+                ? ice::Role::kControlling
+                : ice::Role::kControlled,
+            .credentials = *_offerer
+                ? CreateIceCredentials(*_sdp_offer, *_sdp_answer)
+                : CreateIceCredentials(*_sdp_answer, *_sdp_offer),
             .interfaces = std::move(interface_endpoints),
             .stun_servers = {
                 Endpoint{IpAddressV4::from_string("74.125.250.129"), 19302} //TODO: resolve stun.l.google.com:19302
@@ -184,10 +243,19 @@ void PeerConnection::StartIceAgent() {
             });
             StartDtlsSession();
         }
+        switch(state) {
+            case ice::State::kWaiting:   return;
+            case ice::State::kRunning:   _state = State::kConnecting; break;
+            case ice::State::kReady:     return;
+            case ice::State::kCompleted: return;
+            case ice::State::kFailed:    _state = State::kFailed; break;
+        }
+        _state_callback(_state);
     });
+
     _ice_agent->SetCandidateCallback([this](std::string candidate) {
         TAU_LOG_INFO(_options.log_ctx << "Local candidate: " << candidate);
-        _local_ice_candidates.push_back(std::move(candidate));
+        _ice_candidate_callback(candidate);
     });
     _ice_agent->SetSendCallback([this](size_t socket_idx, Endpoint remote, Buffer&& message) {
         _udp_sockets[socket_idx]->Send(std::move(message), remote);
@@ -203,15 +271,19 @@ void PeerConnection::StartDtlsSession() {
         return;
     }
 
+    const auto& local_sdp = GetLocalSdp();
+    const auto& remote_sdp = GetRemoteSdp();
     _dtls_session.emplace(
         dtls::Session::Dependencies{
             .udp_allocator = _deps.udp_allocator,
             .certificate = _dtls_cert
         },
         dtls::Session::Options{
-            .type = (_sdp_answer->dtls->setup == sdp::Setup::kActive) ? dtls::Session::Type::kClient : dtls::Session::Type::kServer,
+            .type = (local_sdp.dtls->setup == sdp::Setup::kActive)
+                ? dtls::Session::Type::kClient
+                : dtls::Session::Type::kServer,
             .srtp_profiles = dtls::Session::kSrtpProfilesDefault,
-            .remote_peer_cert_digest = _sdp_offer->dtls->fingerprint_sha256,
+            .remote_peer_cert_digest = remote_sdp.dtls->fingerprint_sha256,
             .log_ctx = _options.log_ctx
         }
     );
@@ -226,10 +298,26 @@ void PeerConnection::StartDtlsSession() {
                     .key = _dtls_session->GetKeyingMaterial(false)
                 });
                 _srtp_decryptor->SetCallback([this](Buffer&& packet, bool is_rtp) {
+                    // if(!is_rtp) {
+                    //     auto copy = packet.MakeCopy();
+                    //     _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(copy), _ice_pair->remote_endpoint);
+                    // }
                     _media_demuxer->Process(std::move(packet), is_rtp);
                 });
+
+                _srtp_encryptor.emplace(srtp::Session::Options{
+                    .type = srtp::Session::Type::kEncryptor,
+                    .profile = static_cast<srtp_profile_t>(srtp_profile.value()),
+                    .key = _dtls_session->GetKeyingMaterial(true)
+                });
+                _srtp_encryptor->SetCallback([this](Buffer&& packet, bool /*is_rtp*/) {
+                    _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
+                });
+
+                _state = State::kConnected;
+                _state_callback(_state);
             } catch(const std::exception& e) {
-                TAU_LOG_WARNING("Srtp session creating failed, exception: " << e.what());
+                TAU_LOG_WARNING(_options.log_ctx << "Srtp session creating failed, exception: " << e.what());
             }
         }
     });
@@ -252,7 +340,11 @@ void PeerConnection::InitMdnsClient() {
 }
 
 void PeerConnection::InitMediaDemuxer() {
-    _media_demuxer.emplace(MediaDemuxer::Options{.sdp = *_sdp_offer, .log_ctx = _options.log_ctx});
+    _media_demuxer.emplace(MediaDemuxer::Options{
+        .local_sdp = GetLocalSdp(),
+        .remote_sdp = GetRemoteSdp(),
+        .log_ctx = _options.log_ctx
+    });
     _media_demuxer->SetCallback([this](size_t idx, Buffer&& packet, bool is_rtp) {
         auto& rtp_session = _rtp_sessions.at(idx);
         if(is_rtp) {
@@ -262,8 +354,9 @@ void PeerConnection::InitMediaDemuxer() {
         }
     });
 
-    _rtp_sessions.reserve(_sdp_answer->medias.size());
-    for(auto& media : _sdp_answer->medias) {
+    const auto& local_sdp = GetLocalSdp();
+    _rtp_sessions.reserve(local_sdp.medias.size());
+    for(auto& media : local_sdp.medias) {
         if((media.type == sdp::MediaType::kAudio) || (media.type == sdp::MediaType::kVideo)) {
             const auto idx = _rtp_sessions.size();
             auto& [pt, codec] = *media.codecs.begin();
@@ -277,18 +370,21 @@ void PeerConnection::InitMediaDemuxer() {
                     .rate = codec.clock_rate,
                     .sender_ssrc = *media.ssrc,
                     .base_ts = 0, //TODO: fix it
-                    .rtx = false //TODO: fix it
+                    .rtx = false, //TODO: fix it
+                    .cname = local_sdp.cname
                 }
             );
             auto& rtp_session = _rtp_sessions.back();
             rtp_session.SetEventCallback([this, idx](rtp::session::Event&& event) {
-                TAU_LOG_INFO("RTP session idx: " << idx << ", event: " << event);
+                TAU_LOG_INFO(_options.log_ctx << "Incoming event, RTP session idx: " << idx << ", event: " << event);
             });
             rtp_session.SetSendRtpCallback([this](Buffer&& packet) {
-                _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
+                _srtp_encryptor->Encrypt(std::move(packet), true);
             });
             rtp_session.SetSendRtcpCallback([this](Buffer&& packet) {
-                _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
+                // auto packet_copy = packet.MakeCopy();
+                // _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet_copy), _ice_pair->remote_endpoint);
+                _srtp_encryptor->Encrypt(std::move(packet), false);
             });
             rtp_session.SetRecvRtpCallback([this, idx](Buffer&& packet) {
                 _recv_rtp_callback(idx, std::move(packet));
@@ -362,6 +458,19 @@ void PeerConnection::OnIncomingRtpRtcp(Buffer&& packet) {
             _srtp_decryptor->Decrypt(std::move(packet), true);
         }
     }
+}
+
+ice::Credentials PeerConnection::CreateIceCredentials(const sdp::Sdp& local, const sdp::Sdp& remote) {
+    return ice::Credentials{
+        .local = ice::PeerCredentials{
+            .ufrag    = local.ice->ufrag,
+            .password = local.ice->pwd
+        },
+        .remote = ice::PeerCredentials{
+            .ufrag    = remote.ice->ufrag,
+            .password = remote.ice->pwd
+        }
+    };
 }
 
 bool PeerConnection::ValidateSdpOffer(const sdp::Sdp& sdp, const std::string& log_ctx) {

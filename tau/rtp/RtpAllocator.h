@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tau/memory/PoolAllocator.h"
+#include "tau/memory/Allocator.h"
 #include "tau/memory/Buffer.h"
 #include "tau/rtp/Writer.h"
 #include "tau/rtp/TsConverter.h"
@@ -17,7 +17,7 @@ public:
     };
 
 public:
-    explicit RtpAllocator(PoolAllocator& allocator, Options&& options)
+    explicit RtpAllocator(Allocator& allocator, Options&& options)
         : _pool(allocator)
         , _options(std::move(options))
         , _ts_producer(TsConverter::Options{
@@ -53,7 +53,7 @@ public:
     }
 
 private:
-    PoolAllocator& _pool;
+    Allocator& _pool;
     Options _options;
     TsConverter _ts_producer;
 };

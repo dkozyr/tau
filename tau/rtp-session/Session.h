@@ -28,6 +28,7 @@ public:
         bool rtx = true;
         size_t send_buffer_size = session::SendBuffer::kDefaultSize;
         size_t recv_buffer_size = session::RecvBuffer::kDefaultSize;
+        std::string_view cname = {};
     };
 
     struct Stats {
