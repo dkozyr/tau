@@ -1,24 +1,15 @@
 #pragma once
 
 #include "tau/webrtc/PeerConnection.h"
-// #include "tau/rtp-session/FrameProcessor.h"
-// #include "tau/rtp-packetization/H264Depacketizer.h"
 #include "tau/rtp-packetization/H264Packetizer.h"
 #include "tau/rtp/RtpAllocator.h"
-// #include "tau/video/h264/Avc1NaluProcessor.h"
-// #include "tau/video/h264/AnnexB.h"
-// #include "tau/asio/ThreadPool.h"
-// #include "tau/common/File.h"
-// #include "tau/common/Json.h"
-// #include "tau/common/File.h"
-// #include "tau/common/Ntp.h"
 #include "tests/webrtc/Constants.h"
 #include "tests/lib/H264Utils.h"
 #include "tests/lib/Common.h"
 
 namespace tau::webrtc {
 
-class PeerConnectionContext {
+class ClientContext {
 public:
     struct Options {
         sdp::Direction audio = sdp::Direction::kSendRecv;
@@ -29,7 +20,7 @@ public:
     using Dependencies = PeerConnection::Dependencies;
 
 public:
-    PeerConnectionContext(Dependencies&& deps, Options&& options)
+    ClientContext(Dependencies&& deps, Options&& options)
         : _deps(std::move(deps))
         , _options(std::move(options))
         , _pc(Dependencies{_deps}, CreateOptions(_options))
@@ -37,7 +28,7 @@ public:
         InitCallbacks();
     }
 
-    ~PeerConnectionContext() {
+    ~ClientContext() {
         for(size_t media_idx = 0; media_idx < 2; ++media_idx) {
             TAU_LOG_INFO(_options.log_ctx << "Media idx: " << media_idx << ", send: " << _send_packets[media_idx].size() << ", recv: " << _recv_packets[media_idx].size());
         }
@@ -56,7 +47,7 @@ public:
         });
     }
 
-    void InitCallbacks(PeerConnectionContext& remote) {
+    void InitCallbacks(ClientContext& remote) {
         _pc.SetIceCandidateCallback([&remote](std::string candidate) {
             remote.Pc().SetRemoteIceCandidate(std::move(candidate));
         });

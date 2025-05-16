@@ -1,29 +1,28 @@
 #pragma once
 
-#include "tests/webrtc/PeerConnectionContext.h"
+#include "tests/webrtc/ClientContext.h"
 #include "tests/lib/Common.h"
 
 namespace tau::webrtc {
 
-class PeerConnectionPairContext {
+class CallContext {
 public:
     static constexpr Timepoint kTimeoutDefault = 3 * kSec;
 
     struct Options {
-        PeerConnectionContext::Options offerer;
-        PeerConnectionContext::Options answerer;
+        ClientContext::Options offerer;
+        ClientContext::Options answerer;
     };
 
-    using Dependencies = PeerConnectionContext::Dependencies;
+    using Dependencies = ClientContext::Dependencies;
 
 public:
-    PeerConnectionPairContext(Dependencies&& deps, Options&& options)
+    CallContext(Dependencies&& deps, Options&& options)
         : _deps(std::move(deps))
         , _options(std::move(options))
-        , _pc1(Dependencies{_deps}, PeerConnectionContext::Options{_options.offerer})
-        , _pc2(Dependencies{_deps}, PeerConnectionContext::Options{_options.answerer})
-    {
-    }
+        , _pc1(Dependencies{_deps}, ClientContext::Options{_options.offerer})
+        , _pc2(Dependencies{_deps}, ClientContext::Options{_options.answerer})
+    {}
 
     void SdpNegotiation() {
         auto sdp_offer_str = _pc1.Pc().CreateSdpOffer();
@@ -68,7 +67,7 @@ public:
                         return false;
                     }
                 } else {
-                    EXPECT_EQ(0, _pc1._recv_packets[media_idx].size());
+                    EXPECT_EQ(0, _pc2._recv_packets[media_idx].size());
                 }
             }
             return true;
@@ -97,8 +96,8 @@ public:
 public:
     Dependencies _deps;
     const Options& _options;
-    PeerConnectionContext _pc1;
-    PeerConnectionContext _pc2;
+    ClientContext _pc1;
+    ClientContext _pc2;
 };
 
 }

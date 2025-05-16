@@ -447,15 +447,19 @@ void PeerConnection::DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, End
 
 void PeerConnection::OnIncomingRtpRtcp(Buffer&& packet) {
     if(!_srtp_decryptor) {
-        TAU_LOG_WARNING("Skip srtp packet"); //TODO: queue packet
+        TAU_LOG_WARNING(_options.log_ctx << "Skip srtp packet"); //TODO: queue packet?
         return;
     }
     const auto view = ToConst(packet.GetView());
     if(rtcp::IsRtcp(view)) {
-        _srtp_decryptor->Decrypt(std::move(packet), false);
+        if(!_srtp_decryptor->Decrypt(std::move(packet), false)) {
+            TAU_LOG_INFO_THR(128, _options.log_ctx << "SRTCP decryption failed, packet size: " << view.size);
+        };
     } else {
         if(rtp::Reader::Validate(view)) {
-            _srtp_decryptor->Decrypt(std::move(packet), true);
+            if(!_srtp_decryptor->Decrypt(std::move(packet), true)) {
+                TAU_LOG_INFO_THR(128, _options.log_ctx << "SRTP decryption failed, packet size: " << view.size);
+            }
         }
     }
 }

@@ -92,8 +92,8 @@ std::string WriteSdp(const Sdp& sdp) {
         output += "a=mid:" + media.mid + "\n";
         switch(media.direction) {
             case Direction::kSendRecv: output += "a=sendrecv\n"; break;
-            case Direction::kSend:     output += "a=send\n"; break;
-            case Direction::kRecv:     output += "a=recv\n"; break;
+            case Direction::kSend:     output += "a=sendonly\n"; break;
+            case Direction::kRecv:     output += "a=recvonly\n"; break;
             case Direction::kInactive: output += "a=inactive\n"; break;
         }
         output += "a=rtcp-mux\n";

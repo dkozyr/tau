@@ -7,6 +7,7 @@
 #include "tau/rtcp/SrWriter.h"
 #include "tau/rtcp/RrReader.h"
 #include "tau/rtcp/RrWriter.h"
+#include "tau/rtcp/SdesWriter.h"
 #include "tau/rtcp/FirReader.h"
 #include "tau/rtcp/FirWriter.h"
 #include "tau/rtcp/PliReader.h"
@@ -107,7 +108,7 @@ void Session::PushEvent(Event&& event) {
     }
     switch(event) {
         case Event::kFir:
-            if(!rtcp::FirWriter::Write(writer, _options.sender_ssrc, _rr_block.ssrc, 1)) {
+            if(!rtcp::FirWriter::Write(writer, _options.sender_ssrc, _rr_block.ssrc, 1)) { //TODO: fix FIR sn
                 return;
             }
             break;
@@ -159,6 +160,18 @@ void Session::ProcessRtcp() {
     if(_sr_info.ntp) {
         if(!rtcp::SrWriter::Write(writer, _options.sender_ssrc, _sr_info, rr_blocks)) {
             return;
+        }
+        if(!_options.cname.empty()) {
+            if(!rtcp::SdesWriter::Write(writer, {
+                    rtcp::SdesChunk{
+                        .ssrc = _options.sender_ssrc,
+                        .items = {
+                            rtcp::SdesItem{.type = rtcp::SdesType::kCname, .data = _options.cname},
+                        }
+                    }
+                })) {
+                return;
+            }
         }
     } else {
         if(!rtcp::RrWriter::Write(writer, _options.sender_ssrc, rr_blocks)) {
