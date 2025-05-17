@@ -8,20 +8,7 @@ public:
         _source_options.ssrc = _sender_ssrc;
         Init(_sender_ssrc);
         InitCallbacks();
-        InitSourceCallbacks();
-    }
-
-    void InitSourceCallbacks() {
-        _source->SetCallback([&](Buffer&& rtp_packet) {
-            _session->SendRtp(std::move(rtp_packet));
-        });
-
-        _session->SetSendRtcpCallback([&](Buffer&& packet) {
-            const auto view = ToConst(packet.GetView());
-            EXPECT_TRUE(rtcp::Reader::Validate(view));
-            _output_rtcp.push_back(std::move(packet));
-            EXPECT_NO_FATAL_FAILURE(AssertOutputRtcpLastSrReport());
-        });
+        InitSendSourceCallbacks();
     }
 
     Buffer CreateRtcpRr(rtcp::PacketLostWord packet_lost_word = 0) {
@@ -38,28 +25,6 @@ public:
         EXPECT_TRUE(rtcp::RrWriter::Write(writer, _receiver_ssrc, {rr_block}));
         packet.SetSize(writer.GetSize());
         return packet;
-    }
-
-    void AssertOutputRtcpLastSrReport() const {
-        ASSERT_FALSE(_output_rtcp.empty());
-        const auto view = _output_rtcp.back().GetView();
-        ASSERT_TRUE(rtcp::Reader::Validate(view));
-        bool ok = false;
-        rtcp::Reader::ForEachReport(view, [&](rtcp::Type type, const BufferViewConst& report) {
-            if(type == rtcp::Type::kSr) {
-                EXPECT_EQ(_source_options.ssrc, rtcp::SrReader::GetSenderSsrc(report));
-                const auto sr_info = rtcp::SrReader::GetSrInfo(report);
-                const auto bytes = std::accumulate(_output_rtp.begin(), _output_rtp.end(), 0, [](size_t total, const Buffer& packet) {
-                    return total + packet.GetSize();
-                });
-                EXPECT_EQ(_output_rtp.size(), sr_info.packet_count);
-                EXPECT_EQ(bytes, sr_info.octet_count);
-                EXPECT_EQ(0, rtcp::SrReader::GetBlocks(report).size());
-                ok = true;
-            }
-            return true;
-        });
-        ASSERT_TRUE(ok);
     }
 };
 

@@ -8,16 +8,7 @@ public:
         _source_options.ssrc = _sender_ssrc;
         Init(_receiver_ssrc);
         InitCallbacks();
-        InitSourceCallbacks();
-    }
-
-    void InitSourceCallbacks() {
-        _source->SetCallback([&](Buffer&& rtp_packet) { _session->RecvRtp(std::move(rtp_packet)); });
-        _session->SetSendRtcpCallback([&](Buffer&& packet) {
-            const auto view = ToConst(packet.GetView());
-            EXPECT_TRUE(rtcp::Reader::Validate(view));
-            _output_rtcp.push_back(std::move(packet));
-        });
+        InitRecvSourceCallbacks();
     }
 
 protected:

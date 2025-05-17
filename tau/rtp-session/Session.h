@@ -14,6 +14,7 @@ namespace tau::rtp::session {
 class Session {
 public:
     static constexpr Timepoint kDefaultRtt = 100 * kMs;
+    static constexpr Timepoint kNackRequestPeriod = 5 * kMs;
 
     struct Dependencies {
         Allocator& allocator;
@@ -77,10 +78,12 @@ private:
 
     void ProcessRtcp();
     void ProcessRtcpSr(const Buffer& rtp_packet);
+    void ProcessRtcpNack();
     void UpdateRrBlock();
 
     void ProcessIncomingRtcpSr(const BufferViewConst& report);
     void ProcessIncomingRtcpRr(const BufferViewConst& report);
+    void ProcessIncomingRtcpPtpfb(const BufferViewConst& report);
     void ProcessIncomingRtcpPsfb(const BufferViewConst& report);
 
 private:
@@ -102,7 +105,8 @@ private:
     std::optional<RecvContext> _recv_ctx;
 
     Timepoint _last_outgoing_rtcp;
-    Timepoint _last_outgoing_rtcp_sr = 0;
+    Timepoint _last_outgoing_rtcp_sr;
+    Timepoint _last_outgoing_rtcp_nack;
     rtcp::SrInfo _sr_info;
 
     Timepoint _last_incoming_rtcp_sr = 0;

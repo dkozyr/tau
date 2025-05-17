@@ -12,6 +12,8 @@
 #include "tau/rtcp/FirWriter.h"
 #include "tau/rtcp/PliReader.h"
 #include "tau/rtcp/PliWriter.h"
+#include "tau/rtcp/NackReader.h"
+#include "tau/rtcp/NackWriter.h"
 #include "tau/common/Ntp.h"
 
 namespace tau::rtp::session {
@@ -22,7 +24,8 @@ Session::Session(Dependencies&& deps, Options&& options)
     , _send_buffer(_options.send_buffer_size)
     , _recv_buffer(_options.recv_buffer_size)
     , _last_outgoing_rtcp(_deps.media_clock.Now())
-    , _last_outgoing_rtcp_sr(_deps.media_clock.Now()) {
+    , _last_outgoing_rtcp_sr(_deps.media_clock.Now())
+    , _last_outgoing_rtcp_nack(_deps.media_clock.Now()) {
     _send_buffer.SetCallback([this](Buffer&& rtp_packet) { _send_rtp_callback(std::move(rtp_packet)); });
     _recv_buffer.SetCallback([this](Buffer&& rtp_packet) { _recv_rtp_callback(std::move(rtp_packet)); });
 }
@@ -75,6 +78,7 @@ void Session::RecvRtp(Buffer&& rtp_packet) {
     ProcessTs(rtp_packet, reader.Ts());
     _recv_buffer.Push(std::move(rtp_packet), reader.Sn());
     ProcessRtcp();
+    ProcessRtcpNack();
 }
 
 void Session::RecvRtcp(Buffer&& rtcp_packet) {
@@ -86,9 +90,10 @@ void Session::RecvRtcp(Buffer&& rtcp_packet) {
 
     rtcp::Reader::ForEachReport(view, [this](rtcp::Type type, const BufferViewConst& report) {
         switch(type) {
-            case rtcp::Type::kSr:   ProcessIncomingRtcpSr(report); break;
-            case rtcp::Type::kRr:   ProcessIncomingRtcpRr(report); break;
-            case rtcp::Type::kPsfb: ProcessIncomingRtcpPsfb(report); break;
+            case rtcp::Type::kSr:    ProcessIncomingRtcpSr(report); break;
+            case rtcp::Type::kRr:    ProcessIncomingRtcpRr(report); break;
+            case rtcp::Type::kRtpfb: ProcessIncomingRtcpPtpfb(report); break;
+            case rtcp::Type::kPsfb:  ProcessIncomingRtcpPsfb(report); break;
             default:
                 break;
         }
@@ -200,6 +205,27 @@ void Session::ProcessRtcpSr(const Buffer& rtp_packet) {
     _sr_info.octet_count = sender_stats.bytes;
 }
 
+void Session::ProcessRtcpNack() {
+    const auto now = _deps.media_clock.Now();
+    if(!_options.rtx || (now < _last_outgoing_rtcp_nack + kNackRequestPeriod)) {
+        return;
+    }
+    _last_outgoing_rtcp_nack = now;
+
+    const auto sns = _recv_buffer.GetSnsToRecover();
+    if(sns.empty()) {
+        return;
+    }
+
+    auto packet = Buffer::Create(_deps.allocator, Buffer::Info{.tp = now});
+    rtcp::Writer writer(packet.GetViewWithCapacity());
+    if(!rtcp::NackWriter::Write(writer, _options.sender_ssrc, _rr_block.ssrc, sns)) {
+        return;
+    }
+    packet.SetSize(writer.GetSize());
+    _send_rtcp_callback(std::move(packet));
+}
+
 void Session::UpdateRrBlock() {
     auto& ctx = *_recv_ctx;
     const auto ext_highest_sn = (static_cast<uint32_t>(ctx.sn_cycles) << 16) | ctx.sn_last;
@@ -240,6 +266,25 @@ void Session::ProcessIncomingRtcpRr(const BufferViewConst& report) {
             _stats.outgoing.loss_rate = static_cast<float>(rtcp::GetFractionLost(block.packet_lost_word)) / 256.0f;
             _stats.outgoing.lost_packets = rtcp::GetCumulativePacketLost(block.packet_lost_word);
             break;
+        }
+    }
+}
+
+void Session::ProcessIncomingRtcpPtpfb(const BufferViewConst& report) {
+    const auto fmt = rtcp::GetRc(report.ptr[0]);
+    if(fmt == rtcp::RtpfbType::kNack) {
+        if(_options.rtx) {
+            const auto media_ssrc = rtcp::NackReader::GetMediaSsrc(report);
+            if(_options.sender_ssrc == media_ssrc) {
+                const auto sns = rtcp::NackReader::GetSns(report);
+                for(auto sn : sns) {
+                    if(!_send_buffer.SendRtx(sn)) {
+                        TAU_LOG_INFO_THR(128, "Can't send RTX, sn: " << sn);
+                    }
+                }
+            } else {
+                TAU_LOG_INFO_THR(128, "Wrong media_ssrc: " << media_ssrc);
+            }
         }
     }
 }
