@@ -97,6 +97,7 @@ std::string WriteSdp(const Sdp& sdp) {
             case Direction::kInactive: output += "a=inactive\n"; break;
         }
         output += "a=rtcp-mux\n";
+        output += "a=rtcp-rsize\n";
         if(sdp.ice) {
             if(sdp.ice->trickle) {
                 output += "a=" + AttributeWriter::Write("ice-options", "trickle") + "\n";

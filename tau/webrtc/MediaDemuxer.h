@@ -31,7 +31,8 @@ private:
 
 private:
     const std::string _log_ctx;
-    std::unordered_map<uint32_t, size_t> _ssrc_to_media_idx;
+    std::unordered_map<uint32_t, size_t> _local_media_ssrc_to_media_idx;
+    std::unordered_map<uint32_t, size_t> _remote_media_ssrc_to_media_idx;
     Callback _callback;
 };
 
