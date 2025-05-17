@@ -101,6 +101,10 @@ void Session::RecvRtcp(Buffer&& rtcp_packet) {
     });
 }
 
+void Session::Process() {
+    ProcessRtcpNack();
+}
+
 void Session::PushEvent(Event&& event) {
     if(!_recv_ctx) {
         return;

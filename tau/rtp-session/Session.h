@@ -68,6 +68,7 @@ public:
     void RecvRtp(Buffer&& rtp_packet);
     void RecvRtcp(Buffer&& rtcp_packet);
 
+    void Process();
     void PushEvent(Event&& event);
 
     const Stats& GetStats() const { return _stats; }

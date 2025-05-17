@@ -14,6 +14,7 @@ public:
     struct Options {
         sdp::Direction audio = sdp::Direction::kSendRecv;
         sdp::Direction video = sdp::Direction::kSendRecv;
+        std::optional<double> loss_rate = std::nullopt;
         std::string log_ctx;
     };
 
@@ -136,6 +137,9 @@ public:
                     },
                     .ssrc = std::nullopt
                 }
+            },
+            .debug = {
+                .loss_rate = options.loss_rate
             },
             .log_ctx = options.log_ctx
         };

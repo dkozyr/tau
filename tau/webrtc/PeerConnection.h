@@ -28,6 +28,10 @@ public:
             sdp::Media video; //TODO: optional?
         };
         Sdp sdp;
+        struct Debug {
+            std::optional<double> loss_rate = std::nullopt;
+        };
+        Debug debug = {};
         std::string log_ctx = {};
     };
 

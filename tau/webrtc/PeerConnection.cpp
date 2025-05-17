@@ -54,6 +54,9 @@ void PeerConnection::Process() {
         if(_dtls_session) {
             _dtls_session->Process();
         }
+        for(auto& session : _rtp_sessions) {
+            session.Process();
+        }
     });
 }
 
@@ -298,10 +301,6 @@ void PeerConnection::StartDtlsSession() {
                     .key = _dtls_session->GetKeyingMaterial(false)
                 });
                 _srtp_decryptor->SetCallback([this](Buffer&& packet, bool is_rtp) {
-                    // if(!is_rtp) {
-                    //     auto copy = packet.MakeCopy();
-                    //     _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(copy), _ice_pair->remote_endpoint);
-                    // }
                     _media_demuxer->Process(std::move(packet), is_rtp);
                 });
 
@@ -311,6 +310,10 @@ void PeerConnection::StartDtlsSession() {
                     .key = _dtls_session->GetKeyingMaterial(true)
                 });
                 _srtp_encryptor->SetCallback([this](Buffer&& packet, bool /*is_rtp*/) {
+                    auto& loss_rate = _options.debug.loss_rate;
+                    if(loss_rate && (_random.Real() < *loss_rate)) {
+                        return;
+                    }
                     _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
                 });
 
@@ -370,7 +373,7 @@ void PeerConnection::InitMediaDemuxer() {
                     .rate = codec.clock_rate,
                     .sender_ssrc = *media.ssrc,
                     .base_ts = 0, //TODO: fix it
-                    .rtx = false, //TODO: fix it
+                    .rtx = ((codec.rtcp_fb & sdp::RtcpFb::kNack) == sdp::RtcpFb::kNack),
                     .cname = local_sdp.cname
                 }
             );
