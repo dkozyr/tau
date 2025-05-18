@@ -31,10 +31,12 @@ TEST_F(PeerConnectionLossTest, Test) {
         ctx._pc2.PushFrame(kVideoMediaIdx);
     }
     EXPECT_NO_FATAL_FAILURE(ctx.ProcessUntil([&]() {
-        if(ctx._pc2._send_packets[kVideoMediaIdx].size() != ctx._pc1._recv_packets[kVideoMediaIdx].size()) {
+        // We can't RTX lost packet if it was the first, so add it manually here
+        // Flaky case with losing 2+ first packets still possible
+        if(ctx._pc2._send_packets[kVideoMediaIdx].size() > 1 + ctx._pc1._recv_packets[kVideoMediaIdx].size()) {
             return false;
         }
-        if(ctx._pc1._send_packets[kVideoMediaIdx].size() != ctx._pc2._recv_packets[kVideoMediaIdx].size()) {
+        if(ctx._pc1._send_packets[kVideoMediaIdx].size() > 1 + ctx._pc2._recv_packets[kVideoMediaIdx].size()) {
             return false;
         }
         return true;

@@ -42,6 +42,7 @@ void PeerConnection::Stop() {
             _dtls_session->Stop();
             _dtls_session.reset();
         }
+        _rtp_sessions.clear();
     });
     asio::post(_deps.executor, asio::use_future).wait_for(std::chrono::seconds(1));
 }
@@ -178,8 +179,10 @@ void PeerConnection::SetRemoteIceCandidate(std::string candidate) {
 }
 
 void PeerConnection::SendRtp(size_t media_idx, Buffer&& packet) {
-    auto& rtp_session = _rtp_sessions.at(media_idx);
-    rtp_session.SendRtp(std::move(packet));
+    asio::post(_deps.executor, [this, media_idx, packet = std::move(packet)]() mutable {
+        auto& rtp_session = _rtp_sessions.at(media_idx);
+        rtp_session.SendRtp(std::move(packet));
+    });
 }
 
 const sdp::Sdp& PeerConnection::GetLocalSdp() const {
