@@ -5,15 +5,16 @@
 
 namespace tau::srtp {
 
-Session::Session(Options&& options) {
+Session::Session(Options&& options)
+    : _log_ctx(options.log_ctx) {
     srtp_policy_t policy;
     std::memset(&policy, 0, sizeof(srtp_policy_t));
 
     if(auto error = srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, options.profile)) {
-        TAU_EXCEPTION(std::runtime_error, "srtp_crypto_policy_set_from_profile_for_rtp failed, error: " << error);
+        TAU_EXCEPTION(std::runtime_error, _log_ctx << "srtp_crypto_policy_set_from_profile_for_rtp failed, error: " << error);
     }
     if(auto error = srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, options.profile)) {
-        TAU_EXCEPTION(std::runtime_error, "srtp_crypto_policy_set_from_profile_for_rtcp failed, error: " << error);
+        TAU_EXCEPTION(std::runtime_error, _log_ctx << "srtp_crypto_policy_set_from_profile_for_rtcp failed, error: " << error);
     }
     policy.ssrc.type = (options.type == Type::kEncryptor)
         ? srtp_ssrc_type_t::ssrc_any_outbound
@@ -25,7 +26,7 @@ Session::Session(Options&& options) {
 
     if(auto error = srtp_create(&_session, &policy)) {
         // on srtp_err_status_init_fail try to init srtp first
-        TAU_EXCEPTION(std::runtime_error, "srtp_create failed, error: " << error);
+        TAU_EXCEPTION(std::runtime_error, _log_ctx << "srtp_create failed, error: " << error);
     }
 }
 
@@ -38,12 +39,12 @@ bool Session::Encrypt(Buffer&& packet, bool is_rtp) {
     size_t encrypted_size = packet.GetCapacity();
     if(is_rtp) {
         if(auto error = srtp_protect(_session, view.ptr, view.size, view.ptr, &encrypted_size, 0)) {
-            TAU_LOG_DEBUG("srtp_protect failed, error: " << error);
+            TAU_LOG_WARNING_THR(64, _log_ctx << "srtp_protect failed, error: " << error);
             return false;
         }
     } else {
         if(auto error = srtp_protect_rtcp(_session, view.ptr, view.size, view.ptr, &encrypted_size, 0)) {
-            TAU_LOG_DEBUG("srtp_protect_rtcp failed, error: " << error);
+            TAU_LOG_WARNING_THR(64, _log_ctx << "srtp_protect_rtcp failed, error: " << error);
             return false;
         }
     }
@@ -57,12 +58,12 @@ bool Session::Decrypt(Buffer&& packet, bool is_rtp) {
     size_t decrypted_size = view.size;
     if(is_rtp) {
         if(auto error = srtp_unprotect(_session, view.ptr, view.size, view.ptr, &decrypted_size)) {
-            TAU_LOG_DEBUG("srtp_unprotect failed, error: " << error);
+            TAU_LOG_WARNING_THR(64, _log_ctx << "srtp_unprotect failed, error: " << error);
             return false;
         }
     } else {
         if(auto error = srtp_unprotect_rtcp(_session, view.ptr, view.size, view.ptr, &decrypted_size)) {
-            TAU_LOG_DEBUG("srtp_unprotect_rtcp failed, error: " << error);
+            TAU_LOG_WARNING_THR(64, _log_ctx << "srtp_unprotect_rtcp failed, error: " << error);
             return false;
         }
     }

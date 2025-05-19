@@ -283,11 +283,11 @@ void Session::ProcessIncomingRtcpPtpfb(const BufferViewConst& report) {
                 const auto sns = rtcp::NackReader::GetSns(report);
                 for(auto sn : sns) {
                     if(!_send_buffer.SendRtx(sn)) {
-                        TAU_LOG_INFO_THR(128, "Can't send RTX, sn: " << sn);
+                        TAU_LOG_INFO_THR(128, _options.log_ctx << "Can't send RTX, sn: " << sn);
                     }
                 }
             } else {
-                TAU_LOG_INFO_THR(128, "Wrong media_ssrc: " << media_ssrc);
+                TAU_LOG_INFO_THR(128, _options.log_ctx << "Wrong media_ssrc: " << media_ssrc);
             }
         }
     }

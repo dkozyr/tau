@@ -37,7 +37,9 @@ public:
                 .rate = _source_options.clock_rate,
                 .sender_ssrc = session_ssrc,
                 .base_ts = _source_options.base_ts,
-                .rtx = rtx
+                .rtx = rtx,
+                .cname = "test_cname",
+                .log_ctx = "[test] "
             });
     }
 

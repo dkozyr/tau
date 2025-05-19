@@ -30,6 +30,7 @@ public:
         size_t send_buffer_size = session::SendBuffer::kDefaultSize;
         size_t recv_buffer_size = session::RecvBuffer::kDefaultSize;
         std::string_view cname = {};
+        std::string_view log_ctx = {};
     };
 
     struct Stats {

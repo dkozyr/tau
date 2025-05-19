@@ -29,12 +29,14 @@ public:
         _encryptor.emplace(Session::Options{
             .type = Session::Type::kEncryptor,
             .profile = GetParam().profile,
-            .key = _key
+            .key = _key,
+            .log_ctx = "[test] "
         });
         _decryptor.emplace(Session::Options{
             .type = Session::Type::kDecryptor,
             .profile = GetParam().profile,
-            .key = _key
+            .key = _key,
+            .log_ctx = "[test] "
         });
 
         _encryptor->SetCallback([this](Buffer&& encrypted, bool is_rtp) {
@@ -167,7 +169,8 @@ TEST(SessionTest, WrongProfile) {
     ASSERT_ANY_THROW(Session(Session::Options{
         .type = Session::Type::kEncryptor,
         .profile = srtp_profile_t::srtp_profile_null_sha1_32,
-        .key = {}
+        .key = {},
+        .log_ctx = "[test] "
     }));
 }
 

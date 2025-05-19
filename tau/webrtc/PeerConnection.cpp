@@ -301,7 +301,8 @@ void PeerConnection::StartDtlsSession() {
                 _srtp_decryptor.emplace(srtp::Session::Options{
                     .type = srtp::Session::Type::kDecryptor,
                     .profile = static_cast<srtp_profile_t>(srtp_profile.value()),
-                    .key = _dtls_session->GetKeyingMaterial(false)
+                    .key = _dtls_session->GetKeyingMaterial(false),
+                    .log_ctx = _options.log_ctx
                 });
                 _srtp_decryptor->SetCallback([this](Buffer&& packet, bool is_rtp) {
                     _media_demuxer->Process(std::move(packet), is_rtp);
@@ -310,7 +311,8 @@ void PeerConnection::StartDtlsSession() {
                 _srtp_encryptor.emplace(srtp::Session::Options{
                     .type = srtp::Session::Type::kEncryptor,
                     .profile = static_cast<srtp_profile_t>(srtp_profile.value()),
-                    .key = _dtls_session->GetKeyingMaterial(true)
+                    .key = _dtls_session->GetKeyingMaterial(true),
+                    .log_ctx = _options.log_ctx
                 });
                 _srtp_encryptor->SetCallback([this](Buffer&& packet, bool /*is_rtp*/) {
                     auto& loss_rate = _options.debug.loss_rate;
@@ -377,7 +379,8 @@ void PeerConnection::InitMediaDemuxer() {
                     .sender_ssrc = *media.ssrc,
                     .base_ts = 0, //TODO: fix it
                     .rtx = ((codec.rtcp_fb & sdp::RtcpFb::kNack) == sdp::RtcpFb::kNack),
-                    .cname = local_sdp.cname
+                    .cname = local_sdp.cname,
+                    .log_ctx = _options.log_ctx
                 }
             );
             auto& rtp_session = _rtp_sessions.back();

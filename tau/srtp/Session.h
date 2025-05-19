@@ -20,6 +20,7 @@ public:
         Type type;
         srtp_profile_t profile;
         std::vector<uint8_t> key;
+        std::string_view log_ctx;
     };
 
     using Callback = std::function<void(Buffer&& decrypted, bool is_rtp)>;
@@ -34,6 +35,7 @@ public:
     bool Decrypt(Buffer&& packet, bool is_rtp = true);
 
 private:
+    const std::string_view _log_ctx;
     srtp_t _session;
     Callback _callback;
 };
