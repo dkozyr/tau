@@ -26,7 +26,8 @@ Session::Session(Executor executor, Options&& options)
             .recv_buffer_size = 4
         })
     , _h264_depacketizer(g_system_allocator)
-    , _avc1_nalu_processor(h264::Avc1NaluProcessor::Options{
+    , _avc1_nalu_processor(h264::AvcNaluProcessor::Options{
+        .type = h264::AvcNaluProcessor::Type::kAvc1,
         .sps = std::move(options.sps),
         .pps = std::move(options.pps)
     })

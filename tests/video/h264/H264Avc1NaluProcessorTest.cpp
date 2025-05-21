@@ -1,4 +1,4 @@
-#include "tau/video/h264/Avc1NaluProcessor.h"
+#include "tau/video/h264/AvcNaluProcessor.h"
 #include "tests/lib/Common.h"
 #include "tests/lib/H264Utils.h"
 
@@ -7,7 +7,9 @@ namespace tau::h264 {
 class H264Avc1NaluProcessorTest : public ::testing::Test {
 public:
     H264Avc1NaluProcessorTest() {
-        _avc1_nalu_processor.emplace(Avc1NaluProcessor::Options{});
+        _avc1_nalu_processor.emplace(AvcNaluProcessor::Options{
+            .type = AvcNaluProcessor::Type::kAvc1
+        });
         InitCallback();
     }
 
@@ -27,7 +29,7 @@ protected:
     }
 
 protected:
-    std::optional<Avc1NaluProcessor> _avc1_nalu_processor;
+    std::optional<AvcNaluProcessor> _avc1_nalu_processor;
     std::vector<Buffer> _processed_nalu_units;
 };
 
@@ -53,7 +55,7 @@ TEST_F(H264Avc1NaluProcessorTest, Basic) {
 }
 
 TEST_F(H264Avc1NaluProcessorTest, Options) {
-    _avc1_nalu_processor.emplace(Avc1NaluProcessor::Options{
+    _avc1_nalu_processor.emplace(AvcNaluProcessor::Options{
         .sps = CreateNalu(kSps),
         .pps = CreateNalu(kPps)
     });

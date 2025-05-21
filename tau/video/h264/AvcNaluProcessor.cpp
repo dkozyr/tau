@@ -1,13 +1,14 @@
-#include "tau/video/h264/Avc1NaluProcessor.h"
+#include "tau/video/h264/AvcNaluProcessor.h"
 
 namespace tau::h264 {
 
-Avc1NaluProcessor::Avc1NaluProcessor(Options&& options)
-    : _sps(std::move(options.sps))
+AvcNaluProcessor::AvcNaluProcessor(Options&& options)
+    : _type(options.type)
+    , _sps(std::move(options.sps))
     , _pps(std::move(options.pps))
 {}
 
-void Avc1NaluProcessor::Push(Buffer&& nal_unit) {
+void AvcNaluProcessor::Push(Buffer&& nal_unit) {
     const auto header = reinterpret_cast<const NaluHeader*>(&nal_unit.GetView().ptr[0]);
     switch(header->type) {
         case NaluType::kSps:
@@ -27,6 +28,9 @@ void Avc1NaluProcessor::Push(Buffer&& nal_unit) {
         case NaluType::kIdr:
             ProcessSpsPps();
             if(_sps_pps_processed) {
+                if(_type == Type::kAvc3) {
+                    _sps_pps_processed = false;
+                }
                 _drop_until_key_frame = false;
                 _callback(std::move(nal_unit));
             }
@@ -40,11 +44,11 @@ void Avc1NaluProcessor::Push(Buffer&& nal_unit) {
     }
 }
 
-void Avc1NaluProcessor::DropUntilKeyFrame() {
+void AvcNaluProcessor::DropUntilKeyFrame() {
     _drop_until_key_frame = true;
 }
 
-void Avc1NaluProcessor::ProcessSpsPps() {
+void AvcNaluProcessor::ProcessSpsPps() {
     if(_sps && _pps) {
         _callback(std::move(*_sps));
         _callback(std::move(*_pps));

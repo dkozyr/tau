@@ -3,7 +3,7 @@
 #include "tau/rtp-session/Session.h"
 #include "tau/rtp-session/FrameProcessor.h"
 #include "tau/rtp-packetization/H264Depacketizer.h"
-#include "tau/video/h264/Avc1NaluProcessor.h"
+#include "tau/video/h264/AvcNaluProcessor.h"
 #include "tau/net/UdpSocket.h"
 #include "tau/memory/PoolAllocator.h"
 #include "tau/common/File.h"
@@ -37,7 +37,7 @@ private:
     rtp::Session _rtp_session;
     rtp::session::FrameProcessor _frame_processor;
     rtp::H264Depacketizer _h264_depacketizer;
-    h264::Avc1NaluProcessor _avc1_nalu_processor;
+    h264::AvcNaluProcessor _avc1_nalu_processor;
     std::filesystem::path _output_path;
 
     net::UdpSocketPtr _socket_rtp;
