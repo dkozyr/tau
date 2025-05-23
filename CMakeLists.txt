@@ -26,6 +26,8 @@ if(GCC_SANITIZER)
   link_libraries("-fsanitize=address")
 endif()
 
+set(Boost_USE_STATIC_LIBS ON)
+
 add_subdirectory("${PROJECT_SOURCE_DIR}/tau")
 add_subdirectory("${PROJECT_SOURCE_DIR}/apps")
 add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
