@@ -1,7 +1,8 @@
 #pragma once
 
-#include "tau/webrtc/State.h"
 #include "tau/webrtc/MediaDemuxer.h"
+#include "tau/webrtc/State.h"
+#include "tau/webrtc/Event.h"
 #include "tau/ice/Agent.h"
 #include "tau/dtls/Session.h"
 #include "tau/srtp/Session.h"
@@ -28,6 +29,11 @@ public:
             sdp::Media video; //TODO: optional?
         };
         Sdp sdp;
+        struct Mdns {
+            std::string address = "224.0.0.251"; // mDns default IP
+            uint16_t port = 5353;                // mDns default port
+        };
+        std::optional<Mdns> mdns = std::nullopt;
         struct Debug {
             std::optional<double> loss_rate = std::nullopt;
         };
@@ -38,6 +44,7 @@ public:
     using StateCallback = std::function<void(State state)>;
     using IceCandidateCallback = std::function<void(std::string candidate)>;
     using Callback = std::function<void(size_t media_idx, Buffer&& packet)>;
+    using EventCallback = std::function<void(size_t media_idx, Event&& event)>;
 
 public:
     PeerConnection(Dependencies&& deps, Options&& options);
@@ -46,6 +53,7 @@ public:
     void SetStateCallback(StateCallback callback) { _state_callback = std::move(callback); }
     void SetIceCandidateCallback(IceCandidateCallback callback) { _ice_candidate_callback = std::move(callback); }
     void SetRecvRtpCallback(Callback callback) { _recv_rtp_callback = std::move(callback); }
+    void SetEventCallback(EventCallback callback) { _event_callback = std::move(callback); }
 
     void Stop();
     void Process();
@@ -57,6 +65,7 @@ public:
     void SetRemoteIceCandidate(std::string candidate);
 
     void SendRtp(size_t media_idx, Buffer&& packet);
+    void SendEvent(size_t media_idx, Event&& event);
 
     const sdp::Sdp& GetLocalSdp() const;
     const sdp::Sdp& GetRemoteSdp() const;
@@ -81,8 +90,11 @@ private:
     const Options _options;
     SystemClock _system_clock;
 
-    net::UdpSocketPtr _mdns_socket;
-    mdns::Client _mdns_client; //TODO: optional
+    struct MdnsContext {
+        net::UdpSocketPtr socket;
+        mdns::Client client;
+    };
+    std::optional<MdnsContext> _mdns_ctx;
 
     State _state = State::kInitial;
 
@@ -110,6 +122,7 @@ private:
     StateCallback _state_callback;
     IceCandidateCallback _ice_candidate_callback;
     Callback _recv_rtp_callback;
+    EventCallback _event_callback;
 
     Random _random;
 };

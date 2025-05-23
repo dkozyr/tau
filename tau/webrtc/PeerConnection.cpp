@@ -13,18 +13,6 @@ namespace tau::webrtc {
 PeerConnection::PeerConnection(Dependencies&& deps, Options&& options)
     : _deps(std::move(deps))
     , _options(std::move(options))
-    , _mdns_socket(net::UdpSocket::Create(
-        net::UdpSocket::Options{
-            .allocator = _deps.udp_allocator,
-            .executor = _deps.executor,
-            .local_address = {},
-            .local_port = 5353,                 // mDns port
-            .multicast_address = "224.0.0.251"  // mDns IPv4
-        }))
-    , _mdns_client(mdns::Client::Dependencies{
-        .udp_allocator = _deps.udp_allocator,
-        .clock = _deps.clock
-    })
 {
     InitMdnsClient();
 }
@@ -35,7 +23,7 @@ PeerConnection::~PeerConnection() {
 
 void PeerConnection::Stop() {
     asio::post(_deps.executor, [this]() {
-        _mdns_socket.reset();
+        _mdns_ctx.reset();
         _udp_sockets.clear();
         _ice_agent.reset();
         if(_dtls_session) {
@@ -185,6 +173,20 @@ void PeerConnection::SendRtp(size_t media_idx, Buffer&& packet) {
     });
 }
 
+void PeerConnection::SendEvent(size_t media_idx, Event&& event) {
+    asio::post(_deps.executor, [this, media_idx, event = std::move(event)]() mutable {
+        auto& rtp_session = _rtp_sessions.at(media_idx);
+        std::visit(overloaded{
+            [&rtp_session, media_idx](EventPli&) {
+                rtp_session.PushEvent(rtp::session::Event::kPli);
+            },
+            [&rtp_session, media_idx](EventFir&) {
+                rtp_session.PushEvent(rtp::session::Event::kFir);
+            }
+        }, event);
+    });
+}
+
 const sdp::Sdp& PeerConnection::GetLocalSdp() const {
     return *_offerer ? *_sdp_offer : *_sdp_answer;
 }
@@ -266,9 +268,11 @@ void PeerConnection::StartIceAgent() {
     _ice_agent->SetSendCallback([this](size_t socket_idx, Endpoint remote, Buffer&& message) {
         _udp_sockets[socket_idx]->Send(std::move(message), remote);
     });
-    _ice_agent->SetMdnsEndpointCallback([this](Endpoint endpoint) {
-        return _mdns_client.CreateName(endpoint.address().to_v4());
-    });
+    if(_mdns_ctx) {
+        _ice_agent->SetMdnsEndpointCallback([this](Endpoint endpoint) {
+            return _mdns_ctx->client.CreateName(endpoint.address().to_v4());
+        });
+    }
     _ice_agent->Start();
 }
 
@@ -339,11 +343,31 @@ void PeerConnection::StartDtlsSession() {
 }
 
 void PeerConnection::InitMdnsClient() {
-    _mdns_socket->SetRecvCallback([this](Buffer&& packet, Endpoint /*remote_endpoint*/) {
-        _mdns_client.Recv(std::move(packet));
+    if(!_options.mdns) {
+        return;
+    }
+
+    _mdns_ctx.emplace(MdnsContext{
+        net::UdpSocket::Create(
+            net::UdpSocket::Options{
+                .allocator = _deps.udp_allocator,
+                .executor = _deps.executor,
+                .local_address = {},
+                .local_port = _options.mdns->port,
+                .multicast_address = _options.mdns->address
+            }),
+        mdns::Client::Dependencies{
+            .udp_allocator = _deps.udp_allocator,
+            .clock = _deps.clock
+        }
     });
-    _mdns_client.SetSendCallback([&](Buffer&& packet) {
-        _mdns_socket->Send(std::move(packet), Endpoint{IpAddressV4::from_string("224.0.0.251"), 5353}); //TODO: move endpoint data to callback argument?
+
+    _mdns_ctx->socket->SetRecvCallback([this](Buffer&& packet, Endpoint /*remote_endpoint*/) {
+        _mdns_ctx->client.Recv(std::move(packet));
+    });
+    auto mdns_endpoint = Endpoint{IpAddressV4::from_string(_options.mdns->address), _options.mdns->port};
+    _mdns_ctx->client.SetSendCallback([this, mdns_endpoint](Buffer&& packet) {
+        _mdns_ctx->socket->Send(std::move(packet), mdns_endpoint);
     });
 }
 
@@ -385,14 +409,20 @@ void PeerConnection::InitMediaDemuxer() {
             );
             auto& rtp_session = _rtp_sessions.back();
             rtp_session.SetEventCallback([this, idx](rtp::session::Event&& event) {
-                TAU_LOG_INFO(_options.log_ctx << "Incoming event, RTP session idx: " << idx << ", event: " << event);
+                TAU_LOG_DEBUG(_options.log_ctx << "Incoming event, RTP session idx: " << idx << ", event: " << event);
+                switch(event) {
+                    case rtp::session::Event::kPli:
+                        _event_callback(idx, EventPli{});
+                        break;
+                    case rtp::session::Event::kFir:
+                        _event_callback(idx, EventFir{});
+                        break;
+                }
             });
             rtp_session.SetSendRtpCallback([this](Buffer&& packet) {
                 _srtp_encryptor->Encrypt(std::move(packet), true);
             });
             rtp_session.SetSendRtcpCallback([this](Buffer&& packet) {
-                // auto packet_copy = packet.MakeCopy();
-                // _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet_copy), _ice_pair->remote_endpoint);
                 _srtp_encryptor->Encrypt(std::move(packet), false);
             });
             rtp_session.SetRecvRtpCallback([this, idx](Buffer&& packet) {
@@ -411,9 +441,9 @@ void PeerConnection::SetRemoteIceCandidateInternal(std::string candidate) {
     }
     if(auto pos = candidate.find(".local"); pos != std::string::npos) {
         constexpr auto kUuidSize = 36; //TODO: move to Uuid;
-        if(pos > kUuidSize) {
+        if(_mdns_ctx && (pos > kUuidSize)) {
             auto mdns_name = candidate.substr(pos - kUuidSize, kUuidSize + 6);
-            _mdns_client.FindIpAddressByName(mdns_name,
+            _mdns_ctx->client.FindIpAddressByName(mdns_name,
                 [this, candidate = std::move(candidate), mdns_name](IpAddressV4 address) mutable {
                     candidate.replace(candidate.find(mdns_name), mdns_name.size(), address.to_string());
                     _ice_agent->RecvRemoteCandidate(std::move(candidate));
@@ -426,8 +456,6 @@ void PeerConnection::SetRemoteIceCandidateInternal(std::string candidate) {
 
 // https://datatracker.ietf.org/doc/html/rfc7983#section-7
 void PeerConnection::DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint) {
-    // if(rand() % 10 == 7) { return; } //TODO: remove or add option
-
     const auto view = packet.GetView();
     if(view.size == 0) {
         return;
