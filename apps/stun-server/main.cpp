@@ -9,7 +9,6 @@
 #include "tau/memory/PoolAllocator.h"
 #include "tau/common/Clock.h"
 #include "tau/common/Log.h"
-#include <thread>
 #include <atomic>
 
 using namespace tau;
@@ -20,8 +19,8 @@ int main(int /*argc*/, char** /*argv*/) {
     SteadyClock clock;
     ThreadPool io(std::thread::hardware_concurrency());
 
-    std::atomic<size_t> requests;
-    std::atomic<size_t> responses;
+    std::atomic<size_t> requests{0};
+    std::atomic<size_t> responses{0};
 
     PoolAllocator udp_allocator(1200);
     auto udp_socket = net::UdpSocket::Create(

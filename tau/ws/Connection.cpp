@@ -106,7 +106,7 @@ void Connection::DoRead() {
 void Connection::OnRead(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
         if((ec != beast_ws::error::closed) && (ec != asio::error::eof) && (ec != boost::system::errc::operation_canceled)) {
-            TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
+            TAU_LOG_WARNING(_log_ctx << "Error: " << ec.value() << ", message: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
         }
         return;
     }
