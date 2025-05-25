@@ -138,6 +138,7 @@ public:
                     .ssrc = std::nullopt
                 }
             },
+            .mdns = PeerConnection::Options::Mdns{},
             .debug = {
                 .loss_rate = options.loss_rate
             },
