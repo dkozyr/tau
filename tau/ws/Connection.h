@@ -1,5 +1,6 @@
 #pragma once
 
+#include "tau/ws/Message.h"
 #include "tau/http/Field.h"
 #include "tau/asio/Ssl.h"
 #include <deque>
@@ -8,10 +9,6 @@ namespace tau::ws {
 
 class Connection : public std::enable_shared_from_this<Connection> {
 public:
-    struct CloseMessage{};
-    struct DoNothingMessage{};
-    using Message = std::variant<std::string, CloseMessage, DoNothingMessage>;
-
     using ValidateRequestCallback = std::function<bool(const beast_request& request)>;
     using ProcessResponseCallback = std::function<void(beast_ws::response_type& request)>;
     using ProcessMessageCallback = std::function<Message(std::string&&)>;
