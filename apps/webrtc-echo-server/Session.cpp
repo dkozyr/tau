@@ -15,8 +15,12 @@ Session::Session(Dependencies&& deps, ws::ConnectionPtr connection)
     , _pc(std::move(deps), CreateOptions(_log_ctx)) {
     TAU_LOG_INFO(_log_ctx);
 
-    connection->SetProcessMessageCallback([this](std::string&& request) {
-        return OnRequest(std::move(request));
+    connection->SetProcessMessageCallback([this](std::string&& request) -> ws::Message {
+        auto response = OnRequest(std::move(request));
+        if(!response.empty()) {
+            return response;
+        }
+        return ws::DoNothingMessage{};
     });
 
     PcInitCallbacks();
@@ -42,6 +46,7 @@ void Session::PcInitCallbacks() {
     _pc.SetIceCandidateCallback([this](std::string candidate) {
         TAU_LOG_INFO(_log_ctx << "candidate: " << candidate);
         _local_ice_candidates.push_back(std::move(candidate));
+        SendLocalIceCandidates();
     });
     _pc.SetEventCallback([this](size_t media_idx, webrtc::Event&& event) {
         std::visit(overloaded{
@@ -83,7 +88,6 @@ std::string Session::OnRequest(std::string request_str) {
             auto sdp_answer = _pc.ProcessSdpOffer(sdp_offer);
             if(!sdp_answer.empty()) {
                 const auto& video_media = _pc.GetLocalSdp().medias.at(1);
-                const auto& [_, codec] = *video_media.codecs.begin();
                 _video_ssrc = video_media.ssrc;
 
                 Json::object response = {
@@ -103,27 +107,40 @@ std::string Session::OnRequest(std::string request_str) {
                             _pc.SetRemoteIceCandidate(candidate.substr(kCandidatePrefix.size()));
                         }
                     } else {
-                        TAU_LOG_WARNING("Skipped element: " << element);
+                        TAU_LOG_WARNING(_log_ctx << "Skipped element: " << element);
                     }
                 }
             }
-
-            Json::object response = {
-                {"method", "ice"},
-                {"candidate", Json::array{}}
-            };
-            auto& list = response.at("candidate").get_array();
-            for(auto& candidate : _local_ice_candidates) {
-                list.push_back(Json::value(candidate));
-            }
-            _local_ice_candidates.clear();
-            return Json::serialize(response);
+            SendLocalIceCandidates();
+            return {};
+        } else {
+            TAU_LOG_WARNING(_log_ctx << "Unknown method: " << method);
         }
     } catch(const std::exception& e) {
         TAU_LOG_WARNING(_log_ctx << "Exception: " << e.what());
     }
     CloseConnection();
     return {};
+}
+void Session::SendLocalIceCandidates() {
+    if(!_video_ssrc || _local_ice_candidates.empty()) {
+        return;
+    }
+    auto connection = _ws_connection.lock();
+    if(!connection) {
+        return;
+    }
+
+    Json::object message = {
+        {"method", "ice"},
+        {"candidates", Json::array{}}
+    };
+    auto& list = message.at("candidates").get_array();
+    for(auto& candidate : _local_ice_candidates) {
+        list.push_back(Json::value(candidate));
+    }
+    _local_ice_candidates.clear();
+    connection->PostMessage(Json::serialize(message));
 }
 
 void Session::CloseConnection() {
