@@ -11,9 +11,17 @@
 namespace tau {
 
 //TODO: make it configurable in compile/runtime
-inline constexpr auto g_severity = boost::log::trivial::debug;
+inline constexpr auto kSeverityDefault = 1;
+inline const std::array<boost::log::trivial::severity_level, 6> kSeverity = {
+    boost::log::trivial::trace,
+    boost::log::trivial::debug,
+    boost::log::trivial::info,
+    boost::log::trivial::warning,
+    boost::log::trivial::error,
+    boost::log::trivial::fatal,
+};
 
-inline void InitLogging(const std::string& file_name = "log", bool console = false) {
+inline void InitLogging(const std::string& file_name = "log", bool console = false, size_t severity = kSeverityDefault) {
     boost::log::register_simple_formatter_factory<boost::log::trivial::severity_level, char>("Severity");
     boost::log::add_file_log(
         boost::log::keywords::file_name = file_name + "_%N.log",
@@ -22,7 +30,7 @@ inline void InitLogging(const std::string& file_name = "log", bool console = fal
         boost::log::keywords::format = "[%TimeStamp%] [%ThreadID%] [%Severity%] %Message%"
     );
     boost::log::core::get()->set_filter(
-        boost::log::trivial::severity >= boost::log::trivial::info
+        boost::log::trivial::severity >= kSeverity[severity]
     );
     boost::log::add_common_attributes();
     if(console) {
@@ -46,12 +54,12 @@ inline constexpr std::string_view TruncateFileName(std::string_view path) {
 #define DETAIL_LOG_CONTEXT "[" << DETAIL_LOG_FILENAME << ":" << __LINE__ << "] [" << __FUNCTION__ << "] "
 
 #define DETAIL_TAU_LOG(severity, message)                             \
-    if constexpr(boost::log::trivial::severity >= g_severity) {       \
+    if constexpr(boost::log::trivial::severity >= kSeverityDefault) { \
         BOOST_LOG_TRIVIAL(severity) << DETAIL_LOG_CONTEXT << message; \
     }
 
 #define DETAIL_TAU_LOG_THR(threshold, severity, message)                  \
-    if constexpr(boost::log::trivial::severity >= g_severity) {           \
+    if constexpr(boost::log::trivial::severity >= kSeverityDefault) {     \
         static size_t value = threshold - 1;                              \
         if(++value % threshold == 0) {                                    \
             BOOST_LOG_TRIVIAL(severity) << DETAIL_LOG_CONTEXT << message; \
