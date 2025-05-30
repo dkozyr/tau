@@ -3,6 +3,7 @@
 #include "tau/webrtc/PeerConnection.h"
 #include "tau/ws/Connection.h"
 #include "tau/asio/PeriodicTimer.h"
+#include "tau/common/Json.h"
 
 namespace tau {
 
@@ -20,6 +21,8 @@ private:
     void PcInitCallbacks();
 
     std::string OnRequest(std::string request);
+    std::string OnSdpOffer(const Json::value& request);
+    void OnRemoteIceCandidates(const Json::value& request);
 
     void SendLocalIceCandidates();
     void CloseConnection();

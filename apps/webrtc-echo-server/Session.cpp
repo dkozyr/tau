@@ -1,7 +1,6 @@
 #include "apps/webrtc-echo-server/Session.h"
 #include <tau/crypto/Random.h>
 #include "tau/common/NetToHost.h"
-#include <tau/common/Json.h>
 #include <tau/common/String.h>
 #include <tau/common/Log.h>
 
@@ -84,34 +83,12 @@ std::string Session::OnRequest(std::string request_str) {
         auto request = Json::parse(request_str);
         auto method = request.at("method").get_string();
         if(method == "offer") {
-            const auto sdp_offer = Json::value_to<std::string>(request.at("sdp"));
-            auto sdp_answer = _pc.ProcessSdpOffer(sdp_offer);
-            if(!sdp_answer.empty()) {
-                const auto& video_media = _pc.GetLocalSdp().medias.at(1);
-                _video_ssrc = video_media.ssrc;
-
-                Json::object response = {
-                    {"method", "answer"},
-                    {"sdp", sdp_answer}
-                };
-                return Json::serialize(response);
+            auto response = OnSdpOffer(request);
+            if(!response.empty()) {
+                return response;
             }
         } else if(method == "ice") {
-            auto& candidates = request.at("candidates");
-            constexpr std::string_view kCandidatePrefix = "candidate:";
-            if(candidates.is_array()) {
-                for(auto& element : candidates.get_array()) {
-                    if(element.is_string()) {
-                        const auto candidate = boost::json::value_to<std::string>(element);
-                        if(IsPrefix(candidate, kCandidatePrefix)) {
-                            _pc.SetRemoteIceCandidate(candidate.substr(kCandidatePrefix.size()));
-                        }
-                    } else {
-                        TAU_LOG_WARNING(_log_ctx << "Skipped element: " << element);
-                    }
-                }
-            }
-            SendLocalIceCandidates();
+            OnRemoteIceCandidates(request);
             return {};
         } else {
             TAU_LOG_WARNING(_log_ctx << "Unknown method: " << method);
@@ -122,6 +99,41 @@ std::string Session::OnRequest(std::string request_str) {
     CloseConnection();
     return {};
 }
+
+std::string Session::OnSdpOffer(const Json::value& request) {
+    const auto sdp_offer = Json::value_to<std::string>(request.at("sdp"));
+    auto sdp_answer = _pc.ProcessSdpOffer(sdp_offer);
+    if(!sdp_answer.empty()) {
+        const auto& video_media = _pc.GetLocalSdp().medias.at(1);
+        _video_ssrc = video_media.ssrc;
+
+        Json::object response = {
+            {"method", "answer"},
+            {"sdp", sdp_answer}
+        };
+        return Json::serialize(response);
+    }
+    return {};
+}
+
+void Session::OnRemoteIceCandidates(const Json::value& request) {
+    auto& candidates = request.at("candidates");
+    constexpr std::string_view kCandidatePrefix = "candidate:";
+    if(candidates.is_array()) {
+        for(auto& element : candidates.get_array()) {
+            if(element.is_string()) {
+                const auto candidate = boost::json::value_to<std::string>(element);
+                if(IsPrefix(candidate, kCandidatePrefix)) {
+                    _pc.SetRemoteIceCandidate(candidate.substr(kCandidatePrefix.size()));
+                }
+            } else {
+                TAU_LOG_WARNING(_log_ctx << "Skipped element: " << element);
+            }
+        }
+    }
+    SendLocalIceCandidates();
+}
+
 void Session::SendLocalIceCandidates() {
     if(!_video_ssrc || _local_ice_candidates.empty()) {
         return;
@@ -178,7 +190,10 @@ webrtc::PeerConnection::Options Session::CreateOptions(const std::string& log_ct
                 .ssrc = std::nullopt
             }
         },
-        .mdns = std::nullopt,
+        .ice = {
+            .uri_stun_servers = {},
+            .mdns = std::nullopt,
+        },
         .debug = {},
         .log_ctx = log_ctx
     };
