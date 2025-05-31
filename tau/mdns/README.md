@@ -1,6 +1,6 @@
 # Simple mDNS Client for WebRTC
 
-This is a simple implementation of an mDNS (Multicast DNS) client, designed for use with WebRTC. The primary goal of this mDNS client is to enhance privacy by masking local IP addresses during peer connection setup.
+This is a simple implementation of an mDNS (Multicast DNS) client, designed for use with WebRTC. The primary goal of this mDNS client is to enhance privacy by masking local IP addresses during peer connection setup
 
 ## Overview
 
@@ -20,4 +20,4 @@ WebRTC can expose local IP addresses in peer-to-peer communications. To mitigate
 
 * Socket communication is implemented using a callback-based approach
 * The UDP socket must be configured and passed to the client externally
-* Uses UDP multicast for communication, default mDNS multicast address and port: 224.0.0.251:5353
+* Uses UDP multicast for communication, default mDNS multicast address and port: `224.0.0.251:5353`

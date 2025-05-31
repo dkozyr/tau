@@ -28,7 +28,6 @@ std::optional<Question> ParseQuestion(const BufferViewConst& view) {
 }
 
 bool QuestionWriter::Write(Writer& writer, std::string_view name, Type type, uint16_t class_) {
-    //TODO: move to NameWriter
     auto labels = Split(name, ".");
     const auto name_size = name.size() + 1 + 1;
     if(writer.GetAvailableSize() < name_size + 2 * sizeof(uint16_t)) {
