@@ -16,9 +16,9 @@ public:
     };
 
     struct OptionsSelfSigned {
+        const Certificate& ca;
         std::string cn = "Tau self-signed certificate";
         std::string sna = "IP:127.0.0.1";
-        const Certificate& ca;
     };
 
 public:
