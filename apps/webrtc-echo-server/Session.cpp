@@ -8,6 +8,8 @@ namespace tau {
 
 Session::Session(Dependencies&& deps, ws::ConnectionPtr connection)
     : _ws_connection(connection)
+    , _clock(deps.clock)
+    , _timeout_tp(_clock.Now() + 10 * kMin)
     , _id(crypto::RandomBase64(12))
     , _log_ctx("[" + _id + "] ")
     , _timer(deps.executor)
@@ -71,6 +73,11 @@ void Session::PcInitCallbacks() {
 
     _timer.Start(10, [this](beast_ec ec) {
         if(ec) {
+            return false;
+        }
+        if(_clock.Now() > _timeout_tp) {
+            TAU_LOG_INFO(_log_ctx << "Close on timeout");
+            CloseConnection();
             return false;
         }
         _pc.Process();

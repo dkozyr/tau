@@ -30,12 +30,12 @@ private:
     static webrtc::PeerConnection::Options CreateOptions(const std::string& log_ctx);
 
 private:
-    Executor _executor;
     ws::ConnectionWeakPtr _ws_connection;
+    Clock& _clock;
+    const Timepoint _timeout_tp;
     const std::string _id;
     const std::string _log_ctx;
 
-    SteadyClock _clock;
     PeriodicTimer _timer;
     webrtc::PeerConnection _pc;
     std::vector<std::string> _local_ice_candidates;
