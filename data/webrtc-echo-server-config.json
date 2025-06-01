@@ -1,0 +1,31 @@
+{
+    "ip":{
+        "private":"127.0.0.1",
+        "public":null
+    },
+    "wss":{
+        "port":8443,
+        "http_fields":{
+            "server":"127.0.0.1",
+            "access_control_allow_origin":"*"
+        },
+        "validation":{
+            "origin_host":"127.0.0.1"
+        }
+    },
+    "ssl":{
+        "self_signed":true,
+        "ca":{
+            "certificate":"/path/to/ca.crt",
+            "key":"/path/to/ca.key"
+        },
+        "server":{
+            "certificate":"/path/to/fullchain.pem",
+            "key":"/path/to/privkey.pem"
+        }
+    },
+    "logging":{
+        "console":true,
+        "severity":2
+    }
+}
