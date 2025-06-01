@@ -89,6 +89,7 @@ int main(int argc, char** argv) {
 
     PeriodicTimer timer(io.GetExecutor());
     constexpr auto kPrintStatsPeriodMs = 10 * 1000;
+    auto print_stats_tp = clock.Now();
     timer.Start(kPrintStatsPeriodMs, [&](beast_ec ec) {
         if(ec) {
             TAU_LOG_WARNING("Error: " << ec.value() << ", " << ec.message());
@@ -105,7 +106,9 @@ int main(int argc, char** argv) {
                 print_stats = true;
             }
         }
-        if(print_stats) {
+        const auto now = clock.Now();
+        if(print_stats || (print_stats_tp + 10 * kMin < now)) {
+            print_stats_tp = now;
             TAU_LOG_INFO("Connections: " << connections << ", active sessions: " << sessions.size());
         }
         return true;
