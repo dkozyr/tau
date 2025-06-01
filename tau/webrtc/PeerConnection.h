@@ -29,11 +29,15 @@ public:
             sdp::Media video; //TODO: optional?
         };
         Sdp sdp;
-        struct Mdns {
-            std::string address = "224.0.0.251"; // mDns default IP
-            uint16_t port = 5353;                // mDns default port
+        struct Ice {
+            std::vector<std::string> uri_stun_servers = {};
+            struct Mdns {
+                std::string address = "224.0.0.251"; // mDns default IP
+                uint16_t port = 5353;                // mDns default port
+            };
+            std::optional<Mdns> mdns = std::nullopt;
         };
-        std::optional<Mdns> mdns = std::nullopt;
+        Ice ice = {};
         struct Debug {
             std::optional<double> loss_rate = std::nullopt;
         };

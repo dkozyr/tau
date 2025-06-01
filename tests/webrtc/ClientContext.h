@@ -138,7 +138,12 @@ public:
                     .ssrc = std::nullopt
                 }
             },
-            .mdns = PeerConnection::Options::Mdns{},
+            .ice = {
+                .uri_stun_servers = {
+                    "stun:stun.l.google.com:19302",
+                },
+                .mdns = PeerConnection::Options::Ice::Mdns{},
+            },
             .debug = {
                 .loss_rate = options.loss_rate
             },

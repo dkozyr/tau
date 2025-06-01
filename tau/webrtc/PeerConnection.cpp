@@ -3,6 +3,8 @@
 #include "tau/rtp/Reader.h"
 #include "tau/rtcp/Header.h"
 #include "tau/net/Interface.h"
+#include "tau/net/Resolver.h"
+#include "tau/net/Uri.h"
 #include "tau/crypto/Random.h"
 #include "tau/asio/Ssl.h"
 #include "tau/common/String.h"
@@ -221,6 +223,21 @@ void PeerConnection::StartIceAgent() {
         });
     }
 
+    std::vector<Endpoint> stun_endpoints;
+    for(auto& stun_str : _options.ice.uri_stun_servers) {
+        auto stun_uri = net::GetUriFromString(stun_str);
+        if(stun_uri) {
+            auto resolved = net::Resolve(_deps.executor, stun_uri->host, stun_uri->port);
+            if(resolved) {
+                for(auto& endpoint : *resolved) {
+                    if(endpoint.endpoint().address().is_v4()) {
+                        stun_endpoints.emplace_back(endpoint.endpoint().address().to_v4(), endpoint.endpoint().port());
+                    }
+                }
+            }
+        }
+    }
+
     _ice_agent.emplace(
         ice::Agent::Dependencies{
             .clock = _deps.clock,
@@ -234,9 +251,7 @@ void PeerConnection::StartIceAgent() {
                 ? CreateIceCredentials(*_sdp_offer, *_sdp_answer)
                 : CreateIceCredentials(*_sdp_answer, *_sdp_offer),
             .interfaces = std::move(interface_endpoints),
-            .stun_servers = {
-                Endpoint{IpAddressV4::from_string("74.125.250.129"), 19302} //TODO: resolve stun.l.google.com:19302
-            },
+            .stun_servers = std::move(stun_endpoints),
             .turn_servers = {},
             .log_ctx = _options.log_ctx
         });
@@ -343,9 +358,10 @@ void PeerConnection::StartDtlsSession() {
 }
 
 void PeerConnection::InitMdnsClient() {
-    if(!_options.mdns) {
+    if(!_options.ice.mdns) {
         return;
     }
+    const auto& mdns = *_options.ice.mdns;
 
     _mdns_ctx.emplace(MdnsContext{
         net::UdpSocket::Create(
@@ -353,8 +369,8 @@ void PeerConnection::InitMdnsClient() {
                 .allocator = _deps.udp_allocator,
                 .executor = _deps.executor,
                 .local_address = {},
-                .local_port = _options.mdns->port,
-                .multicast_address = _options.mdns->address
+                .local_port = mdns.port,
+                .multicast_address = mdns.address
             }),
         mdns::Client::Dependencies{
             .udp_allocator = _deps.udp_allocator,
@@ -365,7 +381,7 @@ void PeerConnection::InitMdnsClient() {
     _mdns_ctx->socket->SetRecvCallback([this](Buffer&& packet, Endpoint /*remote_endpoint*/) {
         _mdns_ctx->client.Recv(std::move(packet));
     });
-    auto mdns_endpoint = Endpoint{IpAddressV4::from_string(_options.mdns->address), _options.mdns->port};
+    auto mdns_endpoint = Endpoint{IpAddressV4::from_string(mdns.address), mdns.port};
     _mdns_ctx->client.SetSendCallback([this, mdns_endpoint](Buffer&& packet) {
         _mdns_ctx->socket->Send(std::move(packet), mdns_endpoint);
     });
