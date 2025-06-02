@@ -1,4 +1,4 @@
-#include "tau/rtp-packetization/H264Packetizer.h"
+#include "tau/rtp-packetization/H26XPacketizer.h"
 #include "tau/rtp-packetization/H264Depacketizer.h"
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
@@ -61,13 +61,30 @@ protected:
                     .base_tp = tp,
                     .clock_rate = kDefaultClockRate
                 })
-            , packetizer(allocator)
+            , packetizer(allocator, H26XPacketizer::Options{
+                .nalu_header_size = sizeof(h264::NaluHeader),
+                .fragmented_nalu_type = h264::NaluType::kFuA,
+                .validate_header = [](const BufferViewConst& view) {
+                    if(view.size <= sizeof(h264::NaluHeader)) {
+                        return false;
+                    }
+                    auto header = reinterpret_cast<const h264::NaluHeader*>(&view.ptr[0]);
+                    return !header->forbidden && (header->type < h264::NaluType::kStapA);
+                },
+                .get_nalu_type = [](const BufferViewConst& view) {
+                    const auto header = reinterpret_cast<const NaluHeader*>(&view.ptr[0]);
+                    return static_cast<uint8_t>(header->type);
+                },
+                .set_nalu_type = [](uint8_t* ptr, uint8_t type) {
+                    ptr[0] = (ptr[0] & 0b01100000) | type;
+                }
+            })
             , depacketizer(g_system_allocator)
         {}
 
         PoolAllocator udp_allocator;
         RtpAllocator allocator;
-        H264Packetizer packetizer;
+        H26XPacketizer packetizer;
         H264Depacketizer depacketizer;
     };
     std::optional<Context> _ctx;
