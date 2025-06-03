@@ -12,6 +12,7 @@
 #include "tau/common/Random.h"
 #include "tau/crypto/Random.h"
 #include "tau/common/Log.h"
+#include "tau/common/Exception.h"
 
 #include <gtest/gtest.h>
 

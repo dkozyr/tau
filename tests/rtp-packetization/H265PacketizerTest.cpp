@@ -1,10 +1,10 @@
-#include "tests/rtp-packetization/H264PacketizationBase.h"
+#include "tests/rtp-packetization/H265PacketizationBase.h"
 
 namespace tau::rtp {
 
-using namespace h264;
+using namespace h265;
 
-class H264PacketizerTest : public H264PacketizationBase, public ::testing::Test {
+class H265PacketizerTest : public H265PacketizationBase, public ::testing::Test {
 protected:
     static void ValidateRtpAndAssertMarker(const Buffer& packet, bool marker) {
         auto view = packet.GetView();
@@ -14,8 +14,8 @@ protected:
     }
 };
 
-TEST_F(H264PacketizerTest, Single) {
-    auto nalu = CreateH264Nalu(NaluType::kSps, 42);
+TEST_F(H265PacketizerTest, Single) {
+    auto nalu = CreateH265Nalu(NaluType::kTrailN, 42);
 
     ASSERT_TRUE(_ctx->packetizer.Process(nalu, false));
     ASSERT_EQ(1, _rtp_packets.size());
@@ -26,8 +26,8 @@ TEST_F(H264PacketizerTest, Single) {
     ASSERT_NO_FATAL_FAILURE(ValidateRtpAndAssertMarker(_rtp_packets[1], true));
 }
 
-TEST_F(H264PacketizerTest, FuA) {
-    auto nalu = CreateH264Nalu(NaluType::kNonIdr, 23456);
+TEST_F(H265PacketizerTest, Fu) {
+    auto nalu = CreateH265Nalu(NaluType::kTrailR, 23456);
     ASSERT_TRUE(_ctx->packetizer.Process(nalu, true));
 
     ASSERT_EQ(21, _rtp_packets.size());
@@ -37,21 +37,21 @@ TEST_F(H264PacketizerTest, FuA) {
     }
 }
 
-TEST_F(H264PacketizerTest, SkipHeaderOnlyNalu) {
-    auto nalu = CreateH264Nalu(NaluType::kAud, 1);
+TEST_F(H265PacketizerTest, SkipHeaderOnlyNalu) {
+    auto nalu = CreateH265Nalu(NaluType::kAud, 2);
     ASSERT_FALSE(_ctx->packetizer.Process(nalu, true));
     ASSERT_EQ(0, _rtp_packets.size());
 }
 
-TEST_F(H264PacketizerTest, WrongNaluType) {
-    auto nalu = CreateH264Nalu(NaluType::kStapA, 15561);
+TEST_F(H265PacketizerTest, WrongNaluType) {
+    auto nalu = CreateH265Nalu(NaluType::kAp, 15561);
     ASSERT_FALSE(_ctx->packetizer.Process(nalu, true));
     ASSERT_EQ(0, _rtp_packets.size());
 }
 
-TEST_F(H264PacketizerTest, NaluForbiddenBit) {
-    auto nalu = CreateH264Nalu(NaluType::kIdr, 15561);
-    nalu.GetView().ptr[0] |= 0b10000000;
+TEST_F(H265PacketizerTest, NaluForbiddenBit) {
+    auto nalu = CreateH265Nalu(NaluType::kIdrWRadl, 15561);
+    nalu.GetView().ptr[0] |= h265::kNaluForbiddenMask;
     ASSERT_FALSE(_ctx->packetizer.Process(nalu, true));
     ASSERT_EQ(0, _rtp_packets.size());
 }
