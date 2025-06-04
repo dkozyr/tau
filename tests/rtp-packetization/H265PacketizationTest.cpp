@@ -1,19 +1,21 @@
-#include "tests/rtp-packetization/H264PacketizationBase.h"
+#include "tests/rtp-packetization/H265PacketizationBase.h"
 
 namespace tau::rtp {
 
-using namespace h264;
+using namespace h265;
 
-class H264PacketizationTest : public H264PacketizationBase, public ::testing::Test {
+class H265PacketizationTest : public H265PacketizationBase, public ::testing::Test {
 };
 
-TEST_F(H264PacketizationTest, Randomized) {
+TEST_F(H265PacketizationTest, Randomized) {
     for(size_t iteration = 0; iteration < 50; ++iteration) {
         _header_options.extension_length_in_words = g_random.Int(0, 8);
         const auto allocator_chunk_size = g_random.Int(128, 1500);
         Init(allocator_chunk_size);
         for(size_t i = 0; i < 10; ++i) {
-            auto nalu = CreateH264Nalu(NaluType::kNonIdr, g_random.Int(2, 200'000));
+            auto layer_id = g_random.Int<uint8_t>();
+            auto tid = g_random.Int<uint8_t>();
+            auto nalu = CreateH265Nalu(NaluType::kPrefixSei, g_random.Int(3, 200'000), layer_id, tid);
             const auto last = g_random.Int(0, 1);
             ASSERT_TRUE(_ctx->packetizer.Process(nalu, last));
             ASSERT_FALSE(_rtp_packets.empty());

@@ -4,7 +4,7 @@
 #include "tau/rtp-packetization/H264Packetizer.h"
 #include "tau/rtp/RtpAllocator.h"
 #include "tests/webrtc/Constants.h"
-#include "tests/lib/H264Utils.h"
+#include "tests/lib/NaluUtils.h"
 #include "tests/lib/Common.h"
 
 namespace tau::webrtc {
@@ -95,7 +95,7 @@ public:
         constexpr auto kTimepointFactor = 10;
         auto tp = (_deps.clock.Now() - _start) * kTimepointFactor;
         if(media_idx == kVideoMediaIdx) {
-            auto nalu = h264::CreateNalu(h264::NaluType::kNonIdr, 10'000);
+            auto nalu = CreateH264Nalu(h264::NaluType::kNonIdr, 10'000);
             nalu.GetInfo().tp = tp;
             _h264_packetizer->Process(nalu, true);
         } else {

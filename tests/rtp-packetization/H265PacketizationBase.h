@@ -1,25 +1,21 @@
-#include "tau/rtp-packetization/H264Packetizer.h"
-#include "tau/rtp-packetization/H264Depacketizer.h"
-#include "tau/rtp-packetization/FuHeader.h"
+#include "tau/rtp-packetization/H265Packetizer.h"
+#include "tau/rtp-packetization/H265Depacketizer.h"
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Constants.h"
-#include "tau/video/h264/Nalu.h"
+#include "tau/video/h265/Nalu.h"
 #include "tests/lib/Common.h"
 #include "tests/lib/NaluUtils.h"
 
 namespace tau::rtp {
 
-using namespace h264;
+using namespace h265;
 
-class H264PacketizationBase {
+class H265PacketizationBase {
 protected:
     static constexpr uint32_t kDefaultClockRate = 90'000;
 
 public:
-    H264PacketizationBase() {
-        static_assert(sizeof(FuAIndicator) == 1);
-        static_assert(sizeof(FuHeader) == 1);
-
+    H265PacketizationBase() {
         Init();
     }
 
@@ -68,8 +64,8 @@ protected:
 
         PoolAllocator udp_allocator;
         RtpAllocator allocator;
-        H264Packetizer packetizer;
-        H264Depacketizer depacketizer;
+        H265Packetizer packetizer;
+        H265Depacketizer depacketizer;
     };
     std::optional<Context> _ctx;
     Frame _rtp_packets;
