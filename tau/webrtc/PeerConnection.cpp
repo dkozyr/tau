@@ -105,8 +105,8 @@ std::string PeerConnection::ProcessSdpOffer(const std::string& offer) {
     for(auto& remote_media : _sdp_offer->medias) {
         auto& media_params = (remote_media.type == sdp::MediaType::kAudio) ? _options.sdp.audio : _options.sdp.video;
         auto local_media = sdp::SelectMedia(remote_media, media_params);
-        if(!local_media) {
-            TAU_LOG_WARNING(_options.log_ctx << "SDP negotiation failed");
+        if(!local_media || local_media->codecs.empty()) {
+            TAU_LOG_WARNING(_options.log_ctx << "SDP negotiation failed, media type: " << (size_t)remote_media.type);
             _sdp_offer.reset();
             return {};
         }

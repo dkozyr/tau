@@ -6,6 +6,8 @@ namespace tau::sdp {
 
 void SelectAudioMedia(Media& result, const Media& remote, const Media& local);
 void SelectVideoMedia(Media& result, const Media& remote, const Media& local);
+bool SelectVideoMediaH265(Media& result, const Media& remote, const Media& local);
+bool SelectVideoMediaH264(Media& result, const Media& remote, const Media& local);
 std::string CreateH264Format(std::string_view profile, std::string_view level, bool asymmetry);
 
 std::optional<Media> SelectMedia(const Media& remote, const Media& local) {
@@ -58,6 +60,39 @@ void SelectAudioMedia(Media& result, const Media& remote, const Media& local) {
 }
 
 void SelectVideoMedia(Media& result, const Media& remote, const Media& local) {
+    if(SelectVideoMediaH265(result, remote, local)) {
+        return;
+    }
+    if(SelectVideoMediaH264(result, remote, local)) {
+        return;
+    }
+}
+
+bool SelectVideoMediaH265(Media& result, const Media& remote, const Media& local) {
+    const auto remote_h265_codecs = FilterH265Codec(remote.codecs);
+    const auto local_h265_codecs = FilterH265Codec(local.codecs);
+    if(!local_h265_codecs.empty() && !remote_h265_codecs.empty()) {
+        const auto pts = GetPtWithPriority(local_h265_codecs);
+        if(!pts.empty()) {
+            const auto& codec = local_h265_codecs.at(pts.front().pt);
+            for(auto& [pt, remote_codec] : remote_h265_codecs) {
+                if((codec.name == remote_codec.name) && (codec.clock_rate == remote_codec.clock_rate)) {
+                    result.codecs.insert({pt, Codec{
+                        .index = 0,
+                        .name = remote_codec.name,
+                        .clock_rate = remote_codec.clock_rate,
+                        .rtcp_fb = SelectRtcpFb(remote_codec.rtcp_fb, codec.rtcp_fb),
+                        .format = codec.format
+                    }});
+                    return true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+bool SelectVideoMediaH264(Media& result, const Media& remote, const Media& local) {
     const auto asymmetry = IsH264SupportAsymmetry(remote.codecs);
     const auto remote_h264_codecs = FilterH264Codec(remote.codecs, asymmetry);
     const auto local_h264_codecs = FilterH264Codec(local.codecs, asymmetry);
@@ -76,10 +111,21 @@ void SelectVideoMedia(Media& result, const Media& remote, const Media& local) {
                     .rtcp_fb = SelectRtcpFb(remote_codec.rtcp_fb, codec.rtcp_fb),
                     .format = CreateH264Format(profile, level, asymmetry)
                 }});
-                return;
+                return true;
             }
         }
     }
+    return false;
+}
+
+CodecsMap FilterH265Codec(const CodecsMap& origin) {
+    CodecsMap codecs;
+    for(auto& [pt, codec] : origin) {
+        if(codec.name == "H265") {
+            codecs.insert({pt, codec});
+        }
+    }
+    return codecs;
 }
 
 CodecsMap FilterH264Codec(const CodecsMap& origin, bool asymmetry_allowed) {

@@ -52,6 +52,24 @@ protected:
             {114, Codec{.index = 22, .name = "ulpfec", .clock_rate = 90000}},
         }
     };
+
+    const Media kRemoteVideoWithH265{
+        .type = MediaType::kVideo,
+        .mid = "1",
+        .direction = Direction::kSendRecv,
+        .codecs = {
+            { 96, Codec{.index = 0,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640c1f"}},
+            { 97, Codec{.index = 1,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=96"}},
+            { 98, Codec{.index = 2,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"}},
+            { 99, Codec{.index = 3,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=98"}},
+            {100, Codec{.index = 4,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=640c1f"}},
+            {101, Codec{.index = 5,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=100"}},
+            {102, Codec{.index = 6,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "level-asymmetry-allowed=1;packetization-mode=0;profile-level-id=42e01f"}},
+            {103, Codec{.index = 7,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=102"}},
+            {104, Codec{.index = 8,  .name = "H265", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = {}}},
+            {105, Codec{.index = 9,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=104"}},
+        }
+    };
 };
 
 TEST_F(NegotiationTest, Audio) {
@@ -124,6 +142,7 @@ TEST_F(NegotiationTest, Video) {
             {101, Codec{.index = 1, .name = "nothing", .clock_rate = 90000}},
             {102, Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kPli, .format = "profile-level-id=62002a"}},
             {103, Codec{.index = 3, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = "profile-level-id=4d0029"}},
+            {104, Codec{.index = 4, .name = "H265", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = {}}},
         },
         .ssrc = g_random.Int<uint32_t>()
     };
@@ -143,6 +162,38 @@ TEST_F(NegotiationTest, Video) {
     ASSERT_EQ(90000, codec.clock_rate);
     ASSERT_EQ(RtcpFb::kNack, codec.rtcp_fb);
     ASSERT_EQ("level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d0029", codec.format);
+}
+
+TEST_F(NegotiationTest, VideoH265) {
+    const Media local{
+        .type = MediaType::kVideo,
+        .mid = "video",
+        .direction = Direction::kRecv,
+        .codecs = {
+            {100, Codec{.index = 0, .name = "unknown", .clock_rate = 90000}},
+            {101, Codec{.index = 1, .name = "nothing", .clock_rate = 90000}},
+            {102, Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kPli, .format = "profile-level-id=62002a"}},
+            {103, Codec{.index = 3, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = "profile-level-id=4d0029"}},
+            {104, Codec{.index = 4, .name = "H265", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = {}}},
+        },
+        .ssrc = g_random.Int<uint32_t>()
+    };
+
+    auto media = SelectMedia(kRemoteVideoWithH265, local);
+    ASSERT_TRUE(media.has_value());
+    ASSERT_EQ(MediaType::kVideo, media->type);
+    ASSERT_EQ("1", media->mid);
+    ASSERT_EQ(Direction::kRecv, media->direction);
+    ASSERT_EQ(1, media->codecs.size());
+    ASSERT_EQ(local.ssrc, media->ssrc);
+
+    const auto& [pt, codec] = *media->codecs.begin();
+    ASSERT_EQ(104, pt);
+    ASSERT_EQ(0, codec.index);
+    ASSERT_EQ("H265", codec.name);
+    ASSERT_EQ(90000, codec.clock_rate);
+    ASSERT_EQ(RtcpFb::kNack, codec.rtcp_fb);
+    ASSERT_EQ("", codec.format);
 }
 
 TEST_F(NegotiationTest, FilterH264Codec_Asymmetric) {

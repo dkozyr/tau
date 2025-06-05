@@ -11,6 +11,9 @@ std::optional<Media> SelectMedia(const Media& remote, const Media& local);
 Direction SelectDirection(Direction remote, Direction local);
 uint8_t SelectRtcpFb(uint8_t remote, uint8_t local);
 
+// H265 specific
+CodecsMap FilterH265Codec(const CodecsMap& origin);
+
 // H264 specific
 CodecsMap FilterH264Codec(const CodecsMap& origin, bool asymmetry_allowed);
 bool IsH264SupportAsymmetry(const CodecsMap& codecs);

@@ -188,11 +188,15 @@ webrtc::PeerConnection::Options Session::CreateOptions(const std::string& log_ct
                 .direction = sdp::Direction::kSendRecv,
                 .codecs = {
                     {100, sdp::Codec{.index = 0, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
-                        .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=620028"}},
+                        .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640c1f"}},
                     {101, sdp::Codec{.index = 1, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
-                        .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d0028"}},
+                        .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=620028"}},
                     {102, sdp::Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
+                        .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d0028"}},
+                    {103, sdp::Codec{.index = 3, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
                         .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=420028"}},
+                    {104, sdp::Codec{.index = 4, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
+                        .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"}},
                 },
                 .ssrc = std::nullopt
             }
