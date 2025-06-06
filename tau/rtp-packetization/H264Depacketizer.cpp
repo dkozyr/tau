@@ -50,10 +50,8 @@ bool H264Depacketizer::Process(BufferViewConst rtp_payload_view, Timepoint tp, b
 }
 
 bool H264Depacketizer::ProcessSingle(BufferViewConst rtp_payload_view, Timepoint tp, bool last) {
-    auto nalu = Buffer::Create(_allocator, rtp_payload_view.size,
+    auto nalu = Buffer::Create(_allocator, rtp_payload_view,
         Buffer::Info{.tp = tp, .flags = last ? kFlagsLast : kFlagsNone});
-    std::memcpy(nalu.GetView().ptr, rtp_payload_view.ptr, rtp_payload_view.size);
-    nalu.SetSize(rtp_payload_view.size);
     _callback(std::move(nalu));
     return true;
 }
@@ -97,9 +95,7 @@ bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view, Timepoint 
         }
         rtp_payload_view.ForwardPtrUnsafe(sizeof(uint16_t));
 
-        auto nalu = Buffer::Create(_allocator, nalu_size, Buffer::Info{.tp = tp});
-        std::memcpy(nalu.GetView().ptr, rtp_payload_view.ptr, nalu_size);
-        nalu.SetSize(nalu_size);
+        auto nalu = Buffer::Create(_allocator, {rtp_payload_view.ptr, nalu_size}, Buffer::Info{.tp = tp});
         rtp_payload_view.ForwardPtrUnsafe(nalu_size);
         if(last && (rtp_payload_view.size == 0)) {
             nalu.GetInfo().flags = kFlagsLast;

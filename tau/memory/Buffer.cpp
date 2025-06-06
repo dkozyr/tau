@@ -52,6 +52,13 @@ Buffer::~Buffer() {
     }
 }
 
+Buffer Buffer::Create(Allocator& allocator, const BufferViewConst& view, Info info) {
+    Buffer buffer(allocator, view.size, info);
+    std::memcpy(buffer.GetView().ptr, view.ptr, view.size);
+    buffer.SetSize(view.size);
+    return buffer;
+}
+
 Buffer Buffer::MakeCopy() const {
     Buffer buffer_copy(_allocator, _capacity, _info);
     buffer_copy.SetSize(_size);

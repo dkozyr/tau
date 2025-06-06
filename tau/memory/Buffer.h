@@ -20,6 +20,8 @@ public:
     };
 
 public:
+    static Buffer Create(Allocator& allocator, const BufferViewConst& view, Info info = Info{.tp = 0, .flags = kFlagsNone});
+
     static Buffer Create(Allocator& allocator, size_t capacity, Info info = Info{.tp = 0, .flags = kFlagsNone}) {
         return Buffer(allocator, capacity, info);
     }

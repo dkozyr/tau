@@ -18,6 +18,23 @@ TEST(BufferTest, Basic) {
     ASSERT_EQ(view.ptr, view_with_capacity.ptr);
 }
 
+TEST(BufferTest, FromBufferView) {
+    std::array<uint8_t, 7> data = {0, 1, 2, 3, 4, 5, 6};
+    BufferViewConst origin{data.data(), data.size()};
+    Buffer::Info info{.tp = 42, .flags = kFlagsLast};
+
+    auto buffer = Buffer::Create(g_system_allocator, origin, info);
+    ASSERT_EQ(origin.size, buffer.GetSize());
+    ASSERT_EQ(origin.size, buffer.GetCapacity());
+    ASSERT_EQ(info, buffer.GetInfo());
+
+    auto view = buffer.GetView();
+    ASSERT_EQ(origin.size, view.size);
+    for(size_t i = 0; i < data.size(); ++i) {
+        ASSERT_EQ(view.ptr[i], data[i]);
+    }
+}
+
 TEST(BufferTest, Size) {
     auto buffer = Buffer::Create(g_system_allocator, 256);
     ASSERT_EQ(0, buffer.GetSize());
