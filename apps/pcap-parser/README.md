@@ -2,9 +2,9 @@
 
 This is a simple command-line tool that parses a `.pcap` file, filters RTP packets by a given Payload Type (PT), and depacketizes **H.264** or **H.265** (HEVC) video NAL units into a raw video file (`raw.h264` or `raw.h265`). The output file can be played using **ffplay** or processed with any compatible decoder.
 
-If everything works correctly, the [pcap dump](data/pcap/wilson.pcap) will be depacketized into a valid video file and you'll be able to watch **Wilson**, my dog. 🐾
+If everything works correctly, the [pcap dump](../../data/pcap/wilson.pcap) will be depacketized into a valid video file and you'll be able to watch **Wilson**, my dog. 🐾
 
-![Wilson](data/pcap/wilson.gif)
+![Wilson](../../data/pcap/wilson.gif)
 
 ---
 
@@ -32,7 +32,7 @@ If everything works correctly, the [pcap dump](data/pcap/wilson.pcap) will be de
 ./pcap-parser-app --pcap_file=wilson.pcap --type=2 --pt=104
 ```
 
-This will generate `raw.h265`. Or use `help` for description:
+This will generate `raw.h265`. Or use `help` for the description:
 
 ```
 ./pcap-parser-app --help
