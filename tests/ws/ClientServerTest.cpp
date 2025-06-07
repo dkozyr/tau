@@ -11,12 +11,15 @@ public:
     static inline const std::string kLocalHost = "127.0.0.1";
     static inline const uint16_t kWsPortTest = 12345;
 
+    static inline const std::string kCaCertPath = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.crt";
+    static inline const std::string kCaKeyPath  = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.key";
+
 public:
     ClientServerTest()
         : _io(std::thread::hardware_concurrency())
         , _ca(crypto::Certificate::Options{
-            .cert = std::string{PROJECT_SOURCE_DIR} + "/data/ca.crt",
-            .key  = std::string{PROJECT_SOURCE_DIR} + "/data/ca.key"
+            .cert = kCaCertPath,
+            .key  = kCaKeyPath
         })
         , _server_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})
         , _client_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})

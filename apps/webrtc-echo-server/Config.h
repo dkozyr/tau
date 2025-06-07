@@ -25,13 +25,13 @@ struct Config {
     struct Ssl {
         bool self_signed = true;
         struct Ca {
-            std::string certificate = std::string{PROJECT_SOURCE_DIR} + "/data/ca.crt";
-            std::string key = std::string{PROJECT_SOURCE_DIR} + "/data/ca.key";
+            std::string certificate = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.crt";
+            std::string key = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.key";
         };
         Ca ca = {};
         struct Server {
-            std::string certificate = std::string{PROJECT_SOURCE_DIR} + "/data/server.crt";
-            std::string key = std::string{PROJECT_SOURCE_DIR} + "/data/server.key";
+            std::string certificate = std::string{PROJECT_SOURCE_DIR} + "/data/keys/server.crt";
+            std::string key = std::string{PROJECT_SOURCE_DIR} + "/data/keys/server.key";
         };
         Server server = {};
     };

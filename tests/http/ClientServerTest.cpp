@@ -12,12 +12,15 @@ public:
     static constexpr uint16_t kHttpPort  = 8888;
     static constexpr uint16_t kHttpsPort = 8889;
 
+    static inline const std::string kCaCertPath = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.crt";
+    static inline const std::string kCaKeyPath  = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.key";
+
 public:
     ClientServerTest()
         : _io(std::thread::hardware_concurrency())
         , _ca(crypto::Certificate::Options{
-            .cert = std::string{PROJECT_SOURCE_DIR} + "/data/ca.crt",
-            .key  = std::string{PROJECT_SOURCE_DIR} + "/data/ca.key"
+            .cert = kCaCertPath,
+            .key  = kCaKeyPath
         })
         , _server_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})
         , _client_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})
@@ -138,7 +141,7 @@ TEST_F(ClientServerTest, BasicHttps) {
 }
 
 TEST_F(ClientServerTest, HttpsWithValidatingClientCertificate) {
-    _server_ssl_context->load_verify_file(std::string{PROJECT_SOURCE_DIR} + "/data/ca.crt");
+    _server_ssl_context->load_verify_file(kCaCertPath);
     _server_ssl_context->set_verify_mode(asio_ssl::verify_peer | asio_ssl::verify_fail_if_no_peer_cert);
     InitServerAndStart(true);
 
@@ -165,7 +168,7 @@ TEST_F(ClientServerTest, HttpsWithValidatingClientCertificate) {
 
 
 TEST_F(ClientServerTest, HttpsClientWithWrongCertificate) {
-    _server_ssl_context->load_verify_file(std::string{PROJECT_SOURCE_DIR} + "/data/ca.crt");
+    _server_ssl_context->load_verify_file(kCaCertPath);
     _server_ssl_context->set_verify_mode(asio_ssl::verify_peer | asio_ssl::verify_fail_if_no_peer_cert);
     InitServerAndStart(true);
 
