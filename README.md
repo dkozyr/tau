@@ -16,7 +16,7 @@ Designed for **bundle-only** sessions to minimize complexity and accelerate conn
 * mDNS client is to enhance privacy by masking local IP addresses during peer connection setup
 * **Note**: TURN over TCP is currently **not supported**
 
-See also [ICE readme](tau/ice/README.md) and [mDNS readme](tau/mdns/README.md)
+See also [ICE](tau/ice/README.md) and [mDNS readme](tau/mdns/README.md)
 
 ### DTLS + SRTP
 
@@ -48,6 +48,10 @@ See also [ICE readme](tau/ice/README.md) and [mDNS readme](tau/mdns/README.md)
 
 * No TURN-over-TCP (UDP-only)
 * No support for non-bundled SDP configurations
+
+## Examples
+
+* [pcap-parser](apps/pcap-parser/README.md) - RTP parser and H264/H265 depacketization
 
 ## Contributing
 
