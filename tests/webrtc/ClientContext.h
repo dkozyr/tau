@@ -134,6 +134,8 @@ public:
                             .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=4d0028"}},
                         {102, sdp::Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
                             .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=420028"}},
+                        {103, sdp::Codec{.index = 3, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
+                            .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"}},
                     },
                     .ssrc = std::nullopt
                 }

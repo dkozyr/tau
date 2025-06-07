@@ -197,6 +197,8 @@ webrtc::PeerConnection::Options Session::CreateOptions(const std::string& log_ct
                         .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=420028"}},
                     {104, sdp::Codec{.index = 4, .name = "H264", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
                         .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"}},
+                    {105, sdp::Codec{.index = 5, .name = "H265", .clock_rate = 90000, .rtcp_fb = sdp::kRtcpFbDefault,
+                        .format = {}}},
                 },
                 .ssrc = std::nullopt
             }

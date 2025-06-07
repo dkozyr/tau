@@ -7,6 +7,7 @@
 #include "tau/memory/PoolAllocator.h"
 #include "tau/net/Uri.h"
 #include "tau/common/Clock.h"
+#include "tau/common/Ntp.h"
 #include "tau/common/Log.h"
 #include <boost/program_options.hpp>
 #include <atomic>
@@ -40,7 +41,7 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    InitLogging("tau-webrtc-echo-server", config->logging.console, config->logging.severity);
+    InitLogging(std::to_string(ToNtp(SystemClock{}.Now())), config->logging.console, config->logging.severity);
     srtp::Init();
 
     SteadyClock clock;
