@@ -1,6 +1,6 @@
 #include "apps/pcap-parser/Pipeline.h"
 #include "tau/rtp/Reader.h"
-#include "tau/video/h264/AnnexB.h"
+#include "tau/video/AnnexB.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/common/Log.h"
 
@@ -74,7 +74,7 @@ void Pipeline::BuildPipeline(const Options& options) {
 void Pipeline::WriteNaluToFile(Buffer&& nalu) {
     auto view = nalu.GetView();
     TAU_LOG_INFO("NAL unit size: " << view.size);
-    WriteFile(_output_file, std::string_view{reinterpret_cast<const char*>(h264::kAnnexB.data()), h264::kAnnexB.size()}, _file_append);
+    WriteFile(_output_file, std::string_view{reinterpret_cast<const char*>(kAnnexB.data()), kAnnexB.size()}, _file_append);
     WriteFile(_output_file, std::string_view{reinterpret_cast<const char*>(view.ptr), view.size}, true);
     _file_append = true;
 }

@@ -1,6 +1,6 @@
 #include "apps/rtsp-client/Session.h"
 #include "tau/net/UdpSocketsPair.h"
-#include "tau/video/h264/AnnexB.h"
+#include "tau/video/AnnexB.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/common/Ntp.h"
 #include "tau/common/Random.h"
@@ -69,7 +69,7 @@ void Session::InitPipeline() {
         TAU_LOG_INFO("[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << DurationSec(nal_unit.GetInfo().tp) << ", size: " << nal_unit.GetSize());
         auto view = nal_unit.GetView();
         //TODO: ToStringView
-        WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(h264::kAnnexB.data()), h264::kAnnexB.size()}, true);
+        WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(kAnnexB.data()), kAnnexB.size()}, true);
         WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(view.ptr), view.size}, true);
     });
 }
