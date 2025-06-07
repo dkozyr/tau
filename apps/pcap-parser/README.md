@@ -37,7 +37,7 @@ This will generate `raw.h265`. Or use `help` for the description:
 ```
 ./pcap-parser-app --help
   --help                                produce help message
-  --pcap_file arg (=./data/pcap/wilson.pcap)
+  --pcap_file arg (=/home/user/project/tau/data/pcap/wilson.pcap)
                                         pcap file path
   --type arg (=2)                       processing type: 0 - rtp only, 1 - h264
                                         stream, 2 - h265 stream
