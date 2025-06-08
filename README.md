@@ -51,7 +51,9 @@ See also [ICE](tau/ice/README.md) and [mDNS readme](tau/mdns/README.md)
 
 ## Examples
 
-* [pcap-parser](apps/pcap-parser/README.md) - RTP parser and H264/H265 depacketization
+* [PCAP Parser](apps/pcap-parser/README.md) - RTP parser and H264/H265 depacketization
+* [RTSP Client](apps/rtsp-client/README.md) - Simple RTSP client for receiving video streams from RTSP cameras
+* [STUN Server](apps/stun-server/README.md) - Simple STUN Server
 
 ## Contributing
 
