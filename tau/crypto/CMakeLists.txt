@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(crypto)
+project(tau-crypto)
 
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/*.cpp ${PROJECT_SOURCE_DIR}/*.h)
 
@@ -16,5 +16,5 @@ endif()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${PROJECT_SOURCE_DIR})
 
-target_link_libraries(${PROJECT_NAME} common)
+target_link_libraries(${PROJECT_NAME} tau-common)
 target_link_libraries(${PROJECT_NAME} OpenSSL::Crypto OpenSSL::SSL dl)

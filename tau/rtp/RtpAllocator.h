@@ -44,6 +44,8 @@ public:
         _pool.Deallocate(buffer.GetView().ptr);
     }
 
+    //TODO: GetBaseTp
+
     size_t MaxRtpPayload() const { //TODO: TURN, SRTP, MTU options
         constexpr size_t kSrtpMaxAuthSize = 16;
         constexpr size_t kTurnMessageHeaderSize = 20 + 12; // Header + XOR-MAPPED-ADDRESS(IpV4)

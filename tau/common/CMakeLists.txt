@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(common)
+project(tau-common)
 
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/*.cpp ${PROJECT_SOURCE_DIR}/*.h)
 

@@ -6,22 +6,22 @@ cd build
 cmake -GNinja -DCMAKE_BUILD_TYPE=Debug -DGCC_SANITIZER=ON ..
 ninja -j 4
 
-./bin/common-test-app
-./bin/asio-test-app
-./bin/crypto-test-app
-./bin/net-test-app
-./bin/http-test-app
-./bin/ws-test-app
-./bin/rtp-test-app
-./bin/rtcp-test-app
-./bin/rtp-packetization-test-app
-./bin/srtp-test-app
-./bin/dtls-test-app --gtest_also_run_disabled_tests=1
-./bin/rtp-session-test-app
-./bin/sdp-test-app
-./bin/stun-test-app
-./bin/mdns-test-app
-./bin/ice-test-app
-./bin/rtsp-test-app
-./bin/webrtc-test-app
-./bin/video-test-app
+./bin/tau-common-test-app
+./bin/tau-asio-test-app
+./bin/tau-crypto-test-app
+./bin/tau-net-test-app
+./bin/tau-http-test-app
+./bin/tau-ws-test-app
+./bin/tau-rtp-test-app
+./bin/tau-rtcp-test-app
+./bin/tau-rtp-packetization-test-app
+./bin/tau-srtp-test-app
+./bin/tau-dtls-test-app --gtest_also_run_disabled_tests=1
+./bin/tau-rtp-session-test-app
+./bin/tau-sdp-test-app
+./bin/tau-stun-test-app
+./bin/tau-mdns-test-app
+./bin/tau-ice-test-app
+./bin/tau-rtsp-test-app
+./bin/tau-webrtc-test-app
+./bin/tau-video-test-app

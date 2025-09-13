@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(asio-test-app)
+project(tau-asio-test-app)
 
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/*.cpp ${PROJECT_SOURCE_DIR}/*.h)
 
@@ -7,5 +7,5 @@ find_package(GTest REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} asio)
+target_link_libraries(${PROJECT_NAME} tau-asio)
 target_link_libraries(${PROJECT_NAME} GTest::GTest)

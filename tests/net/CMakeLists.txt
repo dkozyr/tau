@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.20)
-project(net-test-app)
+project(tau-net-test-app)
 
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/*.cpp ${PROJECT_SOURCE_DIR}/*.h)
 
@@ -7,5 +7,5 @@ find_package(GTest REQUIRED)
 
 add_executable(${PROJECT_NAME} ${SOURCES})
 
-target_link_libraries(${PROJECT_NAME} net)
+target_link_libraries(${PROJECT_NAME} tau-net)
 target_link_libraries(${PROJECT_NAME} GTest::GTest)
