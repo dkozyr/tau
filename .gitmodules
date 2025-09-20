@@ -4,3 +4,6 @@
 [submodule "3rdparty/libsrtp"]
 	path = 3rdparty/libsrtp
 	url = https://github.com/cisco/libsrtp.git
+[submodule "3rdparty/opus"]
+	path = 3rdparty/opus
+	url = https://github.com/xiph/opus.git

@@ -31,10 +31,12 @@ add_subdirectory("${PROJECT_SOURCE_DIR}/tau")
 
 option(TAU_BUILD_APPS "Build applications" ON)
 if(TAU_BUILD_APPS)
-add_subdirectory("${PROJECT_SOURCE_DIR}/apps")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/apps")
 endif()
 
 option(TAU_BUILD_TESTS "Build tests" ON)
 if(TAU_BUILD_TESTS)
-add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
+  add_subdirectory("${PROJECT_SOURCE_DIR}/tests")
 endif()
+
+add_subdirectory("${PROJECT_SOURCE_DIR}/3rdparty/opus")
