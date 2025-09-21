@@ -17,6 +17,7 @@
 #include <gtest/gtest.h>
 
 #include <vector>
+#include <array>
 #include <unordered_map>
 #include <unordered_set>
 #include <queue>

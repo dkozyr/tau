@@ -50,4 +50,12 @@ inline double DurationMs(Timepoint a) {
     return a / kMs;
 }
 
+inline int64_t DurationMsInt(Timepoint a, Timepoint b) {
+    return static_cast<int64_t>((b - a) / kMs);
+}
+
+inline int64_t DurationMsInt(Timepoint a) {
+    return static_cast<int64_t>(a / kMs);
+}
+
 }

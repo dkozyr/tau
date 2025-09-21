@@ -24,4 +24,5 @@ ninja -j 4
 ./bin/tau-ice-test-app
 ./bin/tau-rtsp-test-app
 ./bin/tau-webrtc-test-app
+./bin/tau-audio-test-app
 ./bin/tau-video-test-app
