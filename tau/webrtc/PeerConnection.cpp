@@ -213,7 +213,7 @@ void PeerConnection::StartIceAgent() {
         _udp_sockets.push_back(net::UdpSocket::Create(net::UdpSocket::Options{
             .allocator = _deps.udp_allocator,
             .executor = _deps.executor,
-            .local_address = {.address = interface.address.to_string()}
+            .local_address = interface.address.to_string()
         }));
         auto& socket = _udp_sockets.back();
         TAU_LOG_INFO(_options.log_ctx << "Name: " << interface.name << ", address: " << socket->GetLocalEndpoint());
