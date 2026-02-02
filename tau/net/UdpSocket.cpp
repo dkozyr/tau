@@ -16,7 +16,7 @@ UdpSocket::UdpSocket(Options&& options)
         _socket.open(local_endpoint.protocol());
         _socket.set_option(asio_udp::socket::reuse_address(true));
         _socket.bind(local_endpoint);
-        _socket.set_option(asio_ip::multicast::join_group(IpAddress::from_string(options.multicast_address)));
+        _socket.set_option(asio_ip::multicast::join_group(asio_ip::make_address(options.multicast_address)));
     }
     _socket.non_blocking(true);
 }

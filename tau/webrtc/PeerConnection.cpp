@@ -63,7 +63,7 @@ std::string PeerConnection::CreateSdpOffer() {
             .candidates = {}
         },
         .dtls = sdp::Dtls{
-            .setup = sdp::Setup::kPassive, //TODO: sdp::Setup::kActpass ?
+            .setup = sdp::Setup::kActive, //TODO: sdp::Setup::kActpass ???
             .fingerprint_sha256 = _dtls_cert.GetDigestSha256String()
         },
         .medias = {
@@ -381,7 +381,7 @@ void PeerConnection::InitMdnsClient() {
     _mdns_ctx->socket->SetRecvCallback([this](Buffer&& packet, Endpoint /*remote_endpoint*/) {
         _mdns_ctx->client.Recv(std::move(packet));
     });
-    auto mdns_endpoint = Endpoint{IpAddressV4::from_string(mdns.address), mdns.port};
+    auto mdns_endpoint = Endpoint{asio_ip::make_address(mdns.address), mdns.port};
     _mdns_ctx->client.SetSendCallback([this, mdns_endpoint](Buffer&& packet) {
         _mdns_ctx->socket->Send(std::move(packet), mdns_endpoint);
     });

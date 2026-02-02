@@ -25,8 +25,7 @@ public:
     }
 
     void Stop() {
-        beast_ec ec;
-        _timer.cancel(ec);
+        _timer.cancel();
     }
 
 private:

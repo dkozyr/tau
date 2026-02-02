@@ -11,15 +11,15 @@ namespace tau::ice {
 
 class AgentTest : public ::testing::TestWithParam<AgentTestParams> {
 public:
-    static inline Endpoint kHostEndpoint1a{IpAddressV4::from_string("1.2.3.4"), 55555};
-    static inline Endpoint kHostEndpoint1b{IpAddressV4::from_string("1.2.3.5"), 55000};
-    static inline Endpoint kHostEndpoint2a{IpAddressV4::from_string("192.168.0.1"), 54321};
-    static inline Endpoint kHostEndpoint2b{IpAddressV4::from_string("192.168.0.2"), 54000};
-    static inline IpAddressV4 kServerReflexiveIp1{IpAddressV4::from_string("44.44.44.44")};
-    static inline IpAddressV4 kServerReflexiveIp2{IpAddressV4::from_string("55.55.55.55")};
-    static inline Endpoint kStunServerEndpoint{IpAddressV4::from_string("88.77.66.55"), 43210};
-    static inline IpAddress kTurnServerIp1 = IpAddress::from_string("222.222.222.222");
-    static inline IpAddress kTurnServerIp2 = IpAddress::from_string("210.210.210.210");
+    static inline Endpoint kHostEndpoint1a{asio_ip::make_address("1.2.3.4"), 55555};
+    static inline Endpoint kHostEndpoint1b{asio_ip::make_address("1.2.3.5"), 55000};
+    static inline Endpoint kHostEndpoint2a{asio_ip::make_address("192.168.0.1"), 54321};
+    static inline Endpoint kHostEndpoint2b{asio_ip::make_address("192.168.0.2"), 54000};
+    static inline IpAddressV4 kServerReflexiveIp1{asio_ip::make_address("44.44.44.44").to_v4()};
+    static inline IpAddressV4 kServerReflexiveIp2{asio_ip::make_address("55.55.55.55").to_v4()};
+    static inline Endpoint kStunServerEndpoint{asio_ip::make_address("88.77.66.55"), 43210};
+    static inline IpAddress kTurnServerIp1 = asio_ip::make_address("222.222.222.222");
+    static inline IpAddress kTurnServerIp2 = asio_ip::make_address("210.210.210.210");
 
 public:
     AgentTest()

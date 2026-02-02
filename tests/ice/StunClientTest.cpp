@@ -10,8 +10,8 @@ namespace tau::ice {
 
 class StunClientTest : public ::testing::Test {
 public:
-    static inline Endpoint kServerEndpoint{IpAddressV4::from_string("77.77.77.77"), 33333};
-    static inline Endpoint kClientEndpoint{IpAddressV4::from_string("192.168.0.77"), 44444};
+    static inline Endpoint kServerEndpoint{asio_ip::make_address("77.77.77.77"), 33333};
+    static inline Endpoint kClientEndpoint{asio_ip::make_address("192.168.0.77"), 44444};
 
 public:
     StunClientTest() {

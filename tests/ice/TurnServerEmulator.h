@@ -8,7 +8,7 @@ namespace tau::ice {
 class TurnServerEmulator {
 public:
     static inline const auto kPortDefault = 3478;
-    static inline const auto kPublicIpDefault = IpAddress::from_string("222.222.222.222");
+    static inline const auto kPublicIpDefault = asio_ip::make_address("222.222.222.222");
     static inline const Endpoint kEndpointDefault = Endpoint{kPublicIpDefault, kPortDefault};
 
     struct Options {

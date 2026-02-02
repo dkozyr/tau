@@ -12,17 +12,17 @@ namespace tau::ice {
 
 class CheckListTest : public ::testing::TestWithParam<CheckListTestParams> {
 public:
-    static inline Endpoint kHostEndpoint1a{IpAddressV4::from_string("1.2.3.4"), 55555};
-    static inline Endpoint kHostEndpoint1b{IpAddressV4::from_string("1.2.3.5"), 55000};
-    static inline Endpoint kHostEndpoint1c{IpAddressV4::from_string("1.2.3.6"), 55000};
-    static inline Endpoint kHostEndpoint2a{IpAddressV4::from_string("192.168.0.1"), 54321};
-    static inline Endpoint kHostEndpoint2b{IpAddressV4::from_string("192.168.0.2"), 54000};
-    static inline Endpoint kHostEndpoint3a{IpAddressV4::from_string("192.168.0.100"), 33300};
-    static inline Endpoint kHostEndpoint3b{IpAddressV4::from_string("192.168.0.101"), 44400};
-    static inline Endpoint kServerReflexiveEndpoint1{IpAddressV4::from_string("44.44.44.44"), 44444};
-    static inline Endpoint kServerReflexiveEndpoint2{IpAddressV4::from_string("55.55.55.55"), 55555};
-    static inline Endpoint kServerReflexiveEndpoint3{IpAddressV4::from_string("55.55.66.66"), 55777};
-    static inline Endpoint kStunServerEndpoint{IpAddressV4::from_string("88.77.66.55"), 43210};
+    static inline Endpoint kHostEndpoint1a{asio_ip::make_address("1.2.3.4"), 55555};
+    static inline Endpoint kHostEndpoint1b{asio_ip::make_address("1.2.3.5"), 55000};
+    static inline Endpoint kHostEndpoint1c{asio_ip::make_address("1.2.3.6"), 55000};
+    static inline Endpoint kHostEndpoint2a{asio_ip::make_address("192.168.0.1"), 54321};
+    static inline Endpoint kHostEndpoint2b{asio_ip::make_address("192.168.0.2"), 54000};
+    static inline Endpoint kHostEndpoint3a{asio_ip::make_address("192.168.0.100"), 33300};
+    static inline Endpoint kHostEndpoint3b{asio_ip::make_address("192.168.0.101"), 44400};
+    static inline Endpoint kServerReflexiveEndpoint1{asio_ip::make_address("44.44.44.44"), 44444};
+    static inline Endpoint kServerReflexiveEndpoint2{asio_ip::make_address("55.55.55.55"), 55555};
+    static inline Endpoint kServerReflexiveEndpoint3{asio_ip::make_address("55.55.66.66"), 55777};
+    static inline Endpoint kStunServerEndpoint{asio_ip::make_address("88.77.66.55"), 43210};
 
 public:
     CheckListTest()

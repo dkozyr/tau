@@ -12,7 +12,7 @@ namespace tau::ice {
 // NAT emulator for tests only
 class NatEmulator {
 public:
-    static inline const auto kPublicIpDefault = IpAddress::from_string("1.1.1.1");
+    static inline const auto kPublicIpDefault = asio_ip::make_address("1.1.1.1");
 
     enum class Type {
         kFullCone,
