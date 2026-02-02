@@ -1,4 +1,5 @@
 #include "tau/common/Math.h"
+#include "tau/common/Log.h"
 #include <gtest/gtest.h>
 
 namespace tau {
@@ -31,6 +32,28 @@ TEST(MathTest, Near) {
     double c = 2.0;
     ASSERT_TRUE(Near(a, b));
     ASSERT_FALSE(Near(a, c));
+}
+
+TEST(MathTest, AlignPowerOfTwo) {
+    ASSERT_EQ(1u, AlignPowerOfTwo(0u));
+    ASSERT_EQ(1u, AlignPowerOfTwo(1u));
+    ASSERT_EQ(2u, AlignPowerOfTwo(2u));
+    ASSERT_EQ(4u, AlignPowerOfTwo(3u));
+
+    for(size_t i = 2; i < 64; ++i) {
+        uint64_t power = 1;
+        power <<= i;
+        ASSERT_EQ(power, AlignPowerOfTwo(power - 1));
+        ASSERT_EQ(power, AlignPowerOfTwo(power));
+        ASSERT_NE(power, AlignPowerOfTwo(power + 1));
+    }
+}
+
+TEST(MathTest, AlignPowerOfTwo_Overflow) {
+    ASSERT_EQ(0, AlignPowerOfTwo(std::numeric_limits<uint8_t>::max()));
+    ASSERT_EQ(0, AlignPowerOfTwo(std::numeric_limits<uint16_t>::max()));
+    ASSERT_EQ(0, AlignPowerOfTwo(std::numeric_limits<uint32_t>::max()));
+    ASSERT_EQ(0, AlignPowerOfTwo(std::numeric_limits<uint64_t>::max()));
 }
 
 }

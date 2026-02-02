@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <limits>
 #include <utility>
+#include <type_traits>
 #include <cstddef>
 
 namespace tau {
@@ -24,6 +25,23 @@ inline T AbsDelta(T a, T b) {
 template<typename T>
 bool Near(T a, T b) {
     return std::abs(a - b) < std::numeric_limits<T>::epsilon();
+}
+
+template<typename T>
+constexpr T AlignPowerOfTwo(T x) {
+    static_assert(std::is_integral_v<T> && std::is_unsigned_v<T>);
+
+    if(x == 0) { return 1 ;}
+    x--;
+    x |= (x >> 1);
+    x |= (x >> 2);
+    x |= (x >> 4);
+    x |= (x >> 8);
+    x |= (x >> 16);
+    if constexpr(sizeof(T) > 4) {
+        x |= (x >> 32);
+    }
+    return x + 1;
 }
 
 }
