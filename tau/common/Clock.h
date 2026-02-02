@@ -2,7 +2,6 @@
 
 #include <chrono>
 #include <cstdint>
-#include <cstdlib>
 #include <string>
 
 namespace tau {
@@ -13,6 +12,7 @@ constexpr Timepoint kMicro = 1'000;
 constexpr Timepoint kMs    = 1'000'000;
 constexpr Timepoint kSec   = 1'000'000'000;
 constexpr Timepoint kMin   = 60 * kSec;
+constexpr Timepoint kHour  = 60 * kMin;
 
 class Clock {
 public:
@@ -34,28 +34,15 @@ private:
 using SteadyClock = TClock<std::chrono::steady_clock>;
 using SystemClock = TClock<std::chrono::system_clock>;
 
-inline double DurationSec(Timepoint a, Timepoint b) {
-    return static_cast<double>(b - a) * 1e-9;
-}
+double DurationSec(Timepoint a, Timepoint b);
+double DurationSec(Timepoint a);
 
-inline double DurationSec(Timepoint a) {
-    return static_cast<double>(a) * 1e-9;
-}
+double DurationMs(Timepoint a, Timepoint b);
+double DurationMs(Timepoint a);
 
-inline double DurationMs(Timepoint a, Timepoint b) {
-    return (b - a) / kMs;
-}
+int64_t DurationMsInt(Timepoint a, Timepoint b);
+int64_t DurationMsInt(Timepoint a);
 
-inline double DurationMs(Timepoint a) {
-    return a / kMs;
-}
-
-inline int64_t DurationMsInt(Timepoint a, Timepoint b) {
-    return static_cast<int64_t>((b - a) / kMs);
-}
-
-inline int64_t DurationMsInt(Timepoint a) {
-    return static_cast<int64_t>(a / kMs);
-}
+Timepoint FromIso8601(const std::string& iso);
 
 }
