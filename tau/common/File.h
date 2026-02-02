@@ -34,18 +34,18 @@ inline void CreateDirectoryWithSubdirectories(const std::filesystem::path& path)
     CreateDirectory(path);
 }
 
-// inline std::filesystem::path CurrentPath() {
-//     return std::filesystem::current_path();
-// }
+inline std::filesystem::path CurrentPath() {
+    return std::filesystem::current_path();
+}
 
-// inline std::vector<std::string> ListAllFiles(const std::filesystem::path& root_dir) {
-//     std::vector<std::string> enumerated;
-//     for(const auto& path : std::filesystem::recursive_directory_iterator(root_dir)) {
-//         if(!std::filesystem::is_directory(path)) {
-//             enumerated.push_back(path.path());
-//         }
-//     }
-//     return enumerated;
-// }
+inline std::vector<std::filesystem::path> ListAllFiles(const std::filesystem::path& root_dir) {
+    std::vector<std::filesystem::path> enumerated;
+    for(const auto& path : std::filesystem::recursive_directory_iterator(root_dir)) {
+        if(!std::filesystem::is_directory(path)) {
+            enumerated.push_back(path.path());
+        }
+    }
+    return enumerated;
+}
 
 }

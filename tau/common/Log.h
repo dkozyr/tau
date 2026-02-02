@@ -7,6 +7,7 @@
 #include <boost/log/utility/setup/common_attributes.hpp>
 #include <boost/log/utility/setup/console.hpp>
 #include <array>
+#include <string_view>
 
 namespace tau {
 
@@ -40,30 +41,33 @@ inline void InitLogging(const std::string& file_name = "log", bool console = fal
 }
 
 inline constexpr std::string_view TruncateFileName(std::string_view path) {
-    const std::array<std::string_view, 2> dirs{"/tau/", "/../"};
-    for(auto& dir: dirs) {
+    const std::array<std::string_view, 3> dirs{"/tau/", "/../", std::string_view{PROJECT_SOURCE_DIR}};
+    for(auto& dir : dirs) {
         auto p = path.rfind(dir);
         if(p != std::string_view::npos) {
             path = path.substr(p + dir.size());
         }
     }
+    if(path[0] == '/') {
+        path = path.substr(1);
+    }
     return path;
 }
 
-#define DETAIL_LOG_FILENAME TruncateFileName("/" __FILE__)
+#define DETAIL_LOG_FILENAME tau::TruncateFileName("/" __FILE__)
 #define DETAIL_LOG_CONTEXT "[" << DETAIL_LOG_FILENAME << ":" << __LINE__ << "] [" << __FUNCTION__ << "] "
 
-#define DETAIL_TAU_LOG(severity, message)                             \
-    if constexpr(boost::log::trivial::severity >= kSeverityDefault) { \
-        BOOST_LOG_TRIVIAL(severity) << DETAIL_LOG_CONTEXT << message; \
+#define DETAIL_TAU_LOG(severity, message)                                  \
+    if constexpr(boost::log::trivial::severity >= tau::kSeverityDefault) { \
+        BOOST_LOG_TRIVIAL(severity) << DETAIL_LOG_CONTEXT << message;      \
     }
 
-#define DETAIL_TAU_LOG_THR(threshold, severity, message)                  \
-    if constexpr(boost::log::trivial::severity >= kSeverityDefault) {     \
-        static size_t value = threshold - 1;                              \
-        if(++value % threshold == 0) {                                    \
-            BOOST_LOG_TRIVIAL(severity) << DETAIL_LOG_CONTEXT << message; \
-        }                                                                 \
+#define DETAIL_TAU_LOG_THR(threshold, severity, message)                   \
+    if constexpr(boost::log::trivial::severity >= tau::kSeverityDefault) { \
+        static size_t value = threshold - 1;                               \
+        if(++value % threshold == 0) {                                     \
+            BOOST_LOG_TRIVIAL(severity) << DETAIL_LOG_CONTEXT << message;  \
+        }                                                                  \
     }
 
 #define TAU_LOG_FATAL(message)   DETAIL_TAU_LOG(fatal, message)
