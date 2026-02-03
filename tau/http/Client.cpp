@@ -91,7 +91,7 @@ void Client::OnHandshake(boost_ec ec) {
 
     beast::ostream(_request.body()) << _options.body;
     _request.prepare_payload();
-    TAU_LOG_INFO("Request: " << _request);
+    TAU_LOG_TRACE("Request: " << _request);
 
     //TODO: revise it:
     // beast::get_lowest_layer(_socket).expires_after(timeout);

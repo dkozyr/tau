@@ -178,6 +178,7 @@ TEST_F(ClientServerTest, CloseConnection) {
     ASSERT_TRUE(on_ready.WaitFor(1s));
 
     connection_ptr->Close();
+    connection_ptr = nullptr;
     client->PostMessage("Hello world");
     ASSERT_FALSE(on_done.WaitFor(100ms));
     client.reset();
