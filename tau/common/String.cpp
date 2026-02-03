@@ -55,4 +55,16 @@ std::string ToHexDump(const uint8_t* ptr, size_t size, char separator) {
     return dump;
 }
 
+std::string ToHexDumpRaw(const uint8_t* ptr, size_t size, std::string_view separator) {
+    std::string dump;
+    dump.reserve(3 * size);
+    for(size_t i = 0; i < size; ++i) {
+        if(i > 0 && !separator.empty()) {
+            dump += separator;
+        }
+        dump += ToHexStringLowerCase(ptr[i]);
+    }
+    return dump;
+}
+
 }

@@ -28,6 +28,26 @@ TEST(StringTest, StringToUnsigned_DifferentType) {
     ASSERT_FALSE(StringToUnsigned<uint8_t>(std::string_view{"256"}).has_value());
 }
 
+TEST(StringTest, ParseStringAsUnsigned) {
+    ASSERT_EQ(1234567890, ParseStringAsUnsigned(std::string_view{"01234567890"}));
+    ASSERT_EQ(0, ParseStringAsUnsigned(std::string_view{"0"}));
+    ASSERT_EQ(12345, ParseStringAsUnsigned(std::string_view{"012345-67890"}));
+    ASSERT_EQ(0, ParseStringAsUnsigned(std::string_view{"-12345"}));
+    ASSERT_EQ(0, ParseStringAsUnsigned(std::string_view{}));
+    ASSERT_EQ(0, ParseStringAsUnsigned(std::string_view{"a42"}));
+}
+
+TEST(StringTest, ParseStringAsFloat) {
+    ASSERT_EQ(1234567890.0f, ParseStringAsFloat(std::string_view{"01234567890"}));
+    ASSERT_EQ(123456.7890f, ParseStringAsFloat(std::string_view{"0123456.7890"}));
+    ASSERT_EQ(123.456f, ParseStringAsFloat(std::string_view{"0123.456.7890"}));
+    ASSERT_EQ(0, ParseStringAsFloat(std::string_view{"0"}));
+    ASSERT_EQ(12345.0f, ParseStringAsFloat(std::string_view{"012345-67890"}));
+    ASSERT_EQ(0, ParseStringAsFloat(std::string_view{"-12345"}));
+    ASSERT_EQ(0, ParseStringAsFloat(std::string_view{}));
+    ASSERT_EQ(0, ParseStringAsFloat(std::string_view{"a42"}));
+}
+
 TEST(StringTest, ToHexString) {
     ASSERT_EQ("00000001", ToHexString(1));
     ASSERT_EQ("FFFFFFFF", ToHexString(-1));
