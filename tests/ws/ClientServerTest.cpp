@@ -26,7 +26,7 @@ public:
         , _server_ssl_ctx(CreateSslContextPtr(
             _server_certificate.GetCertificateBuffer(), _server_certificate.GetPrivateKeyBuffer()))
         , _client_ssl_ctx(CreateSslContextPtr(
-            _server_certificate.GetCertificateBuffer(), _server_certificate.GetPrivateKeyBuffer()))
+            _client_certificate.GetCertificateBuffer(), _client_certificate.GetPrivateKeyBuffer()))
     {}
 
     ~ClientServerTest() {
@@ -57,7 +57,7 @@ TEST_F(ClientServerTest, Basic) {
     Event on_ready;
     Event on_done;
 
-    auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx});
+    auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, "/", *_client_ssl_ctx});
     client->SetOnConnectedCallback([&on_ready]() {
         on_ready.Set();
     });
@@ -107,7 +107,7 @@ TEST_F(ClientServerTest, ServerValidateRequestOrigin) {
         Event on_done;
 
         auto good_client = std::make_shared<Client>(_io.GetExecutor(),
-            Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx, {
+            Client::Options{kLocalHost, kWsPortTest, "/", *_client_ssl_ctx, {
                 http::Field{beast_http::field::origin, "example.com"},
                 http::Field{beast_http::field::host, "https://www.example.com:443"},
                 http::Field{"custom-name", "custom-value"},
@@ -130,7 +130,7 @@ TEST_F(ClientServerTest, ServerValidateRequestOrigin) {
         Event on_ready;
 
         auto bad_client = std::make_shared<Client>(_io.GetExecutor(),
-            Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx, {
+            Client::Options{kLocalHost, kWsPortTest, "/", *_client_ssl_ctx, {
                 http::Field{beast_http::field::origin, "wrong-origin-domain.com"},
                 http::Field{beast_http::field::host, "https://www.example.com:443"},
                 http::Field{"custom-name", "custom-value"},
@@ -163,13 +163,16 @@ TEST_F(ClientServerTest, CloseConnection) {
 
     Event on_ready;
     Event on_done;
-    auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx});
+    auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, "/", *_client_ssl_ctx});
     client->SetOnConnectedCallback([&on_ready]() {
         on_ready.Set();
     });
     client->SetOnMessageCallback([&on_done](std::string&& message) {
         TAU_LOG_INFO("[client] incoming message: " << message);
         on_done.Set();
+    });
+    client->SetOnErrorCallback([](beast_ec ec) {
+        TAU_LOG_INFO("[client] on error: " << ec << ", message: " << ec.message());
     });
     client->Start();
     ASSERT_TRUE(on_ready.WaitFor(1s));
@@ -197,7 +200,7 @@ TEST_F(ClientServerTest, SeveralClients) {
     constexpr auto kTestClients = 42;
     std::vector<std::shared_ptr<Client>> clients;
     for(size_t i = 0; i < kTestClients; ++i) {
-        auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, *_client_ssl_ctx});
+        auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, "/", *_client_ssl_ctx});
         client->SetOnConnectedCallback([weak_self = std::weak_ptr<Client>(client)]() {
             if(auto self = weak_self.lock()) {
                 self->PostMessage("Hello world");
@@ -208,6 +211,9 @@ TEST_F(ClientServerTest, SeveralClients) {
             if(clients_done.load() == kTestClients) {
                 done.Set();
             }
+        });
+        client->SetOnErrorCallback([](beast_ec ec) {
+            TAU_LOG_INFO("[client] on error: " << ec << ", message: " << ec.message());
         });
         client->Start();
         clients.push_back(std::move(client));

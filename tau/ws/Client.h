@@ -15,12 +15,14 @@ public:
     struct Options {
         std::string host;
         uint16_t port;
+        std::string path;
         SslContext& ssl_ctx;
         http::Fields http_fields = {};
     };
 
     using OnConnectedCallback = std::function<void(void)>;
     using OnMessageCallback = std::function<void(std::string&&)>;
+    using OnError = std::function<void(beast_ec ec)>;
 
 public:
     Client(Executor executor, Options&& options);
@@ -28,10 +30,11 @@ public:
 
     void SetOnConnectedCallback(OnConnectedCallback&& callback) { _on_connected_callback = std::move(callback); }
     void SetOnMessageCallback(OnMessageCallback&& callback) { _on_message_callback = std::move(callback); }
+    void SetOnErrorCallback(OnError&& callback) { _on_error_callback = std::move(callback); }
 
     void Start();
     void PostMessage(std::string message);
-    void Close();
+    void Close(bool graceful = true);
 
 private:
     void OnResolve(beast_ec ec, asio_tcp::resolver::results_type results);
@@ -62,6 +65,7 @@ private:
 
     OnConnectedCallback _on_connected_callback;
     OnMessageCallback _on_message_callback;
+    OnError _on_error_callback;
 };
 
 }

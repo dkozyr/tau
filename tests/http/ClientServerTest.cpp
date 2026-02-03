@@ -166,7 +166,6 @@ TEST_F(ClientServerTest, HttpsWithValidatingClientCertificate) {
     ASSERT_TRUE(has_response.WaitFor(100ms));
 }
 
-
 TEST_F(ClientServerTest, HttpsClientWithWrongCertificate) {
     _server_ssl_context->load_verify_file(kCaCertPath);
     _server_ssl_context->set_verify_mode(asio_ssl::verify_peer | asio_ssl::verify_fail_if_no_peer_cert);

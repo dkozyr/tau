@@ -15,9 +15,9 @@ Server::Server(Dependencies&& deps, Options&& options)
 }
 
 Server::~Server() {
-    CloseConnections();
     boost_ec ec;
     _acceptor.close(ec);
+    CloseConnections();
 }
 
 void Server::Start() {

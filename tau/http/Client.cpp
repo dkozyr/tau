@@ -36,7 +36,7 @@ void Client::Start() {
 void Client::OnResolve(boost_ec ec, asio_tcp::resolver::results_type results) {
     if(ec) {
         TAU_LOG_WARNING("ec: " << ec << ", " << ec.message());
-        _timeout.cancel(ec);
+        _timeout.cancel();
         return;
     }
 
@@ -59,7 +59,7 @@ void Client::OnResolve(boost_ec ec, asio_tcp::resolver::results_type results) {
 void Client::OnConnect(boost_ec ec) {
     if(ec) {
         TAU_LOG_WARNING("ec: " << ec << ", " << ec.message());
-        _timeout.cancel(ec);
+        _timeout.cancel();
         return;
     }
 
@@ -131,7 +131,7 @@ void Client::OnRead(boost_ec ec, size_t bytes) {
 
 void Client::Shutdown() {
     boost_ec ec;
-    _timeout.cancel(ec);
+    _timeout.cancel();
 
     std::visit(overloaded{
         [this, &ec](SslSocket& socket) {
@@ -160,7 +160,7 @@ void Client::OnTimeout(beast_ec ec) {
             [&ec](asio_tcp::socket& socket) { socket.close(ec); }
         }, _socket);
 
-        _timeout.cancel(ec);
+        _timeout.cancel();
     }
 }
 
