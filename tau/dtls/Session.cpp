@@ -255,7 +255,7 @@ int Session::OnVerifyPeer(int, X509_STORE_CTX* x509_ctx) {
         std::vector<uint8_t> digest(EVP_MAX_MD_SIZE);
         uint32_t size = 0;
         if(X509_digest(cert, EVP_sha256(), digest.data(), &size)) {
-            return (_options.remote_peer_cert_digest == ToHexDump(digest.data(), size, ':'));
+            return (_options.remote_peer_cert_digest == ToHexDump(digest.data(), size, ":"));
         }
     }
     return 0;

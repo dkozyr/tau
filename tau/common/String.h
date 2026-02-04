@@ -99,6 +99,18 @@ std::vector<std::string_view> Split(const std::string& str, std::string_view mar
 std::string ReplaceAll(std::string str, const std::string& from, const std::string& to);
 void ToLowerCase(std::string& value);
 bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensitive = false);
-std::string ToHexDump(const uint8_t* ptr, size_t size, std::string_view separator = {});
+
+template<bool UpperCase = true>
+std::string ToHexDump(const uint8_t* ptr, size_t size, std::string_view separator = " ") {
+    std::string dump;
+    dump.reserve(3 * size);
+    for(size_t i = 0; i < size; ++i) {
+        if(i > 0 && !separator.empty()) {
+            dump += separator;
+        }
+        dump += ToHexString<UpperCase>(ptr[i]);
+    }
+    return dump;
+}
 
 }

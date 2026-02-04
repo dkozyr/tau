@@ -49,16 +49,4 @@ bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensiti
     }
 }
 
-std::string ToHexDump(const uint8_t* ptr, size_t size, std::string_view separator) {
-    std::string dump;
-    dump.reserve(3 * size);
-    for(size_t i = 0; i < size; ++i) {
-        if(i > 0 && !separator.empty()) {
-            dump += separator;
-        }
-        dump += ToHexString<false>(ptr[i]);
-    }
-    return dump;
-}
-
 }

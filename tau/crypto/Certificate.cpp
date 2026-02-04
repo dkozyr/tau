@@ -70,7 +70,7 @@ std::vector<uint8_t> Certificate::GetPrivateKeyBuffer() const {
 
 std::string Certificate::GetDigestSha256String() const {
     auto digest = GetDigestSha256();
-    return ToHexDump(digest.data(), digest.size(), ':');
+    return ToHexDump(digest.data(), digest.size(), ":");
 }
 
 Certificate::Digest Certificate::GetDigestSha256() const {

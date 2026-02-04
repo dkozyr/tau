@@ -157,13 +157,14 @@ TEST(StringTest, PrefixCaseInsensitive) {
 
 TEST(StringTest, HexDump) {
     std::array<uint8_t, 8> data = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
-    ASSERT_EQ("12 34 56 78 9a bc de f0", ToHexDump(data.data(), data.size(), " "));
-    ASSERT_EQ("12 34", ToHexDump(data.data(), 2, " "));
-    ASSERT_EQ("12", ToHexDump(data.data(), 1, " "));
-    ASSERT_EQ("", ToHexDump(data.data(), 0, " "));
+    ASSERT_EQ("12 34 56 78 9A BC DE F0", ToHexDump(data.data(), data.size()));
+    ASSERT_EQ("12 34", ToHexDump(data.data(), 2));
+    ASSERT_EQ("12", ToHexDump(data.data(), 1));
+    ASSERT_EQ("", ToHexDump(data.data(), 0));
 
-    ASSERT_EQ("123456789abcdef0", ToHexDump(data.data(), data.size()));
-    ASSERT_EQ("12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0", ToHexDump(data.data(), data.size(), ", 0x"));
+    ASSERT_EQ("123456789ABCDEF0", ToHexDump(data.data(), data.size(), {}));
+    ASSERT_EQ("123456789abcdef0", ToHexDump<false>(data.data(), data.size(), {}));
+    ASSERT_EQ("12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0", ToHexDump<false>(data.data(), data.size(), ", 0x"));
 }
 
 }
