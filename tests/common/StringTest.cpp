@@ -55,6 +55,13 @@ TEST(StringTest, ToHexString) {
     ASSERT_EQ("FF", ToHexString(static_cast<uint8_t>(255)));
     ASSERT_EQ("807F", ToHexString(static_cast<uint16_t>(127 + 32768)));
     ASSERT_EQ("7FFF1234567890FF", ToHexString(0x7FFF'1234'5678'90FF));
+
+    ASSERT_EQ("00000001", ToHexString<false>(1));
+    ASSERT_EQ("ffffffff", ToHexString<false>(-1));
+    ASSERT_EQ("0a", ToHexString<false>(static_cast<uint8_t>(10)));
+    ASSERT_EQ("ff", ToHexString<false>(static_cast<uint8_t>(255)));
+    ASSERT_EQ("807f", ToHexString<false>(static_cast<uint16_t>(127 + 32768)));
+    ASSERT_EQ("7fff1234567890ff", ToHexString<false>(0x7FFF'1234'5678'90FF));
 }
 
 TEST(StringTest, Split) {
@@ -121,6 +128,17 @@ TEST(StringTest, Split_Empty2) {
     ASSERT_EQ(std::string_view{}, tokens[3]);
 }
 
+TEST(StringTest, ReplaceAll) {
+    std::string input = "Hello world! Welcome to the world of C++.";
+    std::string output = ReplaceAll(input, "world", "universe");
+    ASSERT_EQ("Hello universe! Welcome to the universe of C++.", output);
+
+    ASSERT_EQ("HelloWorld!42", ReplaceAll("Hello World! 42", " ", ""));
+    ASSERT_EQ("Hello  World!  42", ReplaceAll("Hello World! 42", " ", "  "));
+    ASSERT_EQ("bbba", ReplaceAll("aaaaaaa", "aa", "b"));
+    ASSERT_EQ("No matches here.", ReplaceAll("No matches here.", "xyz", "123"));
+}
+
 TEST(StringTest, ToLowerCase) {
     std::string str = "Hello wOrlD 42!";
     ToLowerCase(str);
@@ -139,10 +157,13 @@ TEST(StringTest, PrefixCaseInsensitive) {
 
 TEST(StringTest, HexDump) {
     std::array<uint8_t, 8> data = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
-    ASSERT_EQ("12 34 56 78 9A BC DE F0", ToHexDump(data.data(), data.size()));
-    ASSERT_EQ("12 34", ToHexDump(data.data(), 2));
-    ASSERT_EQ("12", ToHexDump(data.data(), 1));
-    ASSERT_EQ("", ToHexDump(data.data(), 0));
+    ASSERT_EQ("12 34 56 78 9a bc de f0", ToHexDump(data.data(), data.size(), " "));
+    ASSERT_EQ("12 34", ToHexDump(data.data(), 2, " "));
+    ASSERT_EQ("12", ToHexDump(data.data(), 1, " "));
+    ASSERT_EQ("", ToHexDump(data.data(), 0, " "));
+
+    ASSERT_EQ("123456789abcdef0", ToHexDump(data.data(), data.size()));
+    ASSERT_EQ("12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0", ToHexDump(data.data(), data.size(), ", 0x"));
 }
 
 }

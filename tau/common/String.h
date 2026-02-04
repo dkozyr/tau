@@ -74,10 +74,10 @@ R ParseStringAsFloat(const T& str) {
     return value;
 }
 
-template<typename T = size_t>
+template<bool UpperCase = true, typename T = size_t>
 std::string ToHexString(T value) {
     static_assert(std::is_integral_v<T>);
-    const std::string_view kHexData = "0123456789ABCDEF";
+    const std::string_view kHexData = UpperCase ? "0123456789ABCDEF" : "0123456789abcdef";
     constexpr size_t kStringSize = 2 * sizeof(T);
     std::string result(kStringSize, '0');
     for(size_t i = 0; (i < kStringSize) && value; ++i) {
@@ -85,28 +85,6 @@ std::string ToHexString(T value) {
         value >>= 4;
     }
     return result;
-}
-
-template<typename T = size_t>
-std::string ToHexStringLowerCase(T value) {
-    static_assert(std::is_integral_v<T>);
-    const std::string_view kHexData = "0123456789abcdef";
-    constexpr size_t kStringSize = 2 * sizeof(T);
-    std::string result(kStringSize, '0');
-    for(size_t i = 0; (i < kStringSize) && value; ++i) {
-        result[kStringSize - 1 - i] = kHexData[value & 0x0F];
-        value >>= 4;
-    }
-    return result;
-}
-
-//TODO: review it
-inline std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
-    size_t pos = 0;
-    while((pos = str.find(from, pos)) != std::string::npos) {
-        str.replace(pos, from.size(), to);
-    }
-    return str;
 }
 
 template<typename T>
@@ -118,9 +96,9 @@ std::string ToString(const T& value) {
 
 std::vector<std::string_view> Split(std::string_view str, std::string_view marker, bool ignore_first = false);
 std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first = false);
+std::string ReplaceAll(std::string str, const std::string& from, const std::string& to);
 void ToLowerCase(std::string& value);
 bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensitive = false);
-std::string ToHexDump(const uint8_t* ptr, size_t size, char separator = ' ');
-std::string ToHexDumpRaw(const uint8_t* ptr, size_t size, std::string_view separator = {});
+std::string ToHexDump(const uint8_t* ptr, size_t size, std::string_view separator = {});
 
 }

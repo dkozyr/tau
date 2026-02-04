@@ -1,4 +1,5 @@
 #include "tau/common/String.h"
+#include <boost/algorithm/string/replace.hpp>
 
 namespace tau {
 
@@ -19,6 +20,11 @@ std::vector<std::string_view> Split(std::string_view str, std::string_view marke
 
 std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first) {
     return Split(std::string_view(str), marker, ignore_first);
+}
+
+std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
+    boost::algorithm::replace_all(str, from, to);
+    return str;
 }
 
 void ToLowerCase(std::string& value) {
@@ -43,26 +49,14 @@ bool IsPrefix(std::string_view str, std::string_view prefix, bool case_insensiti
     }
 }
 
-std::string ToHexDump(const uint8_t* ptr, size_t size, char separator) {
-    std::string dump;
-    dump.reserve(3 * size);
-    for(size_t i = 0; i < size; ++i) {
-        if(i > 0) {
-            dump += separator;
-        }
-        dump += ToHexString(ptr[i]);
-    }
-    return dump;
-}
-
-std::string ToHexDumpRaw(const uint8_t* ptr, size_t size, std::string_view separator) {
+std::string ToHexDump(const uint8_t* ptr, size_t size, std::string_view separator) {
     std::string dump;
     dump.reserve(3 * size);
     for(size_t i = 0; i < size; ++i) {
         if(i > 0 && !separator.empty()) {
             dump += separator;
         }
-        dump += ToHexStringLowerCase(ptr[i]);
+        dump += ToHexString<false>(ptr[i]);
     }
     return dump;
 }
