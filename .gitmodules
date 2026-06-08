@@ -7,3 +7,6 @@
 [submodule "3rdparty/opus"]
 	path = 3rdparty/opus
 	url = https://github.com/xiph/opus.git
+[submodule "3rdparty/etl"]
+	path = 3rdparty/etl
+	url = https://github.com/ETLCPP/etl.git
