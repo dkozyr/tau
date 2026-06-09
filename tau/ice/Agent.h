@@ -23,11 +23,12 @@ public:
     struct Options {
         Role role;
         Credentials credentials;
-        std::vector<Endpoint> interfaces; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
-        std::vector<Endpoint> stun_servers;
-        std::unordered_map<Endpoint, PeerCredentials> turn_servers;
+        //TODO: fix capacity
+        etl::vector<Endpoint, 3> interfaces; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
+        etl::vector<Endpoint, 2> stun_servers;
+        etl::unordered_map<Endpoint, PeerCredentials, 3> turn_servers;
         NominatingStrategy nominating_strategy = NominatingStrategy::kBestValid;
-        std::string log_ctx = {};
+        etl::string_view log_ctx = {};
     };
 
 public:
@@ -42,23 +43,23 @@ public:
     void Start();
     void Process();
 
-    void RecvRemoteCandidate(std::string candidate);
+    void RecvRemoteCandidate(CandidateStr candidate);
     void Recv(size_t socket_idx, Endpoint remote, Buffer&& message);
 
     const CandidatePair& GetBestCandidatePair() const;
 
 private:
-    void InitStunClients(const std::vector<Endpoint>& stun_servers);
-    void InitTurnClients(const std::unordered_map<Endpoint, PeerCredentials>& turn_servers);
+    void InitStunClients(const etl::ivector<Endpoint>& stun_servers);
+    void InitTurnClients(const etl::iunordered_map<Endpoint, PeerCredentials>& turn_servers);
 
 private:
     Dependencies _deps;
-    std::vector<Endpoint> _interfaces;
-    const std::string _log_ctx;
+    etl::vector<Endpoint, 3> _interfaces;
+    const etl::string_view _log_ctx;
 
     CheckList _check_list;
-    std::vector<StunClient> _stun_clients;
-    std::vector<TurnClient> _turn_clients;
+    etl::vector<StunClient, 2 * 3> _stun_clients;
+    etl::vector<TurnClient, 3 * 3> _turn_clients;
 
     State _state = State::kWaiting;
 

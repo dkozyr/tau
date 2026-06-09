@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.20)
 project(tau-crypto)
 
 file(GLOB_RECURSE SOURCES ${PROJECT_SOURCE_DIR}/*.cpp ${PROJECT_SOURCE_DIR}/*.h)
+list(FILTER SOURCES EXCLUDE REGEX "^.*/mbed/.*$")
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})
 

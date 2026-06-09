@@ -1,48 +1,49 @@
 #include "tau/sdp/line/attribute/Candidate.h"
 #include "tau/common/String.h"
+#include <etl/string_stream.h>
 
 namespace tau::sdp::attribute {
 
-std::string_view CandidateReader::GetFoundation(const std::string_view& value) {
+etl::string_view CandidateReader::GetFoundation(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return tokens[0];
 }
 
-uint16_t CandidateReader::GetComponentId(const std::string_view& value) {
+uint16_t CandidateReader::GetComponentId(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return StringToUnsigned<uint16_t>(tokens[1]).value();
 }
 
-std::string_view CandidateReader::GetTransport(const std::string_view& value) {
+etl::string_view CandidateReader::GetTransport(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return tokens[2];
 }
 
-uint32_t CandidateReader::GetPriority(const std::string_view& value) {
+uint32_t CandidateReader::GetPriority(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return StringToUnsigned<uint32_t>(tokens[3]).value();
 }
 
-std::string_view CandidateReader::GetAddress(const std::string_view& value) {
+etl::string_view CandidateReader::GetAddress(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return tokens[4];
 }
 
-uint16_t CandidateReader::GetPort(const std::string_view& value) {
+uint16_t CandidateReader::GetPort(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return StringToUnsigned<uint16_t>(tokens[5]).value();
 }
 
-std::string_view CandidateReader::GetType(const std::string_view& value) {
+etl::string_view CandidateReader::GetType(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return tokens[7];
 }
 
-std::string_view CandidateReader::GetExtParameters(const std::string_view& value) {
+etl::string_view CandidateReader::GetExtParameters(const etl::string_view& value) {
     size_t pos = 0;
     for(size_t i = 0; i < 8; ++i) {
         pos = value.find(' ', pos);
-        if(pos == std::string::npos) {
+        if(pos == etl::string_view::npos) {
             return {};
         }
         pos++;
@@ -50,7 +51,7 @@ std::string_view CandidateReader::GetExtParameters(const std::string_view& value
     return value.substr(pos);
 }
 
-bool CandidateReader::Validate(const std::string_view& value) {
+bool CandidateReader::Validate(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     if(tokens.size() < 8)                      { return false; }
     if(tokens[6] != "typ")                     { return false; }
@@ -62,16 +63,16 @@ bool CandidateReader::Validate(const std::string_view& value) {
 }
 
 
-std::string CandidateWriter::Write(uint32_t foundation, uint16_t component_id,
-        std::string_view transport, uint32_t priority, std::string_view address,
-        uint16_t port, std::string_view type, std::string_view ext_parameters) {
-    std::stringstream ss;
+etl::string_stream& CandidateWriter::Write(etl::string_stream& ss,
+        uint32_t foundation, uint16_t component_id,
+        etl::string_view transport, uint32_t priority, etl::string_view address,
+        uint16_t port, etl::string_view type, etl::string_view ext_parameters) {
     ss << foundation << " " << component_id << " " << transport << " " << priority
        << " " << address << " " << port << " typ " << type;
     if(!ext_parameters.empty()) {
         ss << " " << ext_parameters;
     }
-    return ss.str();
+    return ss;
 }
 
 }

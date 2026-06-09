@@ -1,16 +1,15 @@
 #include "tau/net/Uri.h"
 #include "tau/common/String.h"
-
 #include "tau/common/Log.h"
 
 namespace tau::net {
 
-std::optional<Uri> GetStunUriFromString(std::string_view str);
-std::optional<Uri> GetTurnUriFromString(std::string_view str);
-bool ValidateHost(const std::string_view& host);
-std::optional<uint16_t> ValidateAndParsePort(const std::string_view& port);
+std::optional<Uri> GetStunUriFromString(etl::string_view str);
+std::optional<Uri> GetTurnUriFromString(etl::string_view str);
+bool ValidateHost(const etl::string_view& host);
+std::optional<uint16_t> ValidateAndParsePort(const etl::string_view& port);
 
-std::optional<Uri> GetUriFromString(std::string_view str) {
+std::optional<Uri> GetUriFromString(etl::string_view str) {
     if(IsPrefix(str, "stun:")) { return GetStunUriFromString(str); }
     if(IsPrefix(str, "turn:")) { return GetTurnUriFromString(str); }
 
@@ -42,7 +41,11 @@ std::optional<Uri> GetUriFromString(std::string_view str) {
     if(pos == 0) {
         return std::nullopt;
     }
-    const std::string path = (pos != std::string::npos) ? std::string{host_port_path.substr(pos + 1)} : std::string{};
+
+    etl::string<256> path;
+    if(pos != etl::string_view::npos) {
+        path = host_port_path.substr(pos + 1);
+    }
 
     auto host_port = host_port_path.substr(0, pos);
     auto host_tokens = Split(host_port, ":");
@@ -61,13 +64,13 @@ std::optional<Uri> GetUriFromString(std::string_view str) {
     }
     return Uri{
         .protocol = protocol,
-        .host = std::string{host_tokens[0]},
+        .host = etl::string<32>{host_tokens[0]},
         .port = port,
         .path = path
     };
 }
 
-std::optional<Uri> GetStunUriFromString(std::string_view str) {
+std::optional<Uri> GetStunUriFromString(etl::string_view str) {
     uint16_t port = 3478;
     auto tokens = Split(str, ":");
     if(tokens.size() == 3) {
@@ -84,14 +87,14 @@ std::optional<Uri> GetStunUriFromString(std::string_view str) {
     }
     return Uri{
         .protocol = Protocol::kStun,
-        .host = std::string{tokens[1]},
+        .host = etl::string<32>{tokens[1]},
         .port = port,
         .path = {},
         .transport = Transport::kUdp
     };
 }
 
-std::optional<Uri> GetTurnUriFromString(std::string_view str) {
+std::optional<Uri> GetTurnUriFromString(etl::string_view str) {
     uint16_t port = 3478;
     std::optional<Transport> transport;
     auto transport_tokens = Split(str, "?transport=");
@@ -122,17 +125,17 @@ std::optional<Uri> GetTurnUriFromString(std::string_view str) {
 
     return Uri{
         .protocol = Protocol::kTurn,
-        .host = std::string{tokens[1]},
+        .host = etl::string<32>{tokens[1]},
         .port = port,
         .path = {},
         .transport = transport
     };
 }
 
-bool ValidateHost(const std::string_view& host) {
+bool ValidateHost(const etl::string_view& host) {
     bool ok = false;
     for(auto c : host) {
-        ok = std::isalnum(c) || (c == '.') || (c == '-');
+        ok = IsAlphaDigit(c) || (c == '.') || (c == '-');
         if(!ok) {
             break;
         }
@@ -140,9 +143,9 @@ bool ValidateHost(const std::string_view& host) {
     return ok;
 }
 
-std::optional<uint16_t> ValidateAndParsePort(const std::string_view& port) {
+std::optional<uint16_t> ValidateAndParsePort(const etl::string_view& port) {
     for(auto c : port) { //TODO: remove it?
-        if(!std::isalnum(c)) {
+        if(!IsDigit(c)) {
             return std::nullopt;
         }
     }

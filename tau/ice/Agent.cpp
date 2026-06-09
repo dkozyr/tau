@@ -76,7 +76,7 @@ void Agent::Process() {
     }
 }
 
-void Agent::RecvRemoteCandidate(std::string candidate) {
+void Agent::RecvRemoteCandidate(CandidateStr candidate) {
     _check_list.RecvRemoteCandidate(std::move(candidate));
 }
 
@@ -102,7 +102,7 @@ const CandidatePair& Agent::GetBestCandidatePair() const {
     return _check_list.GetBestCandidatePair();
 }
 
-void Agent::InitStunClients(const std::vector<Endpoint>& stun_servers) {
+void Agent::InitStunClients(const etl::ivector<Endpoint>& stun_servers) {
     for(auto& endpoint : stun_servers) {
         for(size_t i = 0; i < _interfaces.size(); ++i) {
             _stun_clients.emplace_back(
@@ -123,7 +123,7 @@ void Agent::InitStunClients(const std::vector<Endpoint>& stun_servers) {
     }
 }
 
-void Agent::InitTurnClients(const std::unordered_map<Endpoint, PeerCredentials>& turn_servers) {
+void Agent::InitTurnClients(const etl::iunordered_map<Endpoint, PeerCredentials>& turn_servers) {
     for(auto& [endpoint, credentials] : turn_servers) {
         for(size_t i = 0; i < _interfaces.size(); ++i) {
             size_t idx = _interfaces.size() + _turn_clients.size();

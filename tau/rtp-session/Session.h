@@ -1,13 +1,14 @@
 #pragma once
 
-#include "tau/rtp-session/SendBuffer.h"
-#include "tau/rtp-session/RecvBuffer.h"
-#include "tau/rtp-session/Event.h"
-#include "tau/rtp/Jitter.h"
-#include "tau/rtp/TsConverter.h"
-#include "tau/rtcp/SrInfo.h"
-#include "tau/rtcp/RrBlock.h"
-#include "tau/memory/Allocator.h"
+#include <tau/rtp-session/SendBuffer.h>
+#include <tau/rtp-session/RecvBuffer.h>
+#include <tau/rtp-session/Event.h>
+#include <tau/rtp/Jitter.h>
+#include <tau/rtp/TsConverter.h>
+#include <tau/rtcp/SrInfo.h>
+#include <tau/rtcp/RrBlock.h>
+#include <tau/memory/Allocator.h>
+#include <etl/string_view.h>
 
 namespace tau::rtp::session {
 
@@ -29,8 +30,8 @@ public:
         bool rtx = true;
         size_t send_buffer_size = session::SendBuffer::kDefaultSize;
         size_t recv_buffer_size = session::RecvBuffer::kDefaultSize;
-        std::string_view cname = {};
-        std::string_view log_ctx = {};
+        etl::string_view cname = {};
+        etl::string_view log_ctx = {};
     };
 
     struct Stats {

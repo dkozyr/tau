@@ -3,22 +3,22 @@
 
 namespace tau::sdp::attribute {
 
-uint8_t ExtmapReader::GetId(const std::string_view& value) {
+uint8_t ExtmapReader::GetId(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     const auto& id_direction = tokens[0];
     const auto pos = id_direction.find('/');
-    if(pos != std::string::npos) {
+    if(pos != etl::string_view::npos) {
         return StringToUnsigned<uint8_t>(id_direction.substr(0, pos)).value();
     } else {
         return StringToUnsigned<uint8_t>(id_direction).value();
     }
 }
 
-Direction ExtmapReader::GetDirection(const std::string_view& value) {
+Direction ExtmapReader::GetDirection(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     const auto& id_direction = tokens[0];
     const auto pos = id_direction.find('/');
-    if(pos != std::string::npos) {
+    if(pos != etl::string_view::npos) {
         const auto direction = id_direction.substr(pos + 1);
         if(direction == "inactive") { return Direction::kInactive; }
         if(direction == "sendonly") { return Direction::kSend; }
@@ -28,12 +28,12 @@ Direction ExtmapReader::GetDirection(const std::string_view& value) {
     return Direction::kSendRecv;
 }
 
-std::string_view ExtmapReader::GetUri(const std::string_view& value) {
+etl::string_view ExtmapReader::GetUri(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return tokens[1];
 }
 
-bool ExtmapReader::Validate(const std::string_view& value) {
+bool ExtmapReader::Validate(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     if(tokens.size() < 2) {
         return false;
@@ -48,8 +48,7 @@ bool ExtmapReader::Validate(const std::string_view& value) {
     return true;
 }
 
-std::string ExtmapWriter::Write(uint8_t id, std::string_view uri, Direction direction) {
-    std::stringstream ss;
+etl::string_stream& ExtmapWriter::Write(etl::string_stream& ss, uint8_t id, etl::string_view uri, Direction direction) {
     ss << (size_t)id;
     switch(direction) {
         case Direction::kInactive: ss << "/inactive"; break; //TODO: check it
@@ -58,7 +57,7 @@ std::string ExtmapWriter::Write(uint8_t id, std::string_view uri, Direction dire
         case Direction::kSendRecv: break;
     }
     ss << " " << uri;
-    return ss.str();
+    return ss;
 }
 
 }

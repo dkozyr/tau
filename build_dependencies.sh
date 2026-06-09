@@ -17,3 +17,13 @@ cd build
 cmake -GNinja -DCMAKE_INSTALL_PREFIX:PATH=${DEPS_OUTPUT_DIRECTORY} -DCMAKE_BUILD_TYPE=Release -DENABLE_OPENSSL=ON ..
 cmake --build . --target install -j 4
 rm -r *
+cd ..
+
+cd etl
+git checkout 20.47.1
+mkdir -p build
+cd build
+cmake -GNinja -DCMAKE_INSTALL_PREFIX:PATH=${DEPS_OUTPUT_DIRECTORY} -DCMAKE_BUILD_TYPE=Release ..
+cmake --build . --target install -j 4
+rm -r *
+cd ..

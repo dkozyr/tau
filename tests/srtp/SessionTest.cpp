@@ -21,23 +21,33 @@ const std::vector<SessionTestParams> kSessionTestParamsVec = {
 
 class SessionTest : public ::testing::TestWithParam<SessionTestParams> {
 public:
-    SessionTest()
-        : _key(SRTP_MAX_KEY_LEN) // max key size to cover all test cases
-    { 
+    SessionTest() {
+        Init();
+    }
+
+    void Init() {
+        _key.resize(Session::GetKeySize(GetParam().profile));
+        _salt.resize(Session::GetSaltSize(GetParam().profile));
+
         crypto::RandomBytes(_key.data(), _key.size());
+        crypto::RandomBytes(_salt.data(), _salt.size());
 
         _encryptor.emplace(Session::Options{
             .type = Session::Type::kEncryptor,
             .profile = GetParam().profile,
             .key = _key,
+            .salt = _salt,
             .log_ctx = "[test] "
         });
         _decryptor.emplace(Session::Options{
             .type = Session::Type::kDecryptor,
             .profile = GetParam().profile,
             .key = _key,
+            .salt = _salt,
             .log_ctx = "[test] "
         });
+        ASSERT_TRUE(_encryptor->IsValid());
+        ASSERT_TRUE(_decryptor->IsValid());
 
         _encryptor->SetCallback([this](Buffer&& encrypted, bool is_rtp) {
             ASSERT_EQ(is_rtp, !rtcp::IsRtcp(ToConst(encrypted.GetView())));
@@ -116,14 +126,15 @@ public:
     }
 
 protected:
-    std::vector<uint8_t> _key;
+    etl::vector<uint8_t, Session::kKeyCapacity> _key;
+    etl::vector<uint8_t, Session::kSaltCapacity> _salt;
     std::optional<Session> _encryptor;
     std::optional<Session> _decryptor;
     rtp::Writer::Options _rtp_options{
-        .pt = g_random.Int<uint8_t>(96, 127),
-        .ssrc = g_random.Int<uint32_t>(),
-        .ts = g_random.Int<uint32_t>(),
-        .sn = g_random.Int<uint16_t>(),
+        .pt     = g_random.Int<uint8_t>(96, 127),
+        .ssrc   = g_random.Int<uint32_t>(),
+        .ts     = g_random.Int<uint32_t>(),
+        .sn     = g_random.Int<uint16_t>(),
         .marker = false,
         .extension_length_in_words = 0
     };
@@ -166,12 +177,14 @@ TEST_P(SessionTest, Rtcp) {
 }
 
 TEST(SessionTest, WrongProfile) {
-    ASSERT_ANY_THROW(Session(Session::Options{
+    Session session(Session::Options{
         .type = Session::Type::kEncryptor,
         .profile = srtp_profile_t::srtp_profile_null_sha1_32,
         .key = {},
+        .salt = {},
         .log_ctx = "[test] "
-    }));
+    });
+    ASSERT_FALSE(session.IsValid());
 }
 
 }

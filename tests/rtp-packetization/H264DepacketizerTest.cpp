@@ -1,4 +1,4 @@
-#include "tests/rtp-packetization/H264PacketizationBase.h"
+#include "H264PacketizationBase.h"
 
 namespace tau::rtp {
 

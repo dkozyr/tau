@@ -1,12 +1,15 @@
 #pragma once
 
-#include <string>
-#include <cstdint>
-#include <cstddef>
+#ifdef ESP_PLATFORM
+    #include <tau/crypto/mbed/RandomBytes.h>
+#else
+    #include <tau/crypto/host/RandomBytes.h>
+#endif
+
+#include <etl/string.h>
 
 namespace tau::crypto {
 
-bool RandomBytes(uint8_t* ptr, size_t size);
-std::string RandomBase64(size_t size);
+etl::istring& RandomBase64(etl::istring& output, size_t size);
 
 }

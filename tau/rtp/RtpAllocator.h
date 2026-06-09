@@ -32,9 +32,10 @@ public:
         _options.header.ts = _ts_producer.FromTp(tp);
         _options.header.marker = marker;
         auto result = Writer::Write(packet.GetViewWithCapacity(), _options.header);
-        if(result.size == 0) {
-            throw -1;
-        }
+        //TODO: fix it
+        // if(result.size == 0) {
+        //     throw -1;
+        // }
         _options.header.sn++;
         packet.SetSize(result.size);
         return packet;

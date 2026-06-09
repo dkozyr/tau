@@ -1,4 +1,5 @@
 #include "tau/common/Ntp.h"
+#include "tau/common/SystemClock.h"
 #include "tests/lib/Common.h"
 
 namespace tau {

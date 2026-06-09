@@ -52,7 +52,7 @@ private:
             }
             items.push_back(SdesItem{
                 .type = type,
-                .data = std::string_view{reinterpret_cast<const char*>(ptr) + 2, ptr[1]}
+                .data = etl::string_view{reinterpret_cast<const char*>(ptr) + 2, ptr[1]}
             });
             ptr += 2 * sizeof(uint8_t) + items.back().data.size();
         }

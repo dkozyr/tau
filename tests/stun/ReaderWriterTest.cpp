@@ -15,9 +15,9 @@ namespace tau::stun {
 
 using namespace tau::stun::attribute;
 
-class ReaderWriterTest : public ::testing::Test {
+class StunReaderWriterTest : public ::testing::Test {
 public:
-    ReaderWriterTest()
+    StunReaderWriterTest()
         : _packet(Buffer::Create(g_system_allocator, kUdpMtuSize))
         , _transaction_id_hash(GenerateTransactionId(_transaction_id.data()))
     {}
@@ -28,7 +28,7 @@ protected:
     uint32_t _transaction_id_hash;
 };
 
-TEST_F(ReaderWriterTest, Basic) {
+TEST_F(StunReaderWriterTest, Basic) {
     Writer writer(_packet.GetViewWithCapacity(), kBindingRequest);
     auto transcation_id_ptr = _packet.GetView().ptr + 2 * sizeof(uint32_t);
     std::memcpy(transcation_id_ptr, _transaction_id.data(), _transaction_id.size());
@@ -64,7 +64,8 @@ TEST_F(ReaderWriterTest, Basic) {
     target_size += kAttributeHeaderSize + Align(test_data.size(), sizeof(uint32_t));
     ASSERT_EQ(target_size, writer.GetSize());
 
-    MessageIntegrityWriter::Write(writer, "pas$word");
+    crypto::HmacHasher hmac_hasher(crypto::HmacHasher::Type::Sha1, "pas$word");
+    MessageIntegrityWriter::Write(writer, hmac_hasher);
     target_size += kAttributeHeaderSize + MessageIntegrityPayloadSize;
     ASSERT_EQ(target_size, writer.GetSize());
 
@@ -107,7 +108,7 @@ TEST_F(ReaderWriterTest, Basic) {
                 break;
             }
             case AttributeType::kMessageIntegrity:
-                EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, "pas$word"));
+                EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, hmac_hasher));
                 break;
             case AttributeType::kFingerprint:
                 EXPECT_EQ(true,               FingerprintReader::Validate(attr, view));
@@ -125,7 +126,7 @@ TEST_F(ReaderWriterTest, Basic) {
     ASSERT_EQ(target_attributes, attributes);
 }
 
-TEST_F(ReaderWriterTest, Wireshark_Request) {
+TEST_F(StunReaderWriterTest, Wireshark_Request) {
     std::vector<uint8_t> incoming_stun_request = {
         0x00, 0x01, 0x00, 0x50,                                                                         // header
           0x21, 0x12, 0xA4, 0x42,                                                                       // magic number
@@ -147,6 +148,8 @@ TEST_F(ReaderWriterTest, Wireshark_Request) {
     ASSERT_EQ(80, HeaderReader::GetLength(view));
     ASSERT_EQ(0x6A430944, HeaderReader::GetTransactionIdHash(view));
 
+    crypto::HmacHasher hmac_hasher(crypto::HmacHasher::Type::Sha1, "ZN4ykLX1bRr+BzKwm2/ZAdCV");
+
     std::vector<AttributeType> attributes;
     auto ok = Reader::ForEachAttribute(view, [&](AttributeType type, const BufferViewConst& attr) {
         attributes.push_back(type);
@@ -163,7 +166,7 @@ TEST_F(ReaderWriterTest, Wireshark_Request) {
                 EXPECT_EQ("C0Of:aIZC",        ByteStringReader::GetValue(attr));
                 break;
             case AttributeType::kMessageIntegrity:
-                EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, "ZN4ykLX1bRr+BzKwm2/ZAdCV"));
+                EXPECT_EQ(true,               MessageIntegrityReader::Validate(attr, view, hmac_hasher));
                 break;
             case AttributeType::kFingerprint:
                 EXPECT_EQ(true,               FingerprintReader::Validate(attr, view));

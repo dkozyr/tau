@@ -23,7 +23,7 @@ public:
 public:
     Source(Options&& options)
         : _options(std::move(options))
-        , _udp_allocator(_options.max_packet_size)
+        , _udp_allocator(_allocated_memory.data(), _allocated_memory.size(), _options.max_packet_size)
         , _allocator(_udp_allocator,
             RtpAllocator::Options{
                 .header = Writer::Options{
@@ -60,7 +60,8 @@ public:
 
 public:
     const Options _options;
-    PoolAllocator _udp_allocator;
+    std::array<uint8_t, 1'000'000> _allocated_memory;
+    PoolAllocator<> _udp_allocator;
     RtpAllocator _allocator;
 
     Callback _callback;

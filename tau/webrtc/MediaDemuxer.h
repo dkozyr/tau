@@ -2,8 +2,8 @@
 
 #include "tau/sdp/Sdp.h"
 #include "tau/memory/Buffer.h"
+#include <etl/unordered_map.h>
 #include <functional>
-#include <unordered_map>
 
 namespace tau::webrtc {
 
@@ -14,7 +14,7 @@ public:
     struct Options {
         const sdp::Sdp& local_sdp;
         const sdp::Sdp& remote_sdp;
-        std::string log_ctx = {};
+        etl::string_view log_ctx = {};
     };
 
     using Callback = std::function<void(size_t idx, Buffer&& packet, bool is_rtp)>;
@@ -30,9 +30,9 @@ private:
     std::optional<uint32_t> GetSsrcFromRtcp(const BufferViewConst& view) const;
 
 private:
-    const std::string _log_ctx;
-    std::unordered_map<uint32_t, size_t> _local_media_ssrc_to_media_idx;
-    std::unordered_map<uint32_t, size_t> _remote_media_ssrc_to_media_idx;
+    const etl::string_view _log_ctx;
+    etl::unordered_map<uint32_t, size_t, 2> _local_media_ssrc_to_media_idx;
+    etl::unordered_map<uint32_t, size_t, 2> _remote_media_ssrc_to_media_idx;
     Callback _callback;
 };
 

@@ -3,21 +3,21 @@
 
 namespace tau::sdp::attribute {
     
-uint8_t FmtpReader::GetPt(const std::string_view& value) {
+uint8_t FmtpReader::GetPt(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return StringToUnsigned<uint8_t>(tokens[0]).value();
 }
 
-std::string_view FmtpReader::GetParameters(const std::string_view& value) {
+etl::string_view FmtpReader::GetParameters(const etl::string_view& value) {
     auto pos = value.find(' ');
-    if(pos != std::string::npos) {
+    if(pos != etl::string_view::npos) {
         return value.substr(pos + 1);
     } else {
         return {};
     }
 }
 
-bool FmtpReader::Validate(const std::string_view& value) {
+bool FmtpReader::Validate(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     if(tokens.size() < 2) {
         return false;
@@ -29,10 +29,9 @@ bool FmtpReader::Validate(const std::string_view& value) {
     return true;
 }
 
-std::string FmtpWriter::Write(uint8_t pt, std::string_view parameters) {
-    std::stringstream ss;
+etl::string_stream& FmtpWriter::Write(etl::string_stream& ss, uint8_t pt, etl::string_view parameters) {
     ss << (size_t)pt << " " << parameters;
-    return ss.str();
+    return ss;
 }
 
 }

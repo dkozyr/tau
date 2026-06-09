@@ -1,17 +1,19 @@
-#include "tests/ice/NatEmulator.h"
+#include "NatEmulator.h"
 #include "tests/lib/Common.h"
 
 namespace tau::ice {
 
+using namespace tau::net;
+
 class NatEmulatorTest : public ::testing::Test {
 public:
-    static inline auto kEndpoint1 = Endpoint{asio_ip::make_address("1.2.3.4"), 33333};
-    static inline auto kEndpoint2 = Endpoint{asio_ip::make_address("2.3.4.5"), 44444};
-    static inline auto kEndpoint3 = Endpoint{asio_ip::make_address("3.4.5.6"), 55555};
-    static inline auto kEndpoint4 = Endpoint{asio_ip::make_address("4.5.6.7"), 65000};
+    static inline auto kEndpoint1 = Endpoint{MakeIpAddressV4("1.2.3.4"), 33333};
+    static inline auto kEndpoint2 = Endpoint{MakeIpAddressV4("2.3.4.5"), 44444};
+    static inline auto kEndpoint3 = Endpoint{MakeIpAddressV4("3.4.5.6"), 55555};
+    static inline auto kEndpoint4 = Endpoint{MakeIpAddressV4("4.5.6.7"), 65000};
 
-    static inline auto kLocalEndpoint1 = Endpoint{asio_ip::make_address("192.168.0.77"),  34567};
-    static inline auto kLocalEndpoint2 = Endpoint{asio_ip::make_address("192.168.0.111"), 45678};
+    static inline auto kLocalEndpoint1 = Endpoint{MakeIpAddressV4("192.168.0.77"),  34567};
+    static inline auto kLocalEndpoint2 = Endpoint{MakeIpAddressV4("192.168.0.111"), 45678};
 
     using Context = NatEmulator::Context;
     using Type = NatEmulator::Type;
@@ -59,7 +61,7 @@ protected:
     }
 
     static Endpoint BumpPort(Endpoint endpoint) {
-        return Endpoint{endpoint.address(), (uint16_t)(endpoint.port() + 1)};
+        return Endpoint{endpoint.address, (uint16_t)(endpoint.port + 1)};
     }
 
 protected:
@@ -148,7 +150,7 @@ TEST_F(NatEmulatorTest, Symmetric) {
 TEST_F(NatEmulatorTest, LocalNetworkOnly) {
     _nat.emplace(_clock, NatEmulator::Options{
         .type = Type::kLocalNetworkOnly,
-        .public_ip = kLocalEndpoint1.address()
+        .public_ip = kLocalEndpoint1.address
     });
     InitCallbacks();
 

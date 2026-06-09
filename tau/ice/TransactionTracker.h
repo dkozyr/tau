@@ -2,14 +2,15 @@
 
 #include "tau/memory/BufferView.h"
 #include "tau/common/Clock.h"
+#include <etl/unordered_map.h>
 #include <optional>
-#include <unordered_map>
 
 namespace tau::ice {
 
 class TransactionTracker {
 public:
     static constexpr size_t kTimeoutDefault = 500 * kMs;
+    static constexpr size_t kStorageCapacity = 16;
 
     struct Result {
         Timepoint tp;
@@ -33,8 +34,8 @@ private:
     Clock& _clock;
     const Timepoint _timeout;
 
-    std::unordered_map<uint32_t, Result> _hash_storage;
-    std::unordered_map<size_t, Timepoint> _tag_to_tp;
+    etl::unordered_map<uint32_t, Result, kStorageCapacity> _hash_storage;
+    etl::unordered_map<size_t, Timepoint, kStorageCapacity> _tag_to_tp;
 };
 
 }

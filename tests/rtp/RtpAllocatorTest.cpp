@@ -17,10 +17,12 @@ protected:
         .sn = 65535,
         .marker = false
     };
+
+    std::array<uint8_t, 65536> _allocated_memory;
 };
 
 TEST_F(RtpAllocatorTest, Basic) {
-    PoolAllocator udp_allocator(1200);
+    PoolAllocator udp_allocator(_allocated_memory.data(), _allocated_memory.size(), 1200);
     const auto start_tp = SteadyClock().Now();
     RtpAllocator allocator(udp_allocator,
         RtpAllocator::Options{
@@ -60,7 +62,7 @@ TEST_F(RtpAllocatorTest, Basic) {
 }
 
 TEST_F(RtpAllocatorTest, TsOverflow) {
-    PoolAllocator udp_allocator(600);
+    PoolAllocator udp_allocator(_allocated_memory.data(), _allocated_memory.size(), 600);
     const auto start_tp = SteadyClock().Now();
     _header_options.ts = 0;
     RtpAllocator allocator(udp_allocator,

@@ -1,24 +1,25 @@
-#include "tau/dtls/Session.h"
+#include "tau/dtls/host/Session.h"
 #include "tau/common/String.h"
 #include "tau/common/Exception.h"
 #include "tau/common/Log.h"
 #include <openssl/err.h>
-#include <unordered_map>
+// #include <etl/unordered_map.h>
 
 namespace tau::dtls {
 
-struct KeyingMaterialSize {
-    size_t key;
-    size_t salt;
-};
-const std::unordered_map<Session::SrtpProfile, KeyingMaterialSize> kProfileKeyingMaterialSize = {
-    {Session::SrtpProfile::kAes128CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
-    {Session::SrtpProfile::kAes128CmSha1_32, KeyingMaterialSize{.key = 16, .salt = 14}},
-    // {Session::SrtpProfile::kAes256CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
-    // {Session::SrtpProfile::kAes256CmSha1_32, KeyingMaterialSize{.key = 16, .salt = 14}},
-    // {Session::SrtpProfile::kAeadAes128Gcm,   KeyingMaterialSize{.key = 16, .salt = 12}},
-    // {Session::SrtpProfile::kAeadAes256Gcm,   KeyingMaterialSize{.key = 32, .salt = 12}},
-};
+//TODO: fix etl::unordered_map initialization
+// struct KeyingMaterialSize {
+//     size_t key;
+//     size_t salt;
+// };
+// const etl::unordered_map<Session::SrtpProfile, KeyingMaterialSize, 2> kProfileKeyingMaterialSize = {
+//     {Session::SrtpProfile::kAes128CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
+//     {Session::SrtpProfile::kAes128CmSha1_32, KeyingMaterialSize{.key = 16, .salt = 14}},
+//     // {Session::SrtpProfile::kAes256CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
+//     // {Session::SrtpProfile::kAes256CmSha1_32, KeyingMaterialSize{.key = 16, .salt = 14}},
+//     // {Session::SrtpProfile::kAeadAes128Gcm,   KeyingMaterialSize{.key = 16, .salt = 12}},
+//     // {Session::SrtpProfile::kAeadAes256Gcm,   KeyingMaterialSize{.key = 32, .salt = 12}},
+// };
 
 Session::Session(Dependencies&& deps, Options&& options)
     : _deps(deps)
@@ -40,11 +41,16 @@ Session::Session(Dependencies&& deps, Options&& options)
             << ", message: " << ERR_error_string(ERR_get_error(), NULL));
     }
 
-    if(!_options.srtp_profiles.empty()) {
-        if(auto error = SSL_CTX_set_tlsext_use_srtp(_ctx, _options.srtp_profiles.c_str())) {
-            TAU_EXCEPTION(std::runtime_error, "SSL_CTX_set_tlsext_use_srtp failed, error: " << error
-                << ", message: " << ERR_error_string(ERR_get_error(), NULL));
-        }
+    //TODO: review it
+    // if(!_options.srtp_profiles.empty()) {
+    //     if(auto error = SSL_CTX_set_tlsext_use_srtp(_ctx, _options.srtp_profiles.c_str())) {
+    //         TAU_EXCEPTION(std::runtime_error, "SSL_CTX_set_tlsext_use_srtp failed, error: " << error
+    //             << ", message: " << ERR_error_string(ERR_get_error(), NULL));
+    //     }
+    // }
+    if(auto error = SSL_CTX_set_tlsext_use_srtp(_ctx, kSrtpProfilesDefault)) {
+        TAU_EXCEPTION(std::runtime_error, "SSL_CTX_set_tlsext_use_srtp failed, error: " << error
+            << ", message: " << ERR_error_string(ERR_get_error(), NULL));
     }
 
     if(!_options.remote_peer_cert_digest.empty()) {
@@ -91,7 +97,7 @@ void Session::Process() {
     const auto code = (_options.type == Type::kServer) ? SSL_accept(_ssl) : SSL_connect(_ssl);
     if(code <= 0) {
         const auto error = SSL_get_error(_ssl, code);
-        TAU_LOG_DEBUG(_options.log_ctx << "code: " << code << ", error: " << error << ", state: " << SSL_state_string(_ssl));
+        TAU_LOG_TRACE(_options.log_ctx << "code: " << code << ", error: " << error << ", state: " << SSL_state_string(_ssl));
         switch(error) {
             case SSL_ERROR_WANT_READ:
                 while((SSL_pending(_ssl) > 0) || (BIO_ctrl_pending(_bio_read))) {
@@ -217,15 +223,18 @@ std::optional<Session::SrtpProfile> Session::GetSrtpProfile() const {
     return std::nullopt;
 }
 
-std::vector<uint8_t> Session::GetKeyingMaterial(bool encryption) const {
+Session::KeyMaterial Session::GetKeyingMaterial(bool encryption) const {
     auto profile = GetSrtpProfile();
     if(!profile) {
         return {};
     }
 
-    constexpr std::string_view kLabel = "EXTRACTOR-dtls_srtp";
-    const auto& [key_size, salt_size] = kProfileKeyingMaterialSize.at(*profile);
-    std::vector<uint8_t> keying_material(2 * (key_size + salt_size));
+    constexpr etl::string_view kLabel = "EXTRACTOR-dtls_srtp";
+    // const auto& [key_size, salt_size] = kProfileKeyingMaterialSize.at(*profile);
+    constexpr size_t key_size = 16;
+    constexpr size_t salt_size = 14;
+
+    KeyMaterial keying_material(2 * (key_size + salt_size));
     if(!SSL_export_keying_material(_ssl, keying_material.data(), keying_material.size(), kLabel.data(), kLabel.size(), NULL, 0, 0)) {
         return {};
     }
@@ -252,13 +261,24 @@ int Session::OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx) {
 
 int Session::OnVerifyPeer(int, X509_STORE_CTX* x509_ctx) {
     if(auto cert = X509_STORE_CTX_get_current_cert(x509_ctx)) {
-        std::vector<uint8_t> digest(EVP_MAX_MD_SIZE);
+        etl::vector<uint8_t, EVP_MAX_MD_SIZE> digest(EVP_MAX_MD_SIZE);
         uint32_t size = 0;
         if(X509_digest(cert, EVP_sha256(), digest.data(), &size)) {
-            return (_options.remote_peer_cert_digest == ToHexDump(digest.data(), size, ":"));
+            etl::string<3 * EVP_MAX_MD_SIZE> dump;
+            return (_options.remote_peer_cert_digest == ToHexDump(digest.data(), size, dump, ":"));
         }
     }
     return 0;
+}
+
+etl::string_stream& operator<<(etl::string_stream& ss, const Session::State& x) {
+    switch(x) {
+        case Session::State::kWaiting:    return ss << "waiting";
+        case Session::State::kConnecting: return ss << "connecting";
+        case Session::State::kConnected:  return ss << "connected";
+        case Session::State::kFailed:     return ss << "failed";
+    }
+    return ss << "unknown";
 }
 
 }

@@ -22,13 +22,15 @@ TEST(AttributeReaderTest, Validate) {
 }
 
 TEST(AttributeReaderTest, Basic) {
-    std::string_view value = "hello:world";
+    etl::string_view value = "hello:world";
     ASSERT_EQ("hello", AttributeReader::GetType(value));
     ASSERT_EQ("world", AttributeReader::GetValue(value));
 }
 
 TEST(AttributeWriterTest, Basic) {
-    const auto value = AttributeWriter::Write("hello", "world");
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    AttributeWriter::Write(ss, "hello", "world");
     TAU_LOG_INFO("a=" << value);
     ASSERT_TRUE(AttributeReader::Validate(value));
     ASSERT_EQ("hello", AttributeReader::GetType(value));
@@ -36,7 +38,14 @@ TEST(AttributeWriterTest, Basic) {
 }
 
 TEST(AttributeWriterTest, KnownAttribute) {
-    const auto value = AttributeWriter::Write("rtcp-fb", attribute::RtcpFbWriter::Write(100, "hello world"));
+    etl::string<256> value;
+    etl::string_stream ss(value);
+
+    etl::string<16> rtcp_fb_value;
+    etl::string_stream rtcp_fb_ss(rtcp_fb_value);
+    attribute::RtcpFbWriter::Write(rtcp_fb_ss, 100, "hello world");
+
+    AttributeWriter::Write(ss, "rtcp-fb", rtcp_fb_value);
     TAU_LOG_INFO("a=" << value);
     ASSERT_TRUE(AttributeReader::Validate(value));
     ASSERT_EQ("rtcp-fb", AttributeReader::GetType(value));

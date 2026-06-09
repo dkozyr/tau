@@ -1,4 +1,4 @@
-#include "tests/ice/TurnServerEmulator.h"
+#include "TurnServerEmulator.h"
 #include "tau/ice/Credentials.h"
 #include "tau/stun/Reader.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
@@ -21,7 +21,7 @@ TurnServerEmulator::TurnServerEmulator(Clock& clock, Options&& options)
 {}
 
 void TurnServerEmulator::Recv(Buffer&& packet, Endpoint src, Endpoint dest) {
-    if(dest.port() != kPortDefault) {
+    if(dest.port != kPortDefault) {
         return OnRecvData(std::move(packet), src, dest);
     }
     auto view = ToConst(packet.GetView());
@@ -45,7 +45,8 @@ void TurnServerEmulator::Recv(Buffer&& packet, Endpoint src, Endpoint dest) {
             OnSendIndication(std::move(packet), src);
             break;
         default:
-            DropPacket("Unknown type: " + std::to_string(type));
+            TAU_LOG_WARNING("Unknown type: " << type);
+            DropPacket("Unknown type");
             break;
     }
 }
@@ -53,9 +54,10 @@ void TurnServerEmulator::Recv(Buffer&& packet, Endpoint src, Endpoint dest) {
 size_t TurnServerEmulator::GetDroppedPacketsCount() const { return _dropped_packets_count; }
 
 void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, uint32_t hash) {
-    std::string user_name;
-    std::string realm;
-    std::string nonce;
+    TAU_LOG_INFO("src: " << ToString(src) << ", hash: " << hash);
+    etl::string<32> user_name; //TODO: check capacity
+    etl::string<32> realm;
+    etl::string<32> nonce;
     bool requested_transport = false;
     bool message_integrity = false;
     auto view = ToConst(message.GetView());
@@ -74,13 +76,17 @@ void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, uint3
                 nonce = ByteStringReader::GetValue(attr);
                 break;
             case AttributeType::kMessageIntegrity: {
-                std::string message_integrity_password(kLongTermPassword, 'x');
+                etl::string<kLongTermPassword> message_integrity_password(kLongTermPassword, 'x');
                 auto password_ptr = reinterpret_cast<uint8_t*>(message_integrity_password.data());
-                if(!CalcLongTermPassword({user_name, _options.password}, realm, password_ptr)) {
-                    TAU_LOG_WARNING("CalcLongTermPassword failed");
+                PeerCredentials credentials{
+                    .ufrag = user_name,
+                    .password = _options.password
+                };
+                if(!CalcLongTermPassword(credentials, realm, password_ptr)) {
                     return false;
                 }
-                message_integrity = MessageIntegrityReader::Validate(attr, view, message_integrity_password);
+                crypto::HmacHasher hmac_hasher(crypto::HmacHasher::Type::Sha1, message_integrity_password);
+                message_integrity = MessageIntegrityReader::Validate(attr, view, hmac_hasher);
                 return message_integrity;
             }
             default:
@@ -97,10 +103,10 @@ void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, uint3
     } else {
         if(Contains(_hash_to_nonce, hash)) {
             if(nonce != _hash_to_nonce.at(hash)) {
-                return DropPacket("Wrong nonce: " + nonce);
+                return DropPacket("Wrong nonce");
             }
             if(realm != _realm) {
-                return DropPacket("Wrong realm: " + realm);
+                return DropPacket("Wrong realm");
             }
             if(!requested_transport) {
                 return DropPacket("No requested transport");
@@ -131,14 +137,14 @@ void TurnServerEmulator::OnAllocateRequestInitial(Buffer&& message, Endpoint src
     _on_send_callback(std::move(message), _public_endpoint, src);
 }
 
-void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, const std::string& user_name, const std::string& nonce) {
+void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, const etl::istring& user_name, const etl::istring& nonce) {
     auto view = message.GetViewWithCapacity();
     stun::Writer writer(view, kAllocateResponse);
 
     XorMappedAddressWriter::Write(writer, AttributeType::kXorRelayedAddress,
-        _options.public_ip.to_v4().to_uint(), _latest_port);
+        _options.public_ip.GetUint32(), _latest_port);
     XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress,
-        src.address().to_v4().to_uint(), src.port());
+        src.address.GetUint32(), src.port);
     DataUint32Writer::Write(writer, AttributeType::kLifetime, 600);
     FinalizeStunMessage(message, writer, user_name);
 
@@ -161,9 +167,9 @@ void TurnServerEmulator::OnRefreshRequest(Buffer&& message, Endpoint src) {
     stun::Writer writer(view, kRefreshResponse);
 
     XorMappedAddressWriter::Write(writer, AttributeType::kXorRelayedAddress,
-        _options.public_ip.to_v4().to_uint(), _latest_port);
+        _options.public_ip.GetUint32(), _latest_port);
     XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress,
-        src.address().to_v4().to_uint(), src.port());
+        src.address.GetUint32(), src.port);
     DataUint32Writer::Write(writer, AttributeType::kLifetime, 600);
     FinalizeStunMessage(message, writer, _client_to_allocation.at(src).user_name);
 
@@ -185,7 +191,7 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
             case AttributeType::kXorPeerAddress:
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
-                    allocation.permissions.insert(IpAddressV4(address));
+                    allocation.permissions.insert(MakeIpAddressV4(address));
                     peer_address = true;
                 }
                 break;
@@ -193,13 +199,13 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
             case AttributeType::kRealm:    return (_realm == ByteStringReader::GetValue(attr));
             case AttributeType::kNonce:    return (allocation.nonce == ByteStringReader::GetValue(attr));
             case AttributeType::kMessageIntegrity: {
-                std::string message_integrity_password(kLongTermPassword, 'x');
+                etl::string<kLongTermPassword> message_integrity_password(kLongTermPassword, 'x');
                 auto password_ptr = reinterpret_cast<uint8_t*>(message_integrity_password.data());
                 if(!CalcLongTermPassword({allocation.user_name, _options.password}, _realm, password_ptr)) {
-                    TAU_LOG_WARNING("CalcLongTermPassword failed");
                     return false;
                 }
-                message_integrity = MessageIntegrityReader::Validate(attr, request_view, message_integrity_password);
+                crypto::HmacHasher hmac_hasher(crypto::HmacHasher::Type::Sha1, message_integrity_password);
+                message_integrity = MessageIntegrityReader::Validate(attr, request_view, hmac_hasher);
                 return message_integrity;
             }
             default:
@@ -233,7 +239,7 @@ void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    remote_peer.emplace(Endpoint{IpAddressV4(address), port});
+                    remote_peer.emplace(Endpoint{MakeIpAddressV4(address), port});
                 }
                 break;
             case AttributeType::kData:
@@ -247,8 +253,8 @@ void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
     if(!ok || !remote_peer || !data || !data->size) {
         return DropPacket("Wrong send indication");
     }
-    if(!Contains(allocation.permissions, remote_peer->address())) {
-        return DropPacket("No permission for peer: " + ToString(*remote_peer));
+    if(!Contains(allocation.permissions, remote_peer->address)) {
+        return DropPacket("No permission for peer");
     }
 
     std::memmove(view.ptr, data->ptr, data->size);
@@ -259,8 +265,8 @@ void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
 
 void TurnServerEmulator::OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest) {
     for(auto& [client, allocation] : _client_to_allocation) {
-        if(allocation.port == dest.port()) {
-            if(Contains(allocation.permissions, src.address())) {
+        if(allocation.port == dest.port) {
+            if(Contains(allocation.permissions, src.address)) {
                 auto indication = Buffer::Create(g_udp_allocator);
                 auto view = indication.GetViewWithCapacity();
                 stun::Writer writer(view, kDataIndication);
@@ -268,7 +274,7 @@ void TurnServerEmulator::OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest
                 stun::GenerateTransactionId(transaction_id_ptr);
 
                 XorMappedAddressWriter::Write(writer, AttributeType::kXorPeerAddress,
-                    src.address().to_v4().to_uint(), src.port());
+                    src.address.GetUint32(), src.port);
                 //TODO: DONT-FRAGMENT attribute
                 DataWriter::Write(writer, ToConst(packet.GetView()));
                 indication.SetSize(writer.GetSize());
@@ -279,21 +285,23 @@ void TurnServerEmulator::OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest
             break;
         }
     }
-    DropPacket("No permission, src: " + ToString(src) + ", dest: " + ToString(dest));
+    TAU_LOG_WARNING("No permission, src: " << ToString(src) << ", dest: " << ToString(dest));
+    DropPacket("No permission");
 }
 
-void TurnServerEmulator::FinalizeStunMessage(Buffer& message, stun::Writer& writer, const std::string& user_name) {
+void TurnServerEmulator::FinalizeStunMessage(Buffer& message, stun::Writer& writer, const etl::istring& user_name) {
     std::array<uint8_t, crypto::kMd5DigestLength> hash;
     if(!CalcLongTermPassword({user_name, _options.password}, _realm, hash.data())) {
         return DropPacket("CalcLongTermPassword failed");
     }
-    MessageIntegrityWriter::Write(writer, std::string_view{reinterpret_cast<char*>(hash.data()), hash.size()});
+    crypto::HmacHasher hmac_hasher(crypto::HmacHasher::Type::Sha1, etl::string_view{reinterpret_cast<char*>(hash.data()), hash.size()});
+    MessageIntegrityWriter::Write(writer, hmac_hasher);
     FingerprintWriter::Write(writer);
     message.SetSize(writer.GetSize());
 }
 
-void TurnServerEmulator::DropPacket(const std::string& message) {
-    TAU_LOG_WARNING(message << ", drop packet");
+void TurnServerEmulator::DropPacket(const etl::string_view& message) {
+    TAU_LOG_WARNING(message);
     _dropped_packets_count++;
 }
 

@@ -15,7 +15,7 @@ TEST(ExtmapReaderTest, Validate) {
 }
 
 TEST(ExtmapReaderTest, Basic) {
-    std::string_view value = "1/recvonly urn:ietf:params:rtp-hdrext:sdes:mid";
+    etl::string_view value = "1/recvonly urn:ietf:params:rtp-hdrext:sdes:mid";
     ASSERT_EQ(1, ExtmapReader::GetId(value));
     ASSERT_EQ(Direction::kRecv, ExtmapReader::GetDirection(value));
     ASSERT_EQ("urn:ietf:params:rtp-hdrext:sdes:mid", ExtmapReader::GetUri(value));
@@ -30,7 +30,9 @@ TEST(ExtmapReaderTest, Direction) {
 }
 
 TEST(ExtmapWriterTest, Basic) {
-    const auto value = ExtmapWriter::Write(8, "uri:some:path");
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    ExtmapWriter::Write(ss, 8, "uri:some:path");
     TAU_LOG_INFO("a=extmap:" << value);
     ASSERT_TRUE(ExtmapReader::Validate(value));
     ASSERT_EQ(8, ExtmapReader::GetId(value));
@@ -39,7 +41,9 @@ TEST(ExtmapWriterTest, Basic) {
 }
 
 TEST(ExtmapWriterTest, BasicWithDirection) {
-    const auto value = ExtmapWriter::Write(14, "uri:some:path", Direction::kSend);
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    ExtmapWriter::Write(ss, 14, "uri:some:path", Direction::kSend);
     TAU_LOG_INFO("a=extmap:" << value);
     ASSERT_TRUE(ExtmapReader::Validate(value));
     ASSERT_EQ(14, ExtmapReader::GetId(value));

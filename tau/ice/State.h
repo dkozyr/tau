@@ -1,6 +1,6 @@
 #pragma once
 
-#include <ostream>
+#include <etl/string_stream.h>
 
 namespace tau::ice {
 
@@ -12,15 +12,15 @@ enum State {
     kFailed
 };
 
-inline std::ostream& operator<<(std::ostream& s, const State& x) {
+inline etl::string_stream& operator<<(etl::string_stream& ss, const State& x) {
     switch(x) {
-        case State::kWaiting:   return s << "waiting";
-        case State::kRunning:   return s << "running";
-        case State::kReady:     return s << "ready";
-        case State::kCompleted: return s << "completed";
-        case State::kFailed:    return s << "failed";
+        case State::kWaiting:   return ss << "waiting";
+        case State::kRunning:   return ss << "running";
+        case State::kReady:     return ss << "ready";
+        case State::kCompleted: return ss << "completed";
+        case State::kFailed:    return ss << "failed";
     }
-    return s << "unknown";
+    return ss << "unknown";
 }
 
 }

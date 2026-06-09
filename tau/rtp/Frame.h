@@ -1,10 +1,10 @@
 #pragma once
 
 #include "tau/memory/Buffer.h"
-#include <vector>
+#include <etl/vector.h>
 
 namespace tau::rtp {
 
-using Frame = std::vector<Buffer>;
+using Frame = etl::vector<Buffer, 32>; //TODO: check capacity
 
 }

@@ -3,9 +3,14 @@
 
 namespace tau::ice {
 
-bool CalcLongTermPassword(const PeerCredentials& credentials, std::string_view realm, uint8_t* output) {
-    const std::string data = credentials.ufrag + ":" + std::string{realm} + ":" + credentials.password;
-    return crypto::Md5(data, output);
+bool CalcLongTermPassword(const PeerCredentials& credentials, etl::string_view realm, uint8_t* output) {
+    crypto::Md5Hasher md5;
+    md5.Update(credentials.ufrag);
+    md5.Update(":");
+    md5.Update(realm);
+    md5.Update(":");
+    md5.Update(credentials.password);
+    return md5.Finalize(output);
 }
 
 }

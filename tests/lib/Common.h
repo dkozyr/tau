@@ -33,6 +33,8 @@ namespace tau {
 using namespace std::chrono_literals;
 
 inline Random g_random;
-inline PoolAllocator g_udp_allocator(kUdpMtuSize);
+inline std::array<uint8_t, 32 * 1024 * 1024> g_allocated_memory;
+inline PoolAllocator g_udp_allocator(g_allocated_memory.data(), g_allocated_memory.size(), kUdpMtuSize);
+// inline PoolAllocator g_udp_allocator(kUdpMtuSize);
 
 }

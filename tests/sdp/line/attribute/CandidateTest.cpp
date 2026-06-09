@@ -19,7 +19,7 @@ TEST(CandidateReaderTest, Validate) {
 }
 
 TEST(CandidateReaderTest, Basic) {
-    std::string_view value = "2896278100 999 udp 2122260223 192.168.0.1 63955 typ host generation 0";
+    etl::string_view value = "2896278100 999 udp 2122260223 192.168.0.1 63955 typ host generation 0";
     ASSERT_EQ("2896278100", CandidateReader::GetFoundation(value));
     ASSERT_EQ(999, CandidateReader::GetComponentId(value));
     ASSERT_EQ("udp", CandidateReader::GetTransport(value));
@@ -31,12 +31,14 @@ TEST(CandidateReaderTest, Basic) {
 }
 
 TEST(CandidateReaderTest, EmptyExtParameters) {
-    std::string_view value = "2896278100 999 udp 2122260223 192.168.0.1 63955 typ host";
+    etl::string_view value = "2896278100 999 udp 2122260223 192.168.0.1 63955 typ host";
     ASSERT_EQ("", CandidateReader::GetExtParameters(value));
 }
 
 TEST(CandidateWriterTest, Basic) {
-    const auto value = CandidateWriter::Write(1234567890, 22, "udp", 1234567890, "ip-port", 12345, "HOST", "extended params:hello-world");
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    CandidateWriter::Write(ss, 1234567890, 22, "udp", 1234567890, "ip-port", 12345, "HOST", "extended params:hello-world");
     TAU_LOG_INFO("a=candidate:" << value);
     ASSERT_TRUE(CandidateReader::Validate(value));
     ASSERT_EQ("1234567890", CandidateReader::GetFoundation(value));

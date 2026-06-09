@@ -4,10 +4,10 @@
 #include "tau/ice/Candidate.h"
 #include "tau/ice/Credentials.h"
 #include "tau/ice/Constants.h"
+#include "tau/crypto/Hmac.h"
 #include "tau/memory/Buffer.h"
-#include "tau/asio/Common.h"
+#include <etl/unordered_map.h>
 #include <functional>
-#include <unordered_map>
 
 namespace tau::ice {
 
@@ -24,7 +24,7 @@ public:
         Endpoint server;
         PeerCredentials credentials;
         Timepoint start_delay = kRtoDefault / 2;
-        std::string log_ctx = {};
+        etl::string_view log_ctx = {};
     };
 
     using CandidateCallback = std::function<void(Endpoint reflexive)>;
@@ -44,7 +44,7 @@ public:
     void Recv(Buffer&& message);
     void Send(Buffer&& message, Endpoint remote);
 
-    void CreatePermission(const std::vector<IpAddress>& remote_ips);
+    void CreatePermission(const etl::ivector<IpAddress>& remote_ips);
     bool HasPermission(IpAddress remote);
     void Stop();
     bool IsActive() const;
@@ -72,20 +72,20 @@ private:
     bool _stopped = false;
     TransactionTracker _transaction_tracker;
     uint32_t _transaction_hash = 0;
-    std::vector<uint8_t> _transaction_id;
+    etl::vector<uint8_t, 16> _transaction_id; //TODO: check capacity
     std::optional<Endpoint> _relayed;
 
     struct Permission {
         bool done;
         Timepoint rto_tp;
     };
-    std::unordered_map<IpAddress, Permission> _permissions;
-    std::unordered_map<Endpoint, std::vector<Buffer>> _queue;
+    etl::unordered_map<IpAddress, Permission, 16> _permissions; //TODO: check capacity
+    etl::unordered_map<Endpoint, etl::vector<Buffer, 16>, 16> _queue; //TODO: check capacity
 
-    std::string _realm;
-    std::string _nonce;
+    etl::string<32> _realm; //TODO: check capacity
+    etl::string<32> _nonce; //TODO: check capacity
     Timepoint _allocation_eol;
-    std::string _message_integrity_password;
+    std::optional<crypto::HmacHasher> _message_integrity_hasher;
 
     CandidateCallback _candidate_callback;
     Callback _send_callback;

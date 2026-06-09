@@ -14,11 +14,17 @@ TEST(UuidTest, Basic) {
 
 TEST(UuidTest, Validate) {
     ASSERT_TRUE(IsUuidTrivialCheck("3e2639ef-3a10-4dbd-8756-dd019f949086"));
-    ASSERT_TRUE(IsUuidTrivialCheck("ANY.DATA-HERE-_IS_-A.L.-L.O.W.E.D!%$"));
+    ASSERT_TRUE(IsUuidTrivialCheck("3E2639EF-3A10-4DBD-8756-DD019F949086"));
 
     ASSERT_FALSE(IsUuidTrivialCheck("3e2639ef 3a10-4dbd-8756-dd019f949086"));
     ASSERT_FALSE(IsUuidTrivialCheck("3e2639ef-3a10-4dbd-8756-dd01-f949086"));
     ASSERT_FALSE(IsUuidTrivialCheck("3e2639ef-3a10-8756-dd019f949086-4dbd"));
+
+    ASSERT_FALSE(IsUuidTrivialCheck("3e2639ef 3a10-4dbd-8756-dd019f949086a"));
+    ASSERT_FALSE(IsUuidTrivialCheck("3e2639ef 3a10-4dbd-8756-dd019f94908"));
+    ASSERT_FALSE(IsUuidTrivialCheck("3e2639ef"));
+
+    ASSERT_FALSE(IsUuidTrivialCheck("3e2639ef-3a10-4dbd-8756-dd019f949086 "));
 }
 
 }

@@ -1,16 +1,17 @@
 #pragma once
 
-#include "tau/memory/Buffer.h"
+#include <tau/memory/Buffer.h>
+#include <etl/vector.h>
+#include <etl/set.h>
 #include <functional>
-#include <vector>
 #include <optional>
-#include <set>
 
 namespace tau::rtp::session {
 
 class RecvBuffer {
 public:
     static constexpr size_t kDefaultSize = 256;
+    static constexpr size_t kBufferCapacity = 256;
 
     struct Stats {
         uint64_t packets = 0;
@@ -25,6 +26,8 @@ public:
         kReset
     };
 
+    using Sns = etl::set<uint16_t, 32>;
+
     using Callback = std::function<void(Buffer&&)>;
 
 public:
@@ -35,7 +38,7 @@ public:
     PacketType Push(Buffer&& packet, uint16_t sn);
     void Flush();
 
-    const std::set<uint16_t>& GetSnsToRecover() const { return _sns_to_recover; }
+    const Sns& GetSnsToRecover() const { return _sns_to_recover; }
     const Stats& GetStats() const { return _stats; }
 
 private:
@@ -56,8 +59,8 @@ private:
     std::optional<uint16_t> _sn_end;
 
     size_t _index = 0;
-    std::vector<std::optional<Buffer>> _packets;
-    std::set<uint16_t> _sns_to_recover;
+    etl::vector<std::optional<Buffer>, kBufferCapacity> _packets;
+    Sns _sns_to_recover;
 
     Callback _callback;
     Stats _stats;

@@ -8,6 +8,10 @@ inline uint16_t Read16(const uint8_t* ptr) {
     return (static_cast<uint16_t>(ptr[0]) << 8) | ptr[1];
 }
 
+inline uint32_t Read24(const uint8_t* ptr) {
+    return (static_cast<uint32_t>(ptr[0]) << 16) | Read16(ptr + sizeof(uint8_t));
+}
+
 inline uint32_t Read32(const uint8_t* ptr) {
     return (static_cast<uint32_t>(Read16(ptr)) << 16) | Read16(ptr + sizeof(uint16_t));
 }

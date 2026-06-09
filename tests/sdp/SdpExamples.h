@@ -1,8 +1,8 @@
-#include <string_view>
+#include <etl/string_view.h>
 
 namespace tau::sdp {
 
-inline constexpr std::string_view kRtspSdpExample = R"(v=0
+inline constexpr etl::string_view kRtspSdpExample = R"(v=0
 o=- 1742222222222222 1 IN IP4 192.168.0.1
 s=Session streamed by "rRTSPServer"
 i=ch0_0.h264
@@ -21,7 +21,7 @@ a=fmtp:96 packetization-mode=1;profile-level-id=640020;sprop-parameter-sets=Z2QA
 a=control:track1
 )";
 
-inline constexpr std::string_view kWebrtcAudioOnlySdpExample = R"(v=0
+inline constexpr etl::string_view kWebrtcAudioOnlySdpExample = R"(v=0
 o=- 267107056528738969 2 IN IP4 127.0.0.1
 s=-
 t=0 0
@@ -63,7 +63,7 @@ a=candidate:1521601408 1 udp 1686052607 83.49.46.37 63955 typ srflx raddr 192.16
 a=candidate:1521601408 2 udp 1686052606 83.49.46.37 59844 typ srflx raddr 192.168.1.36 rport 59844 generation 0
 )";
 
-inline constexpr std::string_view kWebrtcChromeSdpExample = R"(v=0
+inline constexpr etl::string_view kWebrtcChromeSdpExample = R"(v=0
 o=- 2153471861227177332 2 IN IP4 127.0.0.1
 s=-
 t=0 0
@@ -228,7 +228,7 @@ a=ssrc:2426449402 cname:YOXhcNpX+Cu3pUyF
 a=ssrc:2426449402 msid:033724c4-683e-4dae-a444-dea47e2e3170 8c364e0c-7748-461f-9364-e4ed0bec51f4
 )";
 
-inline constexpr std::string_view kWebrtcChromeSdpExampleWithDataChannel = R"(v=0
+inline constexpr etl::string_view kWebrtcChromeSdpExampleWithDataChannel = R"(v=0
 o=- 5192044719864126464 2 IN IP4 127.0.0.1
 s=-
 t=0 0
@@ -399,7 +399,7 @@ a=sctp-port:5000
 a=max-message-size:262144
 )";
 
-inline constexpr std::string_view kWebrtcSafariSdpExample = R"(v=0
+inline constexpr etl::string_view kWebrtcSafariSdpExample = R"(v=0
 o=- 4417393722931175454 2 IN IP4 127.0.0.1
 s=-
 t=0 0

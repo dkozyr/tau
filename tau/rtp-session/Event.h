@@ -1,7 +1,7 @@
 #pragma once
 
+#include <etl/string_stream.h>
 #include <cstdint>
-#include <ostream>
 
 namespace tau::rtp::session {
 
@@ -10,12 +10,12 @@ enum Event {
     kPli
 };
 
-inline std::ostream& operator<<(std::ostream& s, const Event& x) {
+inline etl::string_stream& ToString(etl::string_stream& ss, const Event& x) {
     switch(x) {
-        case Event::kFir: return s << "fir";
-        case Event::kPli: return s << "pli";
+        case Event::kFir: return ss << "fir";
+        case Event::kPli: return ss << "pli";
     }
-    return s << "unknown";
+    return ss << "unknown";
 }
 
 }

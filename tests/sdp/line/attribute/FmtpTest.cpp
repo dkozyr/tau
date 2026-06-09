@@ -14,14 +14,16 @@ TEST(FmtpReaderTest, Validate) {
 }
 
 TEST(FmtpReaderTest, Basic) {
-    std::string_view value = "96 packetization-mode=1;profile-level-id=42001f";
+    etl::string_view value = "96 packetization-mode=1;profile-level-id=42001f";
     ASSERT_EQ(96, FmtpReader::GetPt(value));
     ASSERT_EQ("packetization-mode=1;profile-level-id=42001f", FmtpReader::GetParameters(value));
 }
 
 TEST(FmtpWriterTest, Basic) {
-    const auto value = FmtpWriter::Write(100, "hello=world");
-    TAU_LOG_INFO("a=extmap:" << value);
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    FmtpWriter::Write(ss, 100, "hello=world");
+    TAU_LOG_INFO("a=fmtp:" << value);
     ASSERT_TRUE(FmtpReader::Validate(value));
     ASSERT_EQ(100, FmtpReader::GetPt(value));
     ASSERT_EQ("hello=world", FmtpReader::GetParameters(value));

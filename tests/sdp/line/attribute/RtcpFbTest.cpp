@@ -15,13 +15,15 @@ TEST(RtcpFbReaderTest, Validate) {
 }
 
 TEST(RtcpFbReaderTest, Basic) {
-    std::string_view value = "96 nack pli";
+    etl::string_view value = "96 nack pli";
     ASSERT_EQ(96, RtcpFbReader::GetPt(value));
     ASSERT_EQ("nack pli", RtcpFbReader::GetValue(value));
 }
 
 TEST(RtcpFbWriterTest, Basic) {
-    const auto value = RtcpFbWriter::Write(100, "nack pli");
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    RtcpFbWriter::Write(ss, 100, "nack pli");
     TAU_LOG_INFO("a=rtcp-fb:" << value);
     ASSERT_TRUE(RtcpFbReader::Validate(value));
     ASSERT_EQ(100, RtcpFbReader::GetPt(value));

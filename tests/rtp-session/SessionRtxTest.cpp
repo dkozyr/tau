@@ -1,4 +1,4 @@
-#include "tests/rtp-session/SessionBaseTest.h"
+#include "SessionBaseTest.h"
 #include "tau/rtcp/NackReader.h"
 #include "tau/rtcp/NackWriter.h"
 
@@ -65,7 +65,9 @@ TEST_F(SessionRtxTest, Send_SendRtxOnNackRequest) {
     ASSERT_EQ(rtp_packets_count, _output_rtp.size());
 
     auto wrong_sn = static_cast<uint16_t>(_source_options.sn + rtp_packets_count);
-    _session->RecvRtcp(CreateNackRequest({wrong_sn}));
+    rtcp::NackSns sns;
+    sns.insert(wrong_sn);
+    _session->RecvRtcp(CreateNackRequest(sns));
     ASSERT_EQ(rtp_packets_count, _output_rtp.size());
 }
 
@@ -95,7 +97,7 @@ TEST_F(SessionRtxTest, Recv_SendNackOnLosses) {
     for(size_t i = 0; i < kTestFrames - 1; ++i) {
         const auto view = _output_rtcp[i].GetView();
         const auto send_packets = (i + 1) * kPacketPerFrame;
-        const auto sns_count = (send_packets + 1) / kPacketLostPeriod;
+        const auto sns_count = std::min<size_t>(32, (send_packets + 1) / kPacketLostPeriod);
         ASSERT_NO_FATAL_FAILURE(AssertRtcpNack(ToConst(view), CreateNackSns(sns_count, kPacketLostPeriod)));
     }
 }

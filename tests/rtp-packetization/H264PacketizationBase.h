@@ -14,9 +14,11 @@ using namespace h264;
 class H264PacketizationBase {
 protected:
     static constexpr uint32_t kDefaultClockRate = 90'000;
+    static constexpr size_t kAllocatedMemorySize = 1'024 * kUdpMtuSize;
 
 public:
-    H264PacketizationBase() {
+    H264PacketizationBase()
+        : _allocated_memory(kAllocatedMemorySize) {
         static_assert(sizeof(FuAIndicator) == 1);
         static_assert(sizeof(FuHeader) == 1);
 
@@ -28,7 +30,7 @@ protected:
         _rtp_packets.clear();
         _nal_units.clear();
 
-        _ctx.emplace(_header_options, _clock.Now(), allocator_chunk_size);
+        _ctx.emplace(_header_options, _clock.Now(), _allocated_memory.data(), allocator_chunk_size);
         _ctx->packetizer.SetCallback([this](Buffer&& rtp_packet) {
             _rtp_packets.push_back(std::move(rtp_packet));
         });
@@ -43,6 +45,8 @@ protected:
     }
 
 protected:
+    std::vector<uint8_t> _allocated_memory;
+
     Writer::Options _header_options = {
         .pt = 96,
         .ssrc = 0x11223344,
@@ -54,8 +58,8 @@ protected:
     SteadyClock _clock;
 
     struct Context {
-        Context(const Writer::Options& options, Timepoint tp, size_t allocator_chunk_size)
-            : udp_allocator(allocator_chunk_size)
+        Context(const Writer::Options& options, Timepoint tp, void* allocated_memory, size_t allocator_chunk_size)
+            : udp_allocator(allocated_memory, kAllocatedMemorySize, kUdpMtuSize)
             , allocator(udp_allocator,
                     RtpAllocator::Options{
                     .header = options,
@@ -66,7 +70,7 @@ protected:
             , depacketizer(g_system_allocator)
         {}
 
-        PoolAllocator udp_allocator;
+        PoolAllocator<> udp_allocator;
         RtpAllocator allocator;
         H264Packetizer packetizer;
         H264Depacketizer depacketizer;

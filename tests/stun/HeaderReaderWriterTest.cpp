@@ -4,9 +4,9 @@
 
 namespace tau::stun {
 
-class HeaderReaderWriterTest : public ::testing::Test {
+class StunHeaderReaderWriterTest : public ::testing::Test {
 public:
-    HeaderReaderWriterTest()
+    StunHeaderReaderWriterTest()
         : _transaction_id_hash(GenerateTransactionId(_transaction_id.data()))
     {}
 
@@ -15,7 +15,7 @@ protected:
     uint32_t _transaction_id_hash;
 };
 
-TEST_F(HeaderReaderWriterTest, Basic) {
+TEST_F(StunHeaderReaderWriterTest, Basic) {
     auto packet = Buffer::Create(g_system_allocator, kUdpMtuSize);
 
     Writer writer(packet.GetViewWithCapacity(), kBindingRequest);

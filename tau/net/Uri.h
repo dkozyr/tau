@@ -1,8 +1,8 @@
 #pragma once
 
-#include <string>
-#include <string_view>
-#include <optional>
+#include <etl/string.h>
+#include <etl/string_view.h>
+#include <optional> //TODO: <etl/optional.h>?
 #include <cstdint>
 
 namespace tau::net {
@@ -23,12 +23,12 @@ enum Transport {
 
 struct Uri {
     Protocol protocol;
-    std::string host;
+    etl::string<32> host;
     uint16_t port;
-    std::string path;
+    etl::string<256> path;
     std::optional<Transport> transport = std::nullopt;
 };
 
-std::optional<Uri> GetUriFromString(std::string_view str);
+std::optional<Uri> GetUriFromString(etl::string_view str);
 
 }

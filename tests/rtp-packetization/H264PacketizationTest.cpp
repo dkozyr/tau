@@ -1,4 +1,4 @@
-#include "tests/rtp-packetization/H264PacketizationBase.h"
+#include "H264PacketizationBase.h"
 
 namespace tau::rtp {
 
@@ -13,7 +13,8 @@ TEST_F(H264PacketizationTest, Randomized) {
         const auto allocator_chunk_size = g_random.Int(128, 1500);
         Init(allocator_chunk_size);
         for(size_t i = 0; i < 10; ++i) {
-            auto nalu = CreateH264Nalu(NaluType::kNonIdr, g_random.Int(2, 200'000));
+            const auto nalu_size = allocator_chunk_size * g_random.Int(2, 30);
+            auto nalu = CreateH264Nalu(NaluType::kNonIdr, nalu_size);
             const auto last = g_random.Int(0, 1);
             ASSERT_TRUE(_ctx->packetizer.Process(nalu, last));
             ASSERT_FALSE(_rtp_packets.empty());

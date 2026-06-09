@@ -3,19 +3,17 @@
 
 namespace tau::sdp {
 
-std::vector<uint8_t> GetPtOrdered(const CodecsMap& codecs) {
+etl::vector<uint8_t, kMaxCodecs> GetPtOrdered(const CodecsMap& codecs) {
     auto pt_with_priority = GetPtWithPriority(codecs);
-    std::vector<uint8_t> pts;
-    pts.reserve(pt_with_priority.size());
+    etl::vector<uint8_t, kMaxCodecs> pts;
     for(auto& pt : pt_with_priority) {
         pts.push_back(pt.pt);
     }
     return pts;
 }
 
-std::vector<PtWithPriority> GetPtWithPriority(const CodecsMap& codecs) {
-    std::vector<PtWithPriority> pts;
-    pts.reserve(codecs.size());
+etl::vector<PtWithPriority, kMaxCodecs> GetPtWithPriority(const CodecsMap& codecs) {
+    etl::vector<PtWithPriority, kMaxCodecs> pts;
     for(auto& [pt, codec] : codecs) {
         pts.push_back(PtWithPriority{.pt = pt, .index = codec.index});
     }
@@ -23,6 +21,14 @@ std::vector<PtWithPriority> GetPtWithPriority(const CodecsMap& codecs) {
         return a.index < b.index;
     });
     return pts;
+}
+
+CodecsMap MakeCodecsMap(std::initializer_list<std::pair<const uint8_t, Codec>> list) {
+    CodecsMap result;
+    for(auto&& p : list) {
+        result[p.first] = std::move(p.second);
+    }
+    return result;
 }
 
 }

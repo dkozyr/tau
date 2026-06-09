@@ -1,35 +1,34 @@
 #include "tau/sdp/line/Media.h"
 #include "tau/common/String.h"
-
-#include "tau/common/Log.h"
+#include <etl/string_stream.h>
 
 namespace tau::sdp {
 
-MediaType MediaReader::GetType(const std::string_view& value) {
+MediaType MediaReader::GetType(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return GetMediaTypeByName(tokens[0]);
 }
 
-uint16_t MediaReader::GetPort(const std::string_view& value) {
+uint16_t MediaReader::GetPort(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return StringToUnsigned<uint16_t>(tokens[1]).value();
 }
 
-std::string_view MediaReader::GetProtocol(const std::string_view& value) {
+etl::string_view MediaReader::GetProtocol(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     return tokens[2];
 }
 
-std::vector<uint8_t> MediaReader::GetFmts(const std::string_view& value) {
+etl::vector<uint8_t, 32> MediaReader::GetFmts(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
-    std::vector<uint8_t> fmts(tokens.size() - 3);
+    etl::vector<uint8_t, 32> fmts(tokens.size() - 3);
     for(size_t i = 3; i < tokens.size(); ++i) {
         fmts[i - 3] = StringToUnsigned<uint8_t>(tokens[i]).value();
     }
     return fmts;
 }
 
-bool MediaReader::Validate(const std::string_view& value) {
+bool MediaReader::Validate(const etl::string_view& value) {
     const auto tokens = Split(value, " ");
     if(tokens.size() < 4) {
         return false;
@@ -54,8 +53,7 @@ bool MediaReader::Validate(const std::string_view& value) {
     return true;
 }
 
-std::string MediaWriter::Write(MediaType type, uint16_t port, std::string_view protocol, const std::vector<uint8_t>& fmts) {
-    std::stringstream ss;
+etl::string_stream& MediaWriter::Write(etl::string_stream& ss, MediaType type, uint16_t port, etl::string_view protocol, const etl::vector<uint8_t, 32>& fmts) {
     switch(type) {
         case MediaType::kAudio:       ss << "audio"; break;
         case MediaType::kVideo:       ss << "video"; break;
@@ -64,13 +62,13 @@ std::string MediaWriter::Write(MediaType type, uint16_t port, std::string_view p
         case MediaType::kUnknown:     ss << "-"; break;
         case MediaType::kApplication:
             ss << "application 9 UDP/DTLS/SCTP webrtc-datachannel";
-            return ss.str();
+            return ss;
     }
     ss << " " << port << " " << protocol;
     for(auto pt : fmts) {
         ss << " " << (size_t)pt;
     }
-    return ss.str();
+    return ss;
 }
 
 }

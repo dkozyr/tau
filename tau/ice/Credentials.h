@@ -1,16 +1,16 @@
 #pragma once
 
-#include <string>
-#include <string_view>
+#include "tau/crypto/Md5.h"
+#include <etl/string_view.h>
 #include <cstdint>
 
 namespace tau::ice {
 
-inline constexpr size_t kLongTermPassword = 16; // MD5 size
+inline constexpr size_t kLongTermPassword = crypto::kMd5DigestLength;
 
 struct PeerCredentials {
-    std::string ufrag;
-    std::string password;
+    etl::string_view ufrag;
+    etl::string_view password;
 };
 
 struct Credentials {
@@ -18,6 +18,6 @@ struct Credentials {
     PeerCredentials remote;
 };
 
-bool CalcLongTermPassword(const PeerCredentials& credentials, std::string_view realm, uint8_t* output);
+bool CalcLongTermPassword(const PeerCredentials& credentials, etl::string_view realm, uint8_t* output);
 
 }

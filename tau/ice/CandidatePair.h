@@ -25,7 +25,7 @@ struct CandidatePair {
 
     bool operator<(const CandidatePair& other) const;
 };
-using CandidatePairs = std::vector<CandidatePair>;
+using CandidatePairs = etl::vector<CandidatePair, 32>;
 
 uint64_t PairPriority(Role role, uint32_t local_priority, uint32_t remote_priority);
 

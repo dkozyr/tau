@@ -1,5 +1,5 @@
 #include "tau/rtp-session/Session.h"
-#include "tests/rtp-session/Source.h"
+#include "Source.h"
 #include "tau/rtcp/Reader.h"
 #include "tau/rtcp/SrReader.h"
 #include "tau/rtcp/RrReader.h"
@@ -22,7 +22,7 @@ public:
 
 public:
     SessionBaseTest()
-        : _rtcp_allocator(512) {
+        : _rtcp_allocator(_allocated_memory.data(), _allocated_memory.size(), 512) {
     }
 
     void Init(uint32_t session_ssrc, bool rtx = false) {
@@ -31,7 +31,7 @@ public:
             Session::Dependencies{
                 .allocator = _rtcp_allocator,
                 .media_clock = _media_clock,
-                .system_clock = _system_clock
+                .system_clock = _media_clock
             }, 
             Session::Options{
                 .rate = _source_options.clock_rate,
@@ -96,7 +96,7 @@ public:
 
 protected:
     TestClock _media_clock;
-    SystemClock _system_clock;
+    Clock& _system_clock = _media_clock;
 
     const uint32_t _sender_ssrc   = g_random.Int<uint32_t>();
     const uint32_t _receiver_ssrc = g_random.Int<uint32_t>();
@@ -111,7 +111,8 @@ protected:
         .extension_length_in_words = g_random.Int<uint16_t>(0, 16),
         .max_packet_size = 1200
     };
-    PoolAllocator _rtcp_allocator;
+    std::array<uint8_t, 100'000> _allocated_memory;
+    PoolAllocator<> _rtcp_allocator;
 
     std::optional<Source> _source;
     std::optional<Session> _session;

@@ -13,7 +13,7 @@
 #include "tau/common/Container.h"
 #include "tau/common/String.h"
 #include "tau/common/Log.h"
-#include <sstream>
+#include <etl/algorithm.h>
 #include <cctype>
 
 namespace tau::ice {
@@ -28,6 +28,8 @@ CheckList::CheckList(Dependencies&& deps, Options&& options)
     , _nominating_strategy(options.nominating_strategy)
     , _log_ctx(std::move(options.log_ctx))
     , _sockets(std::move(options.sockets))
+    , _hmac_hasher_local(crypto::HmacHasher::Type::Sha1, _credentials.local.password)
+    , _hmac_hasher_remote(crypto::HmacHasher::Type::Sha1, _credentials.remote.password)
     , _last_ta_tp(_deps.clock.Now() - kTaDefault) {
     for(size_t i = 0; i < _sockets.size(); ++i) {
         _transcation_trackers.insert({i, TransactionTracker(_deps.clock)});
@@ -70,6 +72,10 @@ void CheckList::Process() {
 }
 
 void CheckList::AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoint endpoint) {
+    if(_local_candidates.full()) {
+        TAU_LOG_WARNING("Full container, skip candidate");
+        return;
+    }
     _local_candidates.push_back(Candidate{
         .type = type,
         .priority = Priority(type, socket_idx),
@@ -77,6 +83,10 @@ void CheckList::AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoin
         .socket_idx = socket_idx
     });
     if(type == CandidateType::kRelayed) {
+        if(_transcation_trackers.full()) {
+            TAU_LOG_WARNING("Full container, skip candidate");
+            return;
+        }
         _transcation_trackers.insert({socket_idx, TransactionTracker(_deps.clock)});
         for(auto& remote : _remote_candidates) {
             if(remote.type != CandidateType::kPeerRefl) {
@@ -92,7 +102,7 @@ void CheckList::AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoin
     }
 }
 
-void CheckList::RecvRemoteCandidate(std::string candidate) {
+void CheckList::RecvRemoteCandidate(CandidateStr candidate) {
     ToLowerCase(candidate);
     TAU_LOG_INFO(_log_ctx << "Candidate: " << candidate);
     if(!sdp::attribute::CandidateReader::Validate(candidate)) {
@@ -109,8 +119,13 @@ void CheckList::RecvRemoteCandidate(std::string candidate) {
     }
     auto address = sdp::attribute::CandidateReader::GetAddress(candidate);
     auto port = sdp::attribute::CandidateReader::GetPort(candidate);
-    Endpoint endpoint{asio_ip::make_address(address), port};
-    if(!endpoint.address().is_v4()) {
+    Endpoint endpoint{net::MakeIpAddressV4(address), port};
+    if(endpoint.address.GetUint32() == 0) {
+        return;
+    }
+
+    if(_remote_candidates.full()) {
+        TAU_LOG_WARNING("Full container, skip candidate");
         return;
     }
     _remote_candidates.emplace_back(Candidate{
@@ -225,9 +240,12 @@ void CheckList::SendStunRequest(size_t socket_idx, size_t pair_id, Endpoint remo
     uint64_t tiebreaker = _deps.clock.Now(); //TODO: fix tiebreaker
     IceRoleWriter::Write(writer, (_role == Role::kControlling), tiebreaker);
     DataUint32Writer::Write(writer, AttributeType::kPriority, Priority(CandidateType::kPeerRefl, socket_idx));
-    const std::string user_name = _credentials.remote.ufrag + ":" + _credentials.local.ufrag;
+    //TODO: check capacity
+    etl::string<64> user_name{_credentials.remote.ufrag};
+    user_name += ":";
+    user_name += _credentials.local.ufrag;
     ByteStringWriter::Write(writer, AttributeType::kUserName, user_name);
-    MessageIntegrityWriter::Write(writer, _credentials.remote.password);
+    MessageIntegrityWriter::Write(writer, _hmac_hasher_remote);
     FingerprintWriter::Write(writer);
     stun_request.SetSize(writer.GetSize());
 
@@ -245,7 +263,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
     transaction_tracker.RemoveTransaction(hash);
     auto& pair = GetPairById(transaction->tag);
     if(pair.remote.endpoint != remote) {
-        TAU_LOG_WARNING(_log_ctx << "Transaction expected remote: " << pair.remote.endpoint << ", actual remote: " << remote);
+        TAU_LOG_WARNING(_log_ctx << "Transaction expected remote: " << net::ToString(pair.remote.endpoint) << ", actual remote: " << net::ToString(remote));
         SetPairState(pair.id, CandidatePair::State::kFailed);
         return;
     }
@@ -257,7 +275,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
             case AttributeType::kIceControlled:  return (_role == Role::kControlling);
             case AttributeType::kIceControlling: return (_role == Role::kControlled);
             case AttributeType::kMessageIntegrity:
-                return MessageIntegrityReader::Validate(attr, view, _credentials.remote.password);
+                return MessageIntegrityReader::Validate(attr, view, _hmac_hasher_remote);
             case AttributeType::kUseCandidate:
                 nominating = true;
                 break;
@@ -265,7 +283,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    reflexive.emplace(Endpoint{IpAddressV4(address), port});
+                    reflexive.emplace(Endpoint{net::MakeIpAddressV4(address), port});
                 }
                 break;
             default:
@@ -277,7 +295,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
         if(FindCandidateByEndpoint(_local_candidates, *reflexive)) {
             SetPairState(transaction->tag, CandidatePair::State::kSucceeded);
         } else {
-            TAU_LOG_INFO(_log_ctx << "Add local peer-reflexive: " << *reflexive << ", socket: " << socket_idx << ", remote: " << remote << ", pair_id: " << transaction->tag);
+            TAU_LOG_INFO(_log_ctx << "Add local peer-reflexive: " << net::ToString(*reflexive) << ", socket: " << socket_idx << ", remote: " << net::ToString(remote) << ", pair_id: " << transaction->tag);
             AddLocalCandidate(CandidateType::kPeerRefl, socket_idx, *reflexive);
         }
         if(nominating) {
@@ -305,7 +323,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
                 break;
             // case AttributeType::kUserName: // ignore, message-integrity is used for validation
             case AttributeType::kMessageIntegrity:
-                message_integrity = MessageIntegrityReader::Validate(attr, view, _credentials.local.password);
+                message_integrity = MessageIntegrityReader::Validate(attr, view, _hmac_hasher_local);
                 return message_integrity;
             case AttributeType::kUseCandidate:
                 if(_role == Role::kControlled) {
@@ -334,7 +352,11 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
                 }
             }
         } else {
-            TAU_LOG_INFO(_log_ctx << "Add peer-reflexive remote candidate: " << remote << ", priority: " << priority << ", socket_idx: " << socket_idx);
+            if(_remote_candidates.full()) {
+                TAU_LOG_WARNING("Full container, skip peer-reflexive candidate");
+                return;
+            }
+            TAU_LOG_INFO(_log_ctx << "Add peer-reflexive remote candidate: " << net::ToString(remote) << ", priority: " << priority << ", socket_idx: " << socket_idx);
             _remote_candidates.push_back(Candidate{
                 .type = CandidateType::kPeerRefl,
                 .priority = priority,
@@ -353,9 +375,8 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
         if(nominating) {
             UseCandidateWriter::Write(writer);
         }
-        XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress,
-            remote.address().to_v4().to_uint(), remote.port());
-        MessageIntegrityWriter::Write(writer, _credentials.local.password);
+        XorMappedAddressWriter::Write(writer, AttributeType::kXorMappedAddress, remote.address.GetUint32(), remote.port);
+        MessageIntegrityWriter::Write(writer, _hmac_hasher_local);
         FingerprintWriter::Write(writer);
         message.SetSize(writer.GetSize());
 
@@ -368,7 +389,7 @@ void CheckList::OnStunRequest(Buffer&& message, const BufferViewConst& view, siz
 // https://www.rfc-editor.org/rfc/rfc8445.html#section-6.1.2.4
 void CheckList::PrunePairs() {
     for(auto it = _pairs.begin(); it != _pairs.end(); ++it) {
-        for(auto it2 = std::next(it); it2 != _pairs.end(); ) {
+        for(auto it2 = etl::next(it); it2 != _pairs.end(); ) {
             const auto same_socket = (*it->local.socket_idx == *it2->local.socket_idx);
             const auto same_remote = (it->remote.endpoint == it2->remote.endpoint);
             if(same_socket && same_remote) {
@@ -381,6 +402,10 @@ void CheckList::PrunePairs() {
 }
 
 void CheckList::AddPair(const Candidate& local, const Candidate& remote) {
+    if(_pairs.full()) {
+        TAU_LOG_WARNING("Full container, skip pair");
+        return;
+    }
     _pairs.emplace_back(CandidatePair{
         .id = _next_pair_id++,
         .local = local,
@@ -388,14 +413,14 @@ void CheckList::AddPair(const Candidate& local, const Candidate& remote) {
         .priority = PairPriority(_role, local.priority, remote.priority),
         .state = CandidatePair::State::kWaiting
     });
-    std::sort(_pairs.begin(), _pairs.end());
+    etl::sort(_pairs.begin(), _pairs.end());
 }
 
 bool CheckList::SetPairState(size_t id, CandidatePair::State state) {
     auto& pair = GetPairById(id);
     if(pair.state < state) {
         pair.state = state;
-        std::sort(_pairs.begin(), _pairs.end());
+        etl::sort(_pairs.begin(), _pairs.end());
         return true;
     }
     return false;

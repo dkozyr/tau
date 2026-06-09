@@ -1,6 +1,6 @@
 #pragma once
 
-#include <string_view>
+#include <etl/string_view.h>
 
 namespace tau::sdp {
 
@@ -13,7 +13,7 @@ enum MediaType {
     kMessage     = 5,
 };
 
-inline MediaType GetMediaTypeByName(std::string_view name) {
+inline MediaType GetMediaTypeByName(etl::string_view name) {
     if(name == "audio")       { return MediaType::kAudio; }
     if(name == "video")       { return MediaType::kVideo; }
     if(name == "text")        { return MediaType::kText; }

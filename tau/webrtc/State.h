@@ -1,7 +1,7 @@
 #pragma once
 
+#include <etl/string_stream.h>
 #include <cstdint>
-#include <ostream>
 
 namespace tau::webrtc {
 
@@ -13,15 +13,15 @@ enum State : uint8_t {
     kFailed     = 4,
 };
 
-inline std::ostream& operator<<(std::ostream& s, const State& x) {
+inline etl::string_stream& operator<<(etl::string_stream& ss, const State& x) {
     switch(x) {
-        case State::kInitial:    return s << "initial";
-        case State::kConnecting: return s << "connecting";
-        // case State::kReady:      return s << "ready";
-        case State::kConnected:  return s << "connected";
-        case State::kFailed:     return s << "failed";
+        case State::kInitial:    return ss << "initial";
+        case State::kConnecting: return ss << "connecting";
+        // case State::kReady:      return ss << "ready";
+        case State::kConnected:  return ss << "connected";
+        case State::kFailed:     return ss << "failed";
     }
-    return s << "unknown";
+    return ss << "unknown";
 }
 
 }

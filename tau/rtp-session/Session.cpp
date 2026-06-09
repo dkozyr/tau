@@ -171,14 +171,15 @@ void Session::ProcessRtcp() {
             return;
         }
         if(!_options.cname.empty()) {
-            if(!rtcp::SdesWriter::Write(writer, {
-                    rtcp::SdesChunk{
-                        .ssrc = _options.sender_ssrc,
-                        .items = {
-                            rtcp::SdesItem{.type = rtcp::SdesType::kCname, .data = _options.cname},
-                        }
-                    }
-                })) {
+            rtcp::SdesChunks chunks;
+            chunks.push_back(rtcp::SdesChunk{
+                .ssrc = _options.sender_ssrc,
+                .items = {}
+            });
+            chunks.back().items.push_back(rtcp::SdesItem{
+                .type = rtcp::SdesType::kCname, .data = _options.cname
+            });
+            if(!rtcp::SdesWriter::Write(writer, chunks)) {
                 return;
             }
         }

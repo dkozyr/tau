@@ -1,8 +1,8 @@
 #include "tau/stun/attribute/MessageIntegrity.h"
 #include "tau/stun/AttributeType.h"
-#include "tau/crypto/Hmac.h"
 #include "tau/common/NetToHost.h"
-#include <vector>
+#include <etl/array.h>
+#include <etl/vector.h>
 #include <cstring>
 
 namespace tau::stun::attribute {
@@ -13,33 +13,52 @@ bool MessageIntegrityReader::Validate(const BufferViewConst& attr) {
     return (attr.size == (kAttributeHeaderSize + MessageIntegrityPayloadSize));
 }
 
-bool MessageIntegrityReader::Validate(const BufferViewConst& attr, const BufferViewConst& message, std::string_view password) {
+bool MessageIntegrityReader::Validate(const BufferViewConst& attr, const BufferViewConst& message, crypto::HmacHasher& hmac_hasher) {
     if(!Validate(attr)) {
         return false;
     }
 
-    std::vector<uint8_t> hash(MessageIntegrityPayloadSize);
-    std::vector<uint8_t> message_copy(static_cast<size_t>(attr.ptr - message.ptr));
-    std::memcpy(message_copy.data(), message.ptr, message_copy.size());
-    Write16(message_copy.data() + 2, message_copy.size() + kSizeAdjustment);
-    BufferViewConst message_view{.ptr = message_copy.data(), .size = message_copy.size()};
-    if(!crypto::HmacSha1(message_view, password, hash.data())) {
+    auto message_copy = message;
+    message_copy.size = static_cast<size_t>(attr.ptr - message.ptr);
+
+    hmac_hasher.Reset();
+    if(!hmac_hasher.Update(BufferViewConst{.ptr = message_copy.ptr, .size = sizeof(uint16_t)})) {
+        return false;
+    }
+
+    etl::array<uint8_t, 2> adjusted_size;
+    Write16(adjusted_size.data(), message_copy.size + kSizeAdjustment);
+    if(!hmac_hasher.Update(ToViewConst(adjusted_size))) {
+        return false;
+    }
+
+    constexpr size_t offset = 2 * sizeof(uint16_t);
+    if(!hmac_hasher.Update(BufferViewConst{.ptr = message_copy.ptr + offset, .size = message_copy.size - offset})) {
+        return false;
+    }
+
+    etl::array<uint8_t, MessageIntegrityPayloadSize> hash;
+    if(!hmac_hasher.Finalize(hash.data())) {
         return false;
     }
     return (0 == std::memcmp(attr.ptr + kAttributeHeaderSize, hash.data(), hash.size()));
 }
 
-bool MessageIntegrityWriter::Write(Writer& writer, std::string_view password) {
+bool MessageIntegrityWriter::Write(Writer& writer, crypto::HmacHasher& hmac_hasher) {
     if(writer.GetAvailableSize() < kAttributeHeaderSize + MessageIntegrityPayloadSize) {
         return false;
     }
     writer.SetHeaderLength(writer.GetSize() + kSizeAdjustment);
-    std::vector<uint8_t> hash(MessageIntegrityPayloadSize);
-    if(!crypto::HmacSha1(writer.GetView(), password, hash.data())) {
+    hmac_hasher.Reset();
+    if(!hmac_hasher.Update(writer.GetView())) {
+        return false;
+    }
+    etl::array<uint8_t, MessageIntegrityPayloadSize> hash;
+    if(!hmac_hasher.Finalize(hash.data())) {
         return false;
     }
     writer.WriteAttributeHeader(AttributeType::kMessageIntegrity, MessageIntegrityPayloadSize);
-    writer.Write(std::string_view{reinterpret_cast<const char*>(hash.data()), hash.size()}); //TODO: ToStringView
+    writer.Write(etl::string_view{reinterpret_cast<const char*>(hash.data()), hash.size()}); //TODO: ToStringView
     writer.UpdateHeaderLength();
     return true;
 }

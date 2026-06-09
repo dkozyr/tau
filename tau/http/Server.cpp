@@ -1,4 +1,5 @@
 #include "tau/http/Server.h"
+// #include "tau/net/Endpoint.h"
 #include "tau/common/Log.h"
 
 namespace tau::http {
@@ -20,7 +21,7 @@ void Server::SetRequestCallback(RequestCallback callback) {
 }
 
 void Server::Start() {
-    TAU_LOG_INFO("Listening: " << _acceptor.local_endpoint() << (_ssl_ctx ? " (TLS)" : ""));
+    TAU_LOG_INFO("Listening: " << net::ToString(_acceptor.local_endpoint().) << (_ssl_ctx ? " (TLS)" : ""));
     Accept();
 }
 

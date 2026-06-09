@@ -42,7 +42,7 @@ void Writer::Write(uint64_t value) {
     _writer.Write(value);
 }
 
-void Writer::Write(std::string_view value) {
+void Writer::Write(etl::string_view value) {
     _writer.Write(value);
 }
 

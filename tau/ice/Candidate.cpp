@@ -8,21 +8,24 @@ bool Candidate::operator<(const Candidate& other) const {
     return priority > other.priority;
 }
 
-std::string ToCandidateAttributeString(CandidateType type, size_t socket_idx, Endpoint endpoint, std::string_view mdns_name) {
-    return sdp::attribute::CandidateWriter::Write(
+CandidateStr ToCandidateAttributeString(CandidateType type, size_t socket_idx, Endpoint endpoint, etl::string_view mdns_name) {
+    CandidateStr candidate;
+    etl::string_stream ss(candidate);
+    sdp::attribute::CandidateWriter::Write(ss,
         Foundation(type, socket_idx), 1, "udp", Priority(type, socket_idx),
-        mdns_name.empty() ? endpoint.address().to_string() : mdns_name,
-        endpoint.port(), CandidateTypeToString(type), {});
+        mdns_name.empty() ? net::ToString(endpoint.address) : mdns_name,
+        endpoint.port, CandidateTypeToString(type), {});
+    return candidate;
 }
 
-CandidateType CandidateTypeFromString(const std::string_view& type) {
+CandidateType CandidateTypeFromString(const etl::string_view& type) {
     if(type == "host")  { return CandidateType::kHost; }
     if(type == "prflx") { return CandidateType::kPeerRefl; }
     if(type == "srflx") { return CandidateType::kServRefl; }
     return CandidateType::kRelayed;
 }
 
-std::string CandidateTypeToString(CandidateType type) {
+etl::string_view CandidateTypeToString(CandidateType type) {
     switch(type) {
         case CandidateType::kHost:     return "host";
         case CandidateType::kPeerRefl: return "prflx";

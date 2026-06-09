@@ -1,11 +1,13 @@
 #pragma once
 
-#include <string>
-#include <string_view>
+#include <etl/string.h>
+#include <etl/string_view.h>
 
 namespace tau {
 
-std::string GenerateUuid();
-bool IsUuidTrivialCheck(std::string_view uuid);
+using Uuid = etl::string<36>;
+
+Uuid GenerateUuid();
+bool IsUuidTrivialCheck(etl::string_view uuid);
 
 }
