@@ -30,7 +30,7 @@ TEST_F(H264PacketizerTest, FuA) {
     auto nalu = CreateH264Nalu(NaluType::kNonIdr, 23456);
     ASSERT_TRUE(_ctx->packetizer.Process(nalu, true));
 
-    ASSERT_EQ(17, _rtp_packets.size());
+    ASSERT_EQ(21, _rtp_packets.size());
     for(size_t i = 0; i < _rtp_packets.size(); ++i) {
         const auto is_last_packet = (i + 1 == _rtp_packets.size());
         ASSERT_NO_FATAL_FAILURE(ValidateRtpAndAssertMarker(_rtp_packets[i], is_last_packet));

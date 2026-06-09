@@ -59,9 +59,9 @@ protected:
 
     struct Context {
         Context(const Writer::Options& options, Timepoint tp, void* allocated_memory, size_t allocator_chunk_size)
-            : udp_allocator(allocated_memory, kAllocatedMemorySize, kUdpMtuSize)
+            : udp_allocator(allocated_memory, kAllocatedMemorySize, allocator_chunk_size)
             , allocator(udp_allocator,
-                    RtpAllocator::Options{
+                RtpAllocator::Options{
                     .header = options,
                     .base_tp = tp,
                     .clock_rate = kDefaultClockRate

@@ -5,6 +5,6 @@
 
 namespace tau::rtp {
 
-using Frame = etl::vector<Buffer, 32>; //TODO: check capacity
+using Frame = etl::vector<Buffer, 128>; //TODO: check capacity
 
 }
