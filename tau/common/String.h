@@ -18,8 +18,7 @@ namespace tau {
 etl::vector<etl::string_view, 256> Split(etl::string_view str, etl::string_view marker, bool ignore_first = false);
 etl::ivector<etl::string_view>& Split(etl::ivector<etl::string_view>& output, etl::string_view str, etl::string_view marker, bool ignore_first = false);
 
-// std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first = false);
-// std::string ReplaceAll(std::string str, const std::string& from, const std::string& to);
+void ReplaceAll(etl::istring& output, etl::string_view input, etl::string_view from, etl::string_view to);
 void ToLowerCase(etl::istring& value);
 bool IsPrefix(etl::string_view str, etl::string_view prefix, bool case_insensitive = false);
 bool IsAlphaDigit(char c);

@@ -75,97 +75,109 @@ TEST(StringTest, Split) {
     ASSERT_EQ("SessionId", tokens[4]);
 }
 
-// TEST("Split_SingleToken", "[StringTest]") {
-//     const etl::string_view a = "Hello world!";
-//     auto tokens = Split(a, ";");
-//     ASSERT_EQ(1, tokens.size());
-//     ASSERT_STREQ_LEN("Hello world!", tokens[0].data(), tokens[0].size());
-// }
+TEST(StringTest, Split_SingleToken) {
+    const etl::string_view a = "Hello world!";
+    auto tokens = Split(a, ";");
+    ASSERT_EQ(1, tokens.size());
+    ASSERT_EQ("Hello world!", tokens[0]);
+}
 
-// TEST("Split_MarkerAtTheEnd", "[StringTest]") {
-//     const etl::string_view a = "Hello world!";
-//     auto tokens = Split(a, "!");
-//     ASSERT_EQ(2, tokens.size());
-//     ASSERT_STREQ_LEN("Hello world", tokens[0].data(), tokens[0].size());
-//     ASSERT_TRUE(tokens[1].empty());
-// }
+TEST(StringTest, Split_MarkerAtTheEnd) {
+    const etl::string_view a = "Hello world!";
+    auto tokens = Split(a, "!");
+    ASSERT_EQ(2, tokens.size());
+    ASSERT_EQ("Hello world", tokens[0]);
+    ASSERT_EQ(11, tokens[0].size());
+    ASSERT_TRUE(tokens[1].empty());
+}
 
-// TEST("Split_IgnoreFirst", "[StringTest]") {
-//     const etl::string_view a = "Hello world!";
-//     {
-//         auto tokens = Split(a, "!", true);
-//         ASSERT_EQ(1, tokens.size());
-//         ASSERT_TRUE(tokens[0].empty());
-//     }
-//     {
-//         auto tokens = Split(a, " ", true);
-//         ASSERT_EQ(1, tokens.size());
-//         ASSERT_STREQ_LEN("world!", tokens[0].data(), tokens[0].size());
-//     }
-// }
+TEST(StringTest, Split_IgnoreFirst) {
+    const etl::string_view a = "Hello world!";
+    {
+        auto tokens = Split(a, "!", true);
+        ASSERT_EQ(1, tokens.size());
+        ASSERT_TRUE(tokens[0].empty());
+    }
+    {
+        auto tokens = Split(a, " ", true);
+        ASSERT_EQ(1, tokens.size());
+        ASSERT_EQ("world!", tokens[0]);
+        ASSERT_EQ(6, tokens[0].size());
+    }
+}
 
-// TEST("Split_Empty", "[StringTest]") {
-//     {
-//         const etl::string_view a = {};
-//         auto tokens = Split(a, "!", false);
-//         ASSERT_EQ(0, tokens.size());
-//     }
-//     {
-//         const etl::string_view a = " ";
-//         auto tokens = Split(a, " ", true);
-//         ASSERT_EQ(1, tokens.size());
-//         ASSERT_TRUE(tokens[0].empty());
-//     }
-// }
+TEST(StringTest, Split_Empty) {
+    {
+        const etl::string_view a = {};
+        auto tokens = Split(a, "!", false);
+        ASSERT_EQ(0, tokens.size());
+    }
+    {
+        const etl::string_view a = " ";
+        auto tokens = Split(a, " ", true);
+        ASSERT_EQ(1, tokens.size());
+        ASSERT_TRUE(tokens[0].empty());
+    }
+}
 
-// TEST("Split_Empty2", "[StringTest]") {
-//     const etl::string_view a = "::token:";
-//     auto tokens = Split(a, ":");
-//     ASSERT_EQ(4, tokens.size());
-//     ASSERT_TRUE(tokens[0].empty());
-//     ASSERT_TRUE(tokens[1].empty());
-//     ASSERT_STREQ_LEN("token", tokens[2].data(), tokens[2].size());
-//     ASSERT_TRUE(tokens[3].empty());
-// }
+TEST(StringTest, Split_Empty2) {
+    const etl::string_view a = "::token:";
+    auto tokens = Split(a, ":");
+    ASSERT_EQ(4, tokens.size());
+    ASSERT_TRUE(tokens[0].empty());
+    ASSERT_TRUE(tokens[1].empty());
+    ASSERT_EQ("token", tokens[2]);
+    ASSERT_EQ(5, tokens[2].size());
+    ASSERT_TRUE(tokens[3].empty());
+}
 
-// // TEST("ReplaceAll", "[StringTest]") {
-// //     etl::string input = "Hello world! Welcome to the world of C++.";
-// //     etl::string output = ReplaceAll(input, "world", "universe");
-// //     ASSERT_EQ("Hello universe! Welcome to the universe of C++.", output);
+TEST(StringTest, ReplaceAll) {
+    etl::string<64> output;
 
-// //     ASSERT_EQ("HelloWorld!42", ReplaceAll("Hello World! 42", " ", ""));
-// //     ASSERT_EQ("Hello  World!  42", ReplaceAll("Hello World! 42", " ", "  "));
-// //     ASSERT_EQ("bbba", ReplaceAll("aaaaaaa", "aa", "b"));
-// //     ASSERT_EQ("No matches here.", ReplaceAll("No matches here.", "xyz", "123"));
-// // }
+    etl::string_view input = "Hello world! Welcome to the world of C++.";
+    ReplaceAll(output, input, "world", "universe");
+    ASSERT_EQ("Hello universe! Welcome to the universe of C++.", output);
 
-// // TEST("ToLowerCase", "[StringTest]") {
-// //     etl::string str = "Hello wOrlD 42!";
-// //     ToLowerCase(str);
-// //     ASSERT_EQ("hello world 42!", str);
-// // }
+    ReplaceAll(output, "Hello World! 42", " ", "");
+    ASSERT_EQ("HelloWorld!42", output);
 
-// TEST("Prefix", "[StringTest]") {
-//     ASSERT_TRUE(IsPrefix("Hello world", "He"));
-//     ASSERT_FALSE(IsPrefix("Hello world", "wo"));
-// }
+    ReplaceAll(output, "Hello World! 42", " ", "  ");
+    ASSERT_EQ("Hello  World!  42", output);
 
-// TEST("PrefixCaseInsensitive", "[StringTest]") {
-//     ASSERT_TRUE(IsPrefix("Hello world", "hElLo", true));
-//     ASSERT_FALSE(IsPrefix("Hello world", "hElLo"));
-// }
+    ReplaceAll(output, "aaaaaaa", "aa", "b");
+    ASSERT_EQ("bbba", output);
 
-// TEST("HexDump", "[StringTest]") {
-//     etl::array<uint8_t, 8> data = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
-//     etl::string<256> dump;
-//     ASSERT_STREQ("12 34 56 78 9A BC DE F0", ToHexDump(data.data(), data.size(), dump).c_str());
-//     ASSERT_STREQ("12 34", ToHexDump(data.data(), 2, dump).c_str());
-//     ASSERT_STREQ("12", ToHexDump(data.data(), 1, dump).c_str());
-//     ASSERT_STREQ("", ToHexDump(data.data(), 0, dump).c_str());
+    ReplaceAll(output, "No matches here.", "xyz", "123");
+    ASSERT_EQ("No matches here.", output);
+}
 
-//     ASSERT_STREQ("123456789ABCDEF0", ToHexDump(data.data(), data.size(), dump, {}).c_str());
-//     ASSERT_STREQ("123456789abcdef0", ToHexDump<false>(data.data(), data.size(), dump, {}).c_str());
-//     ASSERT_STREQ("12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0", ToHexDump<false>(data.data(), data.size(), dump, ", 0x").c_str());
-// }
+TEST(StringTest, ToLowerCase) {
+    etl::string<16> str = "Hello wOrlD 42!";
+    ToLowerCase(str);
+    ASSERT_EQ("hello world 42!", str);
+}
+
+TEST(StringTest, Prefix) {
+    ASSERT_TRUE(IsPrefix("Hello world", "He"));
+    ASSERT_FALSE(IsPrefix("Hello world", "wo"));
+}
+
+TEST(StringTest, PrefixCaseInsensitive) {
+    ASSERT_TRUE(IsPrefix("Hello world", "hElLo", true));
+    ASSERT_FALSE(IsPrefix("Hello world", "hElLo"));
+}
+
+TEST(StringTest, HexDump) {
+    etl::array<uint8_t, 8> data = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
+    etl::string<256> dump;
+    ASSERT_STREQ("12 34 56 78 9A BC DE F0", ToHexDump(data.data(), data.size(), dump).c_str());
+    ASSERT_STREQ("12 34", ToHexDump(data.data(), 2, dump).c_str());
+    ASSERT_STREQ("12", ToHexDump(data.data(), 1, dump).c_str());
+    ASSERT_STREQ("", ToHexDump(data.data(), 0, dump).c_str());
+
+    ASSERT_STREQ("123456789ABCDEF0", ToHexDump(data.data(), data.size(), dump, {}).c_str());
+    ASSERT_STREQ("123456789abcdef0", ToHexDump<false>(data.data(), data.size(), dump, {}).c_str());
+    ASSERT_STREQ("12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0", ToHexDump<false>(data.data(), data.size(), dump, ", 0x").c_str());
+}
 
 }

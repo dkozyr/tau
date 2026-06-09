@@ -32,14 +32,18 @@ etl::ivector<etl::string_view>& Split(etl::ivector<etl::string_view>& output, et
     return output;
 }
 
-// std::vector<std::string_view> Split(const std::string& str, std::string_view marker, bool ignore_first) {
-//     return Split(std::string_view(str), marker, ignore_first);
-// }
-
-// std::string ReplaceAll(std::string str, const std::string& from, const std::string& to) {
-//     boost::algorithm::replace_all(str, from, to);
-//     return str;
-// }
+void ReplaceAll(etl::istring& output, etl::string_view input, etl::string_view from, etl::string_view to) {
+    output.clear();
+    size_t prev = 0, pos = 0;
+    while((pos = input.find(from, prev)) != etl::string_view::npos) {
+        output.append(input.substr(prev, pos - prev));
+        output.append(to);
+        prev = pos + from.size();
+    }
+    if((prev != 0) || !input.empty()) {
+        output.append(input.substr(prev));
+    }
+}
 
 void ToLowerCase(etl::istring& value) {
     for(auto& c : value) {
