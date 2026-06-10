@@ -60,7 +60,7 @@ public:
 
 public:
     const Options _options;
-    std::array<uint8_t, 1'000'000> _allocated_memory;
+    etl::array<uint8_t, 1'000'000> _allocated_memory;
     PoolAllocator<> _udp_allocator;
     RtpAllocator _allocator;
 

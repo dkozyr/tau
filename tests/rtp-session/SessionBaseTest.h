@@ -111,16 +111,16 @@ protected:
         .extension_length_in_words = g_random.Int<uint16_t>(0, 16),
         .max_packet_size = 1200
     };
-    std::array<uint8_t, 100'000> _allocated_memory;
+    etl::array<uint8_t, 100'000> _allocated_memory;
     PoolAllocator<> _rtcp_allocator;
 
     std::optional<Source> _source;
     std::optional<Session> _session;
 
-    std::vector<Buffer> _input_rtp;
-    std::vector<Buffer> _output_rtp;
-    std::vector<Buffer> _output_rtcp;
-    std::vector<Event> _events;
+    etl::vector<Buffer, 1024> _input_rtp;
+    etl::vector<Buffer, 1024> _output_rtp;
+    etl::vector<Buffer, 1024> _output_rtcp;
+    etl::vector<Event, 1024> _events;
 };
 
 }
