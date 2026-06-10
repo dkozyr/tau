@@ -11,12 +11,12 @@ struct SessionTestParams {
     srtp_profile_t profile;
 };
 
-const std::vector<SessionTestParams> kSessionTestParamsVec = {
-    {.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_80},
-    {.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_32},
-    {.profile = srtp_profile_t::srtp_profile_null_sha1_80},
-    {.profile = srtp_profile_t::srtp_profile_aead_aes_128_gcm},
-    {.profile = srtp_profile_t::srtp_profile_aead_aes_256_gcm},
+const etl::array<SessionTestParams, 5> kSessionTestParamsVec = {
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_80},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_32},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_null_sha1_80},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aead_aes_128_gcm},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aead_aes_256_gcm},
 };
 
 class SessionTest : public ::testing::TestWithParam<SessionTestParams> {
@@ -138,8 +138,8 @@ protected:
         .marker = false,
         .extension_length_in_words = 0
     };
-    std::vector<Buffer> _encrypted;
-    std::vector<Buffer> _decrypted;
+    etl::vector<Buffer, 2 * Session::kRtxWindowSize> _encrypted;
+    etl::vector<Buffer, 2 * Session::kRtxWindowSize> _decrypted;
 };
 
 INSTANTIATE_TEST_SUITE_P(Parametrized, SessionTest, ::testing::ValuesIn(kSessionTestParamsVec.begin(), kSessionTestParamsVec.end()));

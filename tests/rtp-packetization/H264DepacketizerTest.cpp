@@ -6,7 +6,7 @@ using namespace h264;
 
 class H264DepacketizerTest : public H264PacketizationBase, public ::testing::Test {
 protected:
-    Buffer CreateRtpPacket(const std::vector<uint8_t>& rtp_payload) {
+    Buffer CreateRtpPacket(const etl::ivector<uint8_t>& rtp_payload) {
         auto packet = _ctx->allocator.Allocate(g_random.Int<Timepoint>(), false);
         auto header_size = packet.GetSize();
         auto payload_ptr = packet.GetView().ptr + header_size;
@@ -36,7 +36,7 @@ TEST_F(H264DepacketizerTest, EmptyFrame) {
 
 TEST_F(H264DepacketizerTest, StapA) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             CreateNalUnitHeader(NaluType::kStapA, 0b11),
             0, 2,
             CreateNalUnitHeader(NaluType::kSps, 0b11), 1,
@@ -56,7 +56,7 @@ TEST_F(H264DepacketizerTest, StapA) {
 
 TEST_F(H264DepacketizerTest, StapA_Incomplete) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             CreateNalUnitHeader(NaluType::kStapA, 0b11),
             0, 1
         }));
@@ -66,7 +66,7 @@ TEST_F(H264DepacketizerTest, StapA_Incomplete) {
 
 TEST_F(H264DepacketizerTest, StapA_ZeroSize) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             CreateNalUnitHeader(NaluType::kStapA, 0b11),
             0, 2,
             CreateNalUnitHeader(NaluType::kSps, 0b11), 1,
@@ -83,7 +83,7 @@ TEST_F(H264DepacketizerTest, StapA_ZeroSize) {
 
 TEST_F(H264DepacketizerTest, StapA_MalformedSize) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             CreateNalUnitHeader(NaluType::kStapA, 0b11),
             0, 2,
             CreateNalUnitHeader(NaluType::kSps, 0b11), 1,

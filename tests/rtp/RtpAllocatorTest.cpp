@@ -11,14 +11,14 @@ protected:
 
 protected:
     Writer::Options _header_options = {
-        .pt = 96,
-        .ssrc = 0x11223344,
-        .ts = 1234567890,
-        .sn = 65535,
+        .pt    = 96,
+        .ssrc   = 0x11223344,
+        .ts     = 1234567890,
+        .sn     = 65535,
         .marker = false
     };
 
-    std::array<uint8_t, 65536> _allocated_memory;
+    etl::array<uint8_t, 65536> _allocated_memory;
 };
 
 TEST_F(RtpAllocatorTest, Basic) {
@@ -39,11 +39,11 @@ TEST_F(RtpAllocatorTest, Basic) {
 
         ASSERT_TRUE(Reader::Validate(ToConst(packet.GetView())));
         Reader reader(ToConst(packet.GetView()));
-        ASSERT_EQ(_header_options.pt, reader.Pt());
+        ASSERT_EQ(_header_options.pt,   reader.Pt());
         ASSERT_EQ(_header_options.ssrc, reader.Ssrc());
-        ASSERT_EQ(_header_options.ts, reader.Ts());
-        ASSERT_EQ(_header_options.sn, reader.Sn());
-        ASSERT_EQ(false, reader.Marker());
+        ASSERT_EQ(_header_options.ts,   reader.Ts());
+        ASSERT_EQ(_header_options.sn,   reader.Sn());
+        ASSERT_EQ(false,                reader.Marker());
     }
     {
         auto packet = allocator.Allocate(start_tp + 500 * kMs, true);

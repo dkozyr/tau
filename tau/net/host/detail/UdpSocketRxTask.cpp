@@ -53,7 +53,7 @@ void UdpSocketRxTask(UdpSocketRxContext& ctx) {
             break;
         }
 
-        int error = bytes;
+        int error = errno;
         if((error == EINTR) || (error == EAGAIN) || (error == EWOULDBLOCK)) {
             continue;
         }

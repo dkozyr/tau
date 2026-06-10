@@ -9,21 +9,21 @@ namespace tau::rtp {
 class WriterTest : public ::testing::Test {
 protected:
     static constexpr auto kDefaultOptions = Writer::Options{
-        .pt = 100,
-        .ssrc = 0x01234567,
-        .ts = 90000,
-        .sn = 12345,
+        .pt     = 100,
+        .ssrc   = 0x01234567,
+        .ts     = 90000,
+        .sn     = 12345,
         .marker = false
     };
 
 protected:
     static void AssertRtpHeader(const Reader& reader, const Writer::Options& options) {
-        ASSERT_EQ(options.pt, reader.Pt());
-        ASSERT_EQ(options.ssrc, reader.Ssrc());
-        ASSERT_EQ(options.sn, reader.Sn());
-        ASSERT_EQ(options.ts, reader.Ts());
+        ASSERT_EQ(options.pt,     reader.Pt());
+        ASSERT_EQ(options.ssrc,   reader.Ssrc());
+        ASSERT_EQ(options.sn,     reader.Sn());
+        ASSERT_EQ(options.ts,     reader.Ts());
         ASSERT_EQ(options.marker, reader.Marker());
-        ASSERT_EQ(0, reader.Padding());
+        ASSERT_EQ(0,              reader.Padding());
     }
 
     static void AssertEmptyExtension(const Reader& reader) {
@@ -99,10 +99,10 @@ TEST_F(WriterTest, Randomized) {
         auto packet = Buffer::Create(g_udp_allocator);
         auto view = packet.GetViewWithCapacity();
         auto options = Writer::Options{
-            .pt = g_random.Int<uint8_t>(0, 127),
-            .ssrc = g_random.Int<uint32_t>(),
-            .ts = g_random.Int<uint32_t>(),
-            .sn = g_random.Int<uint16_t>(),
+            .pt     = g_random.Int<uint8_t>(0, 127),
+            .ssrc   = g_random.Int<uint32_t>(),
+            .ts     = g_random.Int<uint32_t>(),
+            .sn     = g_random.Int<uint16_t>(),
             .marker = (i % 2 == 1),
             .extension_length_in_words = g_random.Int<uint16_t>(0, 16)
         };

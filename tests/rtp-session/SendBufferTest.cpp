@@ -2,6 +2,7 @@
 #include "tau/rtp/RtpAllocator.h"
 #include "tau/rtp/Reader.h"
 #include "tau/rtp/Writer.h"
+#include "SnsVector.h"
 #include "tests/lib/Common.h"
 
 namespace tau::rtp::session {
@@ -41,7 +42,7 @@ protected:
         return packet;
     }
 
-    void AssertPacket(const std::vector<uint16_t>& sns) {
+    void AssertPacket(const SnsIVector& sns) {
         ASSERT_EQ(sns.size(), _processed_packets.size());
         for(size_t i = 0; i < sns.size(); ++i) {
             const auto& packet = _processed_packets[i];
@@ -50,7 +51,7 @@ protected:
         }
     }
 
-    void AssertSendRtxSuccessful(const std::vector<uint16_t>& sns) {
+    void AssertSendRtxSuccessful(const SnsIVector& sns) {
         for(auto sn : sns) {
             const auto processed_packets = _processed_packets.size();
             ASSERT_TRUE(_send_buffer.SendRtx(sn));
@@ -62,7 +63,7 @@ protected:
         }
     }
 
-    void AssertSendRtxFailed(const std::vector<uint16_t>& sns) {
+    void AssertSendRtxFailed(const SnsIVector& sns) {
         for(auto sn : sns) {
             const auto processed_packets = _processed_packets.size();
             ASSERT_FALSE(_send_buffer.SendRtx(sn));
@@ -84,13 +85,13 @@ protected:
 
 TEST_F(SendBufferTest, Basic) {
     PushPackets(10);
-    ASSERT_NO_FATAL_FAILURE(AssertPacket({1, 2, 3, 4, 5, 6, 7, 8, 9, 10}));
+    ASSERT_NO_FATAL_FAILURE(AssertPacket(ToVector({1, 2, 3, 4, 5, 6, 7, 8, 9, 10})));
     ASSERT_NO_FATAL_FAILURE(AssertStats(10, 0));
-    ASSERT_NO_FATAL_FAILURE(AssertSendRtxSuccessful({4, 5, 6, 7, 8, 9, 10}));
+    ASSERT_NO_FATAL_FAILURE(AssertSendRtxSuccessful(ToVector({4, 5, 6, 7, 8, 9, 10})));
     ASSERT_NO_FATAL_FAILURE(AssertStats(17, 7));
-    ASSERT_NO_FATAL_FAILURE(AssertSendRtxSuccessful({10, 4, 9, 5, 8, 6, 7}));
+    ASSERT_NO_FATAL_FAILURE(AssertSendRtxSuccessful(ToVector({10, 4, 9, 5, 8, 6, 7})));
     ASSERT_NO_FATAL_FAILURE(AssertStats(24, 14));
-    ASSERT_NO_FATAL_FAILURE(AssertSendRtxFailed({0, 1, 2, 3, 11}));
+    ASSERT_NO_FATAL_FAILURE(AssertSendRtxFailed(ToVector({0, 1, 2, 3, 11})));
     ASSERT_NO_FATAL_FAILURE(AssertStats(24, 14));
 }
 

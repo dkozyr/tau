@@ -42,7 +42,7 @@ protected:
     }
 
 protected:
-    std::vector<uint8_t> _allocated_memory;
+    etl::vector<uint8_t, kAllocatedMemorySize> _allocated_memory;
 
     Writer::Options _header_options = {
         .pt = 96,
@@ -74,7 +74,7 @@ protected:
     };
     std::optional<Context> _ctx;
     Frame _rtp_packets;
-    std::vector<Buffer> _nal_units;
+    etl::vector<Buffer, 32> _nal_units;
 };
 
 }

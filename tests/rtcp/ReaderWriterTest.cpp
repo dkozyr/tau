@@ -64,8 +64,8 @@ protected:
         return sns;
     }
 
-    std::vector<uint32_t> ByeSsrcs(size_t count) {
-        std::vector<uint32_t> ssrcs;
+    etl::vector<uint32_t, ByeReader::kMaxSsrcs> ByeSsrcs(size_t count) {
+        etl::vector<uint32_t, ByeReader::kMaxSsrcs> ssrcs;
         for(size_t i = 0; i < count; ++i) {
             ssrcs.push_back(g_random.Int<uint32_t>());
         }
@@ -258,7 +258,7 @@ TEST_F(ReaderWriterTest, Compound_Randomized) {
         auto packet = Buffer::Create(g_system_allocator, 1500);
         const auto info = CreateSrInfo();
         const auto rr_blocks = CreateRrBlocks(g_random.Int<size_t>(1, 10));
-        const auto bye_ssrcs = ByeSsrcs(g_random.Int<size_t>(0, 30));
+        const auto bye_ssrcs = ByeSsrcs(g_random.Int<size_t>(0, ByeReader::kMaxSsrcs));
         const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 32)); //TODO: name capacity
         const auto fir_sn = g_random.Int<uint8_t>();
         etl::string<64> cname;

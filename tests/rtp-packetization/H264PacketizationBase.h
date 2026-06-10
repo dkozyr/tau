@@ -45,13 +45,13 @@ protected:
     }
 
 protected:
-    std::vector<uint8_t> _allocated_memory;
+    etl::vector<uint8_t, kAllocatedMemorySize> _allocated_memory;
 
     Writer::Options _header_options = {
-        .pt = 96,
-        .ssrc = 0x11223344,
-        .ts = 1234567890,
-        .sn = 65535,
+        .pt     = 96,
+        .ssrc   = 0x11223344,
+        .ts     = 1234567890,
+        .sn     = 65535,
         .marker = false
     };
 
@@ -77,7 +77,7 @@ protected:
     };
     std::optional<Context> _ctx;
     Frame _rtp_packets;
-    std::vector<Buffer> _nal_units;
+    etl::vector<Buffer, 32> _nal_units;
 };
 
 }

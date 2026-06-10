@@ -7,9 +7,9 @@ struct HmacParams {
     HmacHasher::Type type;
 };
 
-const std::vector<HmacParams> kHmacParamsVec = {
-    {.type = HmacHasher::Type::Sha1},
-    {.type = HmacHasher::Type::Sha256},
+const etl::array<HmacParams, 2> kHmacParamsVec = {
+    HmacParams{.type = HmacHasher::Type::Sha1},
+    HmacParams{.type = HmacHasher::Type::Sha256},
 };
 
 class HmacTest : public ::testing::TestWithParam<HmacParams> {

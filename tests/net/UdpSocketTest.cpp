@@ -1,5 +1,5 @@
-#include "tau/net/UdpSocket.h"
 #include "tau/net/UdpSocketsPair.h"
+#include "tau/net/UdpSocket.h"
 #include "tau/memory/PoolAllocator.h"
 #include "tau/common/Event.h"
 #include "tests/lib/Common.h"
@@ -106,37 +106,47 @@ TEST_F(UdpSocketTest, PortsPair) {
 //     Event().WaitFor(600s);
 // }
 
-// TEST_F(UdpSocketTest, DISABLED_MANUAL_Load) {
-//     constexpr auto kPacketSize1 = 1234;
-//     constexpr auto kPacketSize2 = 800;
+TEST_F(UdpSocketTest, Load) {
+    constexpr auto kPacketSize1 = 1234;
+    constexpr auto kPacketSize2 = 800;
 
-//     for(size_t i = 0; i < 10'000; ++i) {
-//         auto [socket1, socket2] = CreateUdpSocketsPair(UdpSocket::Options{
-//             .allocator = g_udp_allocator,
-//             .executor = _io.GetExecutor(),
-//             .local_address = kLocalHost
-//         });
+    auto [socket1, socket2] = CreateUdpSocketsPair(UdpSocket::Options{
+        .allocator = g_udp_allocator,
+        .local_address = kLocalHost
+    });
 
-//         Event event1;
-//         socket1->SetRecvCallback([&](Buffer&&, Endpoint) {
-//             event1.Set();
-//         });
+    for(size_t i = 0; i < 10'000; ++i) {
+        Event event1;
+        socket1->SetRecvCallback([&](Buffer&&, Endpoint endpoint) {
+            TAU_LOG_DEBUG("[socket1] Received from: " << endpoint);
+            event1.Set();
+        });
 
-//         Event event2;
-//         socket2->SetRecvCallback([&](Buffer&&, Endpoint) {
-//             event2.Set();
-//         });
+        Event event2;
+        socket2->SetRecvCallback([&](Buffer&&, Endpoint endpoint) {
+            TAU_LOG_DEBUG("[socket2] Received from: " << endpoint);
+            event2.Set();
+        });
 
-//         socket1->Send(CreatePacket(kPacketSize1), socket2->GetLocalEndpoint());
-//         socket2->Send(CreatePacket(kPacketSize2), socket1->GetLocalEndpoint());
+        socket1->Send(CreatePacket(kPacketSize1), socket2->GetLocalEndpoint().value());
+        socket2->Send(CreatePacket(kPacketSize2), socket1->GetLocalEndpoint().value());
 
-//         EXPECT_TRUE(event1.WaitFor(1000ms));
-//         EXPECT_TRUE(event2.WaitFor(1000ms));
+        bool ok = false;
+        auto begin = _clock.Now();
+        while(_clock.Now() - begin < 100 * kMs) {
+            if(event1.IsSet() && event2.IsSet()) {
+                ok = true;
+                break;
+            }
+            socket1->Receive();
+            socket2->Receive();
+        }
+        ASSERT_TRUE(ok);
 
-//         if(i % 1000 == 0) {
-//             TAU_LOG_INFO("Iteration: #" << i);
-//         }
-//     }
-// }
+        if(i % 1000 == 0) {
+            TAU_LOG_INFO("Iteration: #" << i);
+        }
+    }
+}
 
 }

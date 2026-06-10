@@ -16,6 +16,11 @@
 
 #include <gtest/gtest.h>
 
+#include <etl/array.h>
+#include <etl/vector.h>
+#include <etl/string.h>
+#include <etl/string_view.h>
+
 #include <vector>
 #include <array>
 #include <unordered_map>

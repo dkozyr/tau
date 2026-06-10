@@ -2,20 +2,16 @@
 #include "tau/rtp/Constants.h"
 #include "tau/rtp/details/FixedHeader.h"
 #include "tau/common/NetToHost.h"
-#include <gtest/gtest.h>
-#include <vector>
-#include <string_view>
-#include <cstring>
-#include <iostream>
+#include "tests/lib/Common.h"
 
 namespace tau::rtp {
 
 class ReaderTest : public ::testing::Test {
 protected:
-    static constexpr std::string_view kTargetPayload = "hello world";
-    static constexpr std::string_view kTargetExtensionPayload = "ext?";
+    static constexpr etl::string_view kTargetPayload = "hello world";
+    static constexpr etl::string_view kTargetExtensionPayload = "ext?";
 
-    std::vector<uint8_t> _default_packet = {
+    etl::vector<uint8_t, 1500> _default_packet = {
         0b10010000,
         0b10000000 | 0x60,
         0x12, 0x34,
@@ -27,7 +23,7 @@ protected:
     };
 
 protected:
-    static BufferViewConst ToBufferViewConst(const std::vector<uint8_t>& data) {
+    static BufferViewConst ToBufferViewConst(const etl::ivector<uint8_t>& data) {
         return BufferViewConst{
             .ptr = data.data(),
             .size = data.size()
@@ -95,7 +91,7 @@ TEST_F(ReaderTest, EmptyPayload) {
 
 TEST_F(ReaderTest, Padding) {
     _default_packet[0] = 0b10110000;
-    std::string_view padding_here = "padding here";
+    etl::string_view padding_here = "padding here";
     for(auto c : padding_here) {
         _default_packet.push_back(c);
     }

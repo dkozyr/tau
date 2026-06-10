@@ -7,7 +7,7 @@ using namespace h265;
 
 class H265DepacketizerTest : public H265PacketizationBase, public ::testing::Test {
 protected:
-    Buffer CreateRtpPacket(const std::vector<uint8_t>& rtp_payload) {
+    Buffer CreateRtpPacket(const etl::ivector<uint8_t>& rtp_payload) {
         auto packet = _ctx->allocator.Allocate(g_random.Int<Timepoint>(), false);
         auto header_size = packet.GetSize();
         auto payload_ptr = packet.GetView().ptr + header_size;
@@ -37,7 +37,7 @@ TEST_F(H265DepacketizerTest, EmptyFrame) {
 
 TEST_F(H265DepacketizerTest, Ap) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             NaluType::kAp << 1, 0,
             0, 3,
             NaluType::kVps << 1, 0, 2,
@@ -60,7 +60,7 @@ TEST_F(H265DepacketizerTest, Ap) {
 
 TEST_F(H265DepacketizerTest, Ap_Incomplete) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             NaluType::kAp << 1, 0,
             0, 1
         }));
@@ -70,7 +70,7 @@ TEST_F(H265DepacketizerTest, Ap_Incomplete) {
 
 TEST_F(H265DepacketizerTest, Ap_ZeroSize) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             NaluType::kAp << 1, 0,
             0, 3,
             NaluType::kVps << 1, 0, 2,
@@ -87,7 +87,7 @@ TEST_F(H265DepacketizerTest, Ap_ZeroSize) {
 
 TEST_F(H265DepacketizerTest, Ap_MalformedSize) {
     _rtp_packets.push_back(
-        CreateRtpPacket({
+        CreateRtpPacket(etl::vector<uint8_t, 1024>{
             NaluType::kAp << 1, 0,
             0, 3,
             NaluType::kVps << 1, 0, 2,
