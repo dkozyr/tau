@@ -15,7 +15,7 @@ public:
     static MediaType GetType(const etl::string_view& value);
     static uint16_t GetPort(const etl::string_view& value);
     static etl::string_view GetProtocol(const etl::string_view& value);
-    static etl::vector<uint8_t, 32> GetFmts(const etl::string_view& value);
+    static etl::vector<uint8_t, 32> GetFmts(const etl::string_view& value); //TODO: revise this limit
 
     static bool Validate(const etl::string_view& value);
 };

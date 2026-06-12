@@ -8,23 +8,26 @@
 
 namespace tau::sdp {
 
+using CName = etl::string<16>;
+using BundleMid = etl::string<8>;
+inline constexpr size_t kMaxBundleMids = 4;
+
 struct Sdp {
-    etl::string<64> cname = {};
-    etl::vector<etl::string<32>, 4> bundle_mids = {};
+    CName cname = {};
+    etl::vector<BundleMid, kMaxBundleMids> bundle_mids = {};
     std::optional<Ice> ice = std::nullopt;
     std::optional<Dtls> dtls = std::nullopt;
     Medias medias = {};
 };
-
 using SdpPtr = std::unique_ptr<Sdp>;
 
 SdpPtr ParseSdp(etl::string_view sdp_str);
 etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp);
 
-inline etl::vector<etl::string<32>, 4> MakeBundleMids(std::initializer_list<etl::string_view> list) {
-    etl::vector<etl::string<32>, 4> bundle_mids;
+inline etl::vector<BundleMid, kMaxBundleMids> MakeBundleMids(std::initializer_list<etl::string_view> list) {
+    etl::vector<BundleMid, kMaxBundleMids> bundle_mids;
     for(auto&& mid : list) {
-        bundle_mids.push_back(etl::string<32>{mid});
+        bundle_mids.push_back(BundleMid{mid});
     }
     return bundle_mids;
 }

@@ -4,25 +4,32 @@
 namespace tau::sdp::attribute {
     
 uint8_t RtpmapReader::GetPt(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<1> tokens;
+    Split(tokens, value, " ");
     return StringToUnsigned<uint8_t>(tokens[0]).value();
 }
 
 etl::string_view RtpmapReader::GetEncodingName(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
-    const auto name_clock = Split(tokens[1], "/");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
+    SplitTokens<2> name_clock;
+    Split(name_clock, tokens[1], "/");
     return name_clock[0];
 }
 
 size_t RtpmapReader::GetClockRate(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
-    const auto name_clock = Split(tokens[1], "/");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
+    SplitTokens<2> name_clock;
+    Split(name_clock, tokens[1], "/");
     return StringToUnsigned<uint32_t>(name_clock[1]).value();
 }
 
 etl::string_view RtpmapReader::GetParams(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
-    const auto params = Split(tokens[1], "/");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
+    SplitTokens<3> params;
+    Split(params, tokens[1], "/");
     if(params.size() == 3) {
         return params[2];
     }
@@ -30,7 +37,8 @@ etl::string_view RtpmapReader::GetParams(const etl::string_view& value) {
 }
 
 bool RtpmapReader::Validate(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     if(tokens.size() < 2) {
         return false;
     }
@@ -38,7 +46,8 @@ bool RtpmapReader::Validate(const etl::string_view& value) {
     if(!pt || (*pt > 127)) {
         return false;
     }
-    const auto name_clock = Split(tokens[1], "/");
+    SplitTokens<2> name_clock;
+    Split(name_clock, tokens[1], "/");
     if(name_clock.size() < 2) {
         return false;
     }

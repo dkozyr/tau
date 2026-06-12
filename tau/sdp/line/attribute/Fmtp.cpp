@@ -4,7 +4,8 @@
 namespace tau::sdp::attribute {
     
 uint8_t FmtpReader::GetPt(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<1> tokens;
+    Split(tokens, value, " ");
     return StringToUnsigned<uint8_t>(tokens[0]).value();
 }
 
@@ -18,7 +19,8 @@ etl::string_view FmtpReader::GetParameters(const etl::string_view& value) {
 }
 
 bool FmtpReader::Validate(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     if(tokens.size() < 2) {
         return false;
     }

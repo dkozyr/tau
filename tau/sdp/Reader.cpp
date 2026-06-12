@@ -11,8 +11,9 @@ namespace tau::sdp {
 bool Reader::ForEachLine(const etl::string_view& sdp, LineCallback callback) {
     std::optional<size_t> media_index;
     const auto end_of_line = (sdp.find('\r') != etl::string_view::npos) ? "\r\n" : "\n"; //TODO: name constants
-    const auto lines = Split(sdp, end_of_line);
-    for(auto& line : lines) {
+    size_t pos = 0;
+    while(pos != etl::string_view::npos) {
+        auto line = SplitNext(sdp, pos, end_of_line);
         if(line.empty()) {
             return true;
         }

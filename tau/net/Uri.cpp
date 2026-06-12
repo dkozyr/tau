@@ -13,7 +13,8 @@ std::optional<Uri> GetUriFromString(etl::string_view str) {
     if(IsPrefix(str, "stun:")) { return GetStunUriFromString(str); }
     if(IsPrefix(str, "turn:")) { return GetTurnUriFromString(str); }
 
-    auto tokens = Split(str, "://");
+    SplitTokens<2> tokens;
+    Split(tokens, str, "://");
     if(tokens.size() != 2) {
         return std::nullopt;
     }
@@ -42,17 +43,19 @@ std::optional<Uri> GetUriFromString(etl::string_view str) {
         return std::nullopt;
     }
 
-    etl::string<256> path;
+    Uri::Path path;
     if(pos != etl::string_view::npos) {
         path = host_port_path.substr(pos + 1);
     }
 
     auto host_port = host_port_path.substr(0, pos);
-    auto host_tokens = Split(host_port, ":");
+
+    SplitTokens<2> host_tokens;
+    Split(host_tokens, host_port, ":");
     if(host_tokens.size() > 2) {
         return std::nullopt;
     }
-    if(!ValidateHost(host_tokens[0])) {
+    if((host_tokens.size() < 1) || !ValidateHost(host_tokens[0])) {
         return std::nullopt;
     }
     if(host_tokens.size() == 2) {
@@ -64,7 +67,7 @@ std::optional<Uri> GetUriFromString(etl::string_view str) {
     }
     return Uri{
         .protocol = protocol,
-        .host = etl::string<32>{host_tokens[0]},
+        .host = Uri::Host{host_tokens[0]},
         .port = port,
         .path = path
     };
@@ -72,7 +75,8 @@ std::optional<Uri> GetUriFromString(etl::string_view str) {
 
 std::optional<Uri> GetStunUriFromString(etl::string_view str) {
     uint16_t port = 3478;
-    auto tokens = Split(str, ":");
+    SplitTokens<3> tokens;
+    Split(tokens, str, ":");
     if(tokens.size() == 3) {
         auto port_parsed = ValidateAndParsePort(tokens[2]);
         if(!port_parsed) {
@@ -87,7 +91,7 @@ std::optional<Uri> GetStunUriFromString(etl::string_view str) {
     }
     return Uri{
         .protocol = Protocol::kStun,
-        .host = etl::string<32>{tokens[1]},
+        .host = Uri::Host{tokens[1]},
         .port = port,
         .path = {},
         .transport = Transport::kUdp
@@ -97,7 +101,8 @@ std::optional<Uri> GetStunUriFromString(etl::string_view str) {
 std::optional<Uri> GetTurnUriFromString(etl::string_view str) {
     uint16_t port = 3478;
     std::optional<Transport> transport;
-    auto transport_tokens = Split(str, "?transport=");
+    SplitTokens<2> transport_tokens;
+    Split(transport_tokens, str, "?transport=");
     if(transport_tokens.size() == 2) {
         if(transport_tokens[1] == "udp")      { transport = Transport::kUdp; }
         else if(transport_tokens[1] == "tcp") { transport = Transport::kTcp; }
@@ -109,8 +114,9 @@ std::optional<Uri> GetTurnUriFromString(etl::string_view str) {
         return std::nullopt;
     }
 
-    auto tokens = Split(str, ":");
-    if(!ValidateHost(tokens[1])) {
+    SplitTokens<3> tokens;
+    Split(tokens, str, ":");
+    if((tokens.size() < 2) || !ValidateHost(tokens[1])) {
         return std::nullopt;
     }
     if(tokens.size() == 3) {
@@ -125,7 +131,7 @@ std::optional<Uri> GetTurnUriFromString(etl::string_view str) {
 
     return Uri{
         .protocol = Protocol::kTurn,
-        .host = etl::string<32>{tokens[1]},
+        .host = Uri::Host{tokens[1]},
         .port = port,
         .path = {},
         .transport = transport

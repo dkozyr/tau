@@ -208,8 +208,9 @@ bool OnAttributeGroup(Sdp& sdp, const etl::string_view& value) {
     }
 
     if(sdp.medias.empty()) {
-        const auto mids = Split(value, " ");
-        if(mids[0] == "BUNDLE") {
+        SplitTokens<kMaxBundleMids> mids;
+        Split(mids, value, " ");
+        if(!mids.empty() && (mids[0] == "BUNDLE")) {
             for(size_t i = 1; i < mids.size(); ++i) {
                 sdp.bundle_mids.push_back(etl::string<32>{mids[i]});
             }
@@ -223,13 +224,15 @@ bool OnAttributeSsrc(Sdp& sdp, const etl::string_view& value) {
         return false;
     }
 
-    auto values = Split(value, " ");
+    SplitTokens<2> values;
+    Split(values, value, " ");
     if(values.size() == 2) {
         auto ssrc = StringToUnsigned<uint32_t>(values[0]);
         if(!ssrc) {
             return false;
         }
-        auto cname_splits = Split(values[1], ":");
+        SplitTokens<2> cname_splits;
+        Split(cname_splits, values[1], ":");
         if((cname_splits.size() == 2) && (cname_splits[0] == "cname")) {
             if(sdp.cname.empty()) {
                 sdp.cname = cname_splits[1];

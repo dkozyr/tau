@@ -1,12 +1,12 @@
-#include "SdpReaderWriterBase.h"
+#include "ReaderWriterBase.h"
 #include "SdpExamples.h"
 
 namespace tau::sdp {
 
-class SdpReaderTest :public SdpReaderWriterBase, public ::testing::Test {
+class ReaderTest :public ReaderWriterBase, public ::testing::Test {
 };
 
-TEST_F(SdpReaderTest, Rtsp) {
+TEST_F(ReaderTest, Rtsp) {
     ASSERT_TRUE(Reader::Validate(kRtspSdpExample));
 
     Sdp target_sdp{
@@ -30,7 +30,7 @@ TEST_F(SdpReaderTest, Rtsp) {
     ASSERT_NO_FATAL_FAILURE(AssertSdp(target_sdp, *parsed_sdp));
 }
 
-TEST_F(SdpReaderTest, WebrtcAudioOnly) {
+TEST_F(ReaderTest, WebrtcAudioOnly) {
     ASSERT_TRUE(Reader::Validate(kWebrtcAudioOnlySdpExample));
 
     Sdp target_sdp{
@@ -78,7 +78,7 @@ TEST_F(SdpReaderTest, WebrtcAudioOnly) {
     ASSERT_NO_FATAL_FAILURE(AssertSdp(target_sdp, *parsed_sdp));
 }
 
-TEST_F(SdpReaderTest, WebrtcChrome) {
+TEST_F(ReaderTest, WebrtcChrome) {
     ASSERT_TRUE(Reader::Validate(kWebrtcChromeSdpExample));
 
     Sdp target_sdp{
@@ -155,7 +155,7 @@ TEST_F(SdpReaderTest, WebrtcChrome) {
     TAU_LOG_INFO("codecs: " << sizeof(parsed_sdp->medias[0].codecs));
 }
 
-TEST_F(SdpReaderTest, WebrtcSafari) {
+TEST_F(ReaderTest, WebrtcSafari) {
     ASSERT_TRUE(Reader::Validate(kWebrtcSafariSdpExample));
 
     Sdp target_sdp{

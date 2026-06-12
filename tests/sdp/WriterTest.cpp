@@ -1,11 +1,11 @@
-#include "SdpReaderWriterBase.h"
+#include "ReaderWriterBase.h"
 
 namespace tau::sdp {
 
-class SdpWriterTest : public SdpReaderWriterBase, public ::testing::Test {
+class WriterTest : public ReaderWriterBase, public ::testing::Test {
 };
 
-TEST_F(SdpWriterTest, Basic) {
+TEST_F(WriterTest, Basic) {
     Sdp sdp{
         .cname = "rand0m-cNaMe",
         .bundle_mids = MakeBundleMids({"audio", "video", "data-42"}),

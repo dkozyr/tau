@@ -11,7 +11,7 @@
 
 namespace tau::sdp {
 
-inline constexpr uint8_t kMaxCodecs = 32;
+inline constexpr uint8_t kMaxCodecs = 32; //TODO: revise this limit
 
 enum RtcpFb : uint8_t {
     kNone = 0,

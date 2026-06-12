@@ -66,7 +66,8 @@ TEST(StringTest, ToHexString) {
 
 TEST(StringTest, Split) {
     const etl::string_view a = "Hello;world!;User;agent;SessionId";
-    auto tokens = Split(a, ";");
+    SplitTokens<8> tokens;
+    Split(tokens, a, ";");
     ASSERT_EQ(5, tokens.size());
     ASSERT_EQ("Hello",     tokens[0]);
     ASSERT_EQ("world!",    tokens[1]);
@@ -75,16 +76,27 @@ TEST(StringTest, Split) {
     ASSERT_EQ("SessionId", tokens[4]);
 }
 
+TEST(StringTest, Split_SmallCapacity) {
+    const etl::string_view a = "Hello;world!;User;agent;SessionId";
+    SplitTokens<1> tokens;
+    Split(tokens, a, ";");
+    ASSERT_EQ(2, tokens.size());
+    ASSERT_EQ("Hello",     tokens[0]);
+    ASSERT_EQ("world!",    tokens[1]);
+}
+
 TEST(StringTest, Split_SingleToken) {
     const etl::string_view a = "Hello world!";
-    auto tokens = Split(a, ";");
+    SplitTokens<2> tokens;
+    Split(tokens, a, ";");
     ASSERT_EQ(1, tokens.size());
     ASSERT_EQ("Hello world!", tokens[0]);
 }
 
 TEST(StringTest, Split_MarkerAtTheEnd) {
     const etl::string_view a = "Hello world!";
-    auto tokens = Split(a, "!");
+    SplitTokens<3> tokens;
+    Split(tokens, a, "!");
     ASSERT_EQ(2, tokens.size());
     ASSERT_EQ("Hello world", tokens[0]);
     ASSERT_EQ(11, tokens[0].size());
@@ -94,12 +106,14 @@ TEST(StringTest, Split_MarkerAtTheEnd) {
 TEST(StringTest, Split_IgnoreFirst) {
     const etl::string_view a = "Hello world!";
     {
-        auto tokens = Split(a, "!", true);
+        SplitTokens<2> tokens;
+        Split(tokens, a, "!", true);
         ASSERT_EQ(1, tokens.size());
         ASSERT_TRUE(tokens[0].empty());
     }
     {
-        auto tokens = Split(a, " ", true);
+        SplitTokens<2> tokens;
+        Split(tokens, a, " ", true);
         ASSERT_EQ(1, tokens.size());
         ASSERT_EQ("world!", tokens[0]);
         ASSERT_EQ(6, tokens[0].size());
@@ -109,12 +123,21 @@ TEST(StringTest, Split_IgnoreFirst) {
 TEST(StringTest, Split_Empty) {
     {
         const etl::string_view a = {};
-        auto tokens = Split(a, "!", false);
+        SplitTokens<2> tokens;
+        Split(tokens, a, "!", false);
+        ASSERT_EQ(1, tokens.size());
+        ASSERT_TRUE(tokens[0].empty());
+    }
+    {
+        const etl::string_view a = {};
+        SplitTokens<2> tokens;
+        Split(tokens, a, "!", true);
         ASSERT_EQ(0, tokens.size());
     }
     {
         const etl::string_view a = " ";
-        auto tokens = Split(a, " ", true);
+        SplitTokens<2> tokens;
+        Split(tokens, a, " ", true);
         ASSERT_EQ(1, tokens.size());
         ASSERT_TRUE(tokens[0].empty());
     }
@@ -122,7 +145,8 @@ TEST(StringTest, Split_Empty) {
 
 TEST(StringTest, Split_Empty2) {
     const etl::string_view a = "::token:";
-    auto tokens = Split(a, ":");
+    SplitTokens<8> tokens;
+    Split(tokens, a, ":");
     ASSERT_EQ(4, tokens.size());
     ASSERT_TRUE(tokens[0].empty());
     ASSERT_TRUE(tokens[1].empty());
@@ -178,6 +202,14 @@ TEST(StringTest, HexDump) {
     ASSERT_STREQ("123456789ABCDEF0", ToHexDump(data.data(), data.size(), dump, {}).c_str());
     ASSERT_STREQ("123456789abcdef0", ToHexDump<false>(data.data(), data.size(), dump, {}).c_str());
     ASSERT_STREQ("12, 0x34, 0x56, 0x78, 0x9a, 0xbc, 0xde, 0xf0", ToHexDump<false>(data.data(), data.size(), dump, ", 0x").c_str());
+}
+
+TEST(StringTest, EtlStringTruncation) {
+    etl::string_view src = "0123456789";
+
+    etl::string<8> dest;
+    dest = src;
+    ASSERT_EQ("01234567", dest);
 }
 
 }

@@ -175,7 +175,8 @@ etl::string_view SelectH264Level(const etl::string_view& remote_format, const et
 }
 
 etl::string_view GetH264ProfileLevelId(const etl::string_view& codec_format) {
-    const auto data = Split(codec_format, "profile-level-id=");
+    SplitTokens<2> data;
+    Split(data, codec_format, "profile-level-id=");
     return ((data.size() == 2) && (data[1].size() >= 6)) ? data[1].substr(0, 6) : kH264BaseProfileLevel1_0;
 }
 

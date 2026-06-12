@@ -4,7 +4,8 @@
 namespace tau::sdp::attribute {
 
 uint8_t ExtmapReader::GetId(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<1> tokens;
+    Split(tokens, value, " ");
     const auto& id_direction = tokens[0];
     const auto pos = id_direction.find('/');
     if(pos != etl::string_view::npos) {
@@ -15,7 +16,8 @@ uint8_t ExtmapReader::GetId(const etl::string_view& value) {
 }
 
 Direction ExtmapReader::GetDirection(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     const auto& id_direction = tokens[0];
     const auto pos = id_direction.find('/');
     if(pos != etl::string_view::npos) {
@@ -29,12 +31,14 @@ Direction ExtmapReader::GetDirection(const etl::string_view& value) {
 }
 
 etl::string_view ExtmapReader::GetUri(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     return tokens[1];
 }
 
 bool ExtmapReader::Validate(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     if(tokens.size() < 2) {
         return false;
     }

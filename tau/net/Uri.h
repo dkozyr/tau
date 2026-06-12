@@ -22,10 +22,13 @@ enum Transport {
 };
 
 struct Uri {
+    using Host = etl::string<32>;
+    using Path = etl::string<256>;
+
     Protocol protocol;
-    etl::string<32> host;
+    Host host;
     uint16_t port;
-    etl::string<256> path;
+    Path path;
     std::optional<Transport> transport = std::nullopt;
 };
 

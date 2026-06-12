@@ -19,17 +19,29 @@ etl::vector<etl::string_view, 256> Split(etl::string_view str, etl::string_view 
 }
 
 etl::ivector<etl::string_view>& Split(etl::ivector<etl::string_view>& output, etl::string_view str, etl::string_view marker, bool ignore_first) {
-    size_t prev = 0, pos = 0;
-    while((pos = str.find(marker, prev)) != etl::string_view::npos) {
-        if(!(ignore_first && (prev == 0))) {
-            output.emplace_back(str.substr(prev, pos - prev));
+    size_t pos = 0;
+    while((pos != etl::string_view::npos) && !output.full()) {
+        auto token = SplitNext(str, pos, marker);
+        if(!ignore_first) {
+            output.emplace_back(token);
+        } else {
+            ignore_first = false;
         }
-        prev = pos + marker.size();
-    }
-    if((prev != 0) || !str.empty()) {
-        output.emplace_back(str.substr(prev));
     }
     return output;
+}
+
+etl::string_view SplitNext(etl::string_view str, size_t& prev, etl::string_view marker) {
+    auto pos = str.find(marker, prev);
+    if(pos != etl::string_view::npos) {
+        auto result = str.substr(prev, pos - prev);
+        prev = pos + marker.size();
+        return result;
+    } else {
+        auto result = str.substr(prev);
+        prev = pos;
+        return result;
+    }
 }
 
 void ReplaceAll(etl::istring& output, etl::string_view input, etl::string_view from, etl::string_view to) {

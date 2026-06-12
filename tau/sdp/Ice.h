@@ -8,12 +8,15 @@
 namespace tau::sdp {
 
 using Candidate = etl::string_view;
-using Candidates = etl::vector<Candidate, 32>;
+using Candidates = etl::vector<Candidate, 32>; //TODO: revise this limit
 
 struct Ice {
+    using Ufrag = etl::string<32>;
+    using Pwd = etl::string<32>;
+
     bool trickle = false; //TODO: types?
-    etl::string<32> ufrag = {};
-    etl::string<32> pwd = {};
+    Ufrag ufrag = {};
+    Pwd pwd = {};
     Candidates candidates = {};
 };
 

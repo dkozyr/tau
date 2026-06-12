@@ -7,17 +7,20 @@
 namespace tau::sdp {
 
 etl::string_view OriginatorReader::GetAddressType(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<5> tokens;
+    Split(tokens, value, " ");
     return tokens[4];
 }
 
 etl::string_view OriginatorReader::GetAddress(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<6> tokens;
+    Split(tokens, value, " ");
     return tokens[5];
 }
 
 bool OriginatorReader::Validate(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<6> tokens;
+    Split(tokens, value, " ");
     if(tokens.size() != 6) { return false; }
     if(tokens[3] != "IN") { return false; }
     if(!((tokens[4] == "IP4") || (tokens[4] == "IP6"))) { return false; }

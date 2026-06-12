@@ -14,9 +14,13 @@
 
 namespace tau {
 
-//TODO: remove with fixed capacity?
+template<size_t ExpectedCapacity>
+using SplitTokens = etl::vector<etl::string_view, ExpectedCapacity + 1>;
+
+//TODO: remove with fixed capacity
 etl::vector<etl::string_view, 256> Split(etl::string_view str, etl::string_view marker, bool ignore_first = false);
 etl::ivector<etl::string_view>& Split(etl::ivector<etl::string_view>& output, etl::string_view str, etl::string_view marker, bool ignore_first = false);
+etl::string_view SplitNext(etl::string_view str, size_t& pos, etl::string_view marker);
 
 void ReplaceAll(etl::istring& output, etl::string_view input, etl::string_view from, etl::string_view to);
 void ToLowerCase(etl::istring& value);

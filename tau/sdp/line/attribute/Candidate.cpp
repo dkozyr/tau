@@ -5,37 +5,44 @@
 namespace tau::sdp::attribute {
 
 etl::string_view CandidateReader::GetFoundation(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<1> tokens;
+    Split(tokens, value, " ");
     return tokens[0];
 }
 
 uint16_t CandidateReader::GetComponentId(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     return StringToUnsigned<uint16_t>(tokens[1]).value();
 }
 
 etl::string_view CandidateReader::GetTransport(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<3> tokens;
+    Split(tokens, value, " ");
     return tokens[2];
 }
 
 uint32_t CandidateReader::GetPriority(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<4> tokens;
+    Split(tokens, value, " ");
     return StringToUnsigned<uint32_t>(tokens[3]).value();
 }
 
 etl::string_view CandidateReader::GetAddress(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<5> tokens;
+    Split(tokens, value, " ");
     return tokens[4];
 }
 
 uint16_t CandidateReader::GetPort(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<6> tokens;
+    Split(tokens, value, " ");
     return StringToUnsigned<uint16_t>(tokens[5]).value();
 }
 
 etl::string_view CandidateReader::GetType(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<8> tokens;
+    Split(tokens, value, " ");
     return tokens[7];
 }
 
@@ -52,7 +59,8 @@ etl::string_view CandidateReader::GetExtParameters(const etl::string_view& value
 }
 
 bool CandidateReader::Validate(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<8> tokens;
+    Split(tokens, value, " ");
     if(tokens.size() < 8)                      { return false; }
     if(tokens[6] != "typ")                     { return false; }
     if(!StringToUnsigned<uint16_t>(tokens[1])) { return false; }

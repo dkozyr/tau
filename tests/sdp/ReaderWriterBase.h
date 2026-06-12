@@ -6,7 +6,7 @@
 
 namespace tau::sdp {
 
-class SdpReaderWriterBase {
+class ReaderWriterBase {
 protected:
     static void AssertSdp(const Sdp& target, const Sdp& actual) {
         ASSERT_EQ(target.cname, actual.cname);

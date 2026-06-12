@@ -5,17 +5,20 @@
 namespace tau::sdp {
 
 etl::string_view BandwidthReader::GetType(const etl::string_view& value) {
-    const auto tokens = Split(value, ":");
+    SplitTokens<2> tokens;
+    Split(tokens, value, ":");
     return tokens[0];
 }
 
 size_t BandwidthReader::GetKbps(const etl::string_view& value) {
-    const auto tokens = Split(value, ":");
+    SplitTokens<2> tokens;
+    Split(tokens, value, ":");
     return StringToUnsigned(tokens[1]).value();
 }
 
 bool BandwidthReader::Validate(const etl::string_view& value) {
-    const auto tokens = Split(value, ":");
+    SplitTokens<2> tokens;
+    Split(tokens, value, ":");
     if(tokens.size() != 2) { return false; }
     const auto& bwtype = tokens[0];
     if(bwtype.size() < 2) { return false; }

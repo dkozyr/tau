@@ -20,7 +20,8 @@ IpAddress MakeIpAddressV4(uint32_t value, bool network_order) {
 }
 
 IpAddress MakeIpAddressV4(const etl::string_view& address_str) {
-    const auto tokens = Split(address_str, ".");
+    etl::vector<etl::string_view, 4 + 1> tokens;
+    Split(tokens, address_str, ".");
     if(tokens.size() == 4) {
         IpAddress ip;
         for(size_t i = 0; i < 4 + 1; ++i) {

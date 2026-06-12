@@ -5,22 +5,26 @@
 namespace tau::sdp {
 
 MediaType MediaReader::GetType(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     return GetMediaTypeByName(tokens[0]);
 }
 
 uint16_t MediaReader::GetPort(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<2> tokens;
+    Split(tokens, value, " ");
     return StringToUnsigned<uint16_t>(tokens[1]).value();
 }
 
 etl::string_view MediaReader::GetProtocol(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<3> tokens;
+    Split(tokens, value, " ");
     return tokens[2];
 }
 
 etl::vector<uint8_t, 32> MediaReader::GetFmts(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<3 + 32> tokens;
+    Split(tokens, value, " ");
     etl::vector<uint8_t, 32> fmts(tokens.size() - 3);
     for(size_t i = 3; i < tokens.size(); ++i) {
         fmts[i - 3] = StringToUnsigned<uint8_t>(tokens[i]).value();
@@ -29,7 +33,8 @@ etl::vector<uint8_t, 32> MediaReader::GetFmts(const etl::string_view& value) {
 }
 
 bool MediaReader::Validate(const etl::string_view& value) {
-    const auto tokens = Split(value, " ");
+    SplitTokens<3 + 32> tokens;
+    Split(tokens, value, " ");
     if(tokens.size() < 4) {
         return false;
     }
