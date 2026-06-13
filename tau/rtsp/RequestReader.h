@@ -9,11 +9,13 @@ namespace tau::rtsp {
 class RequestReader {
 public:
     static std::optional<Request> Read(etl::string_view str) {
-        auto lines = Split(str, kClRf);
+        SplitTokens<128> lines; //TODO: rework with SplitNext
+        Split(lines, str, kClRf);
         if(lines.size() < 2) {
             return std::nullopt;
         }
-        auto tokens = Split(lines[0], " ");
+        SplitTokens<3> tokens;
+        Split(tokens, lines[0], " ");
         if((tokens.size() != 3) || (tokens[2] != kRtspVersion)) {
             return std::nullopt;
         }

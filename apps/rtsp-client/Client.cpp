@@ -173,11 +173,13 @@ Session::Options Client::CreateSessionOptions() const {
     const auto& video = _sdp->medias[0];
     const auto& [_, codec] = *video.codecs.begin();
     if(!codec.format.empty()) {
-        const auto tokens = Split(codec.format, ";");
+        SplitTokens<16> tokens;
+        Split(tokens, codec.format, ";");
         for(auto& token : tokens) {
             const std::string_view kPrefix = "sprop-parameter-sets="; //TODO: name and move to h264 or sdp namespace?
             if(IsPrefix(token, kPrefix)) {
-                const auto params = Split(token.substr(kPrefix.size()), ",");
+                SplitTokens<2> params;
+                Split(params, token.substr(kPrefix.size()), ",");
                 if(params.size() == 2) {
                     return Session::Options{
                         .clock_rate = codec.clock_rate,

@@ -34,7 +34,8 @@ std::optional<Answer> ParseAnswer(const BufferViewConst& view) {
 }
 
 bool AnswerWriter::Write(Writer& writer, std::string_view name, Type type, uint16_t class_, uint32_t ttl, uint32_t ip_address_v4) {
-    auto labels = Split(name, ".");
+    SplitTokens<16> labels; //TODO: rework with SplitNext
+    Split(labels, name, ".");
     const auto name_size = name.size() + 1 + 1;
     if(writer.GetAvailableSize() < name_size + 2 * sizeof(uint32_t) + sizeof(uint16_t) + sizeof(uint32_t)) {
         return false;

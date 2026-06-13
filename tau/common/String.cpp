@@ -3,21 +3,6 @@
 
 namespace tau {
 
-etl::vector<etl::string_view, 256> Split(etl::string_view str, etl::string_view marker, bool ignore_first) {
-    size_t prev = 0, pos = 0;
-    etl::vector<etl::string_view, 256> data;
-    while((pos = str.find(marker, prev)) != etl::string_view::npos) {
-        if(!(ignore_first && (prev == 0))) {
-            data.emplace_back(str.substr(prev, pos - prev));
-        }
-        prev = pos + marker.size();
-    }
-    if((prev != 0) || !str.empty()) {
-        data.emplace_back(str.substr(prev));
-    }
-    return data;
-}
-
 etl::ivector<etl::string_view>& Split(etl::ivector<etl::string_view>& output, etl::string_view str, etl::string_view marker, bool ignore_first) {
     size_t pos = 0;
     while((pos != etl::string_view::npos) && !output.full()) {

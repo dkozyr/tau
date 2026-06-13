@@ -10,7 +10,8 @@ inline std::optional<uint16_t> ParseServerRtpPort(const rtsp::Response& response
     constexpr std::string_view kServerPortStr = "server_port=";
     for(auto& header : response.headers) {
         if(header.name == rtsp::HeaderName::kTransport) {
-            auto tokens = Split(header.value, ";");
+            SplitTokens<16> tokens; //TODO: rework with SplitNext
+            Split(tokens, header.value, ";");
             for(auto& token : tokens) {
                 if(IsPrefix(token, kServerPortStr)) {
                     auto ports = token.substr(kServerPortStr.size());
@@ -27,7 +28,8 @@ inline std::optional<uint16_t> ParseServerRtpPort(const rtsp::Response& response
 inline std::string_view ParseSessionId(const rtsp::Response& response) {
     for(auto& header : response.headers) {
         if(header.name == rtsp::HeaderName::kSession) {
-            auto tokens = Split(header.value, ";");
+            SplitTokens<3> tokens;
+            Split(tokens, header.value, ";");
             if(!tokens.empty()) {
                 return tokens[0];
             }
