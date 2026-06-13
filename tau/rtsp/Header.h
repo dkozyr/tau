@@ -32,7 +32,7 @@ struct Header {
 };
 using Headers = etl::vector<Header, HeaderName::kMaxIndex>;
 
-Headers GetHeaders(const etl::ivector<etl::string_view>& lines);
+Headers GetHeaders(const etl::string_view& str);
 etl::string_view GetHeaderValue(etl::string_view line, etl::string_view prefix);
 etl::string_view GetHeaderValue(HeaderName name, const Headers& headers);
 

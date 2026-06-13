@@ -16,11 +16,15 @@ const etl::array<etl::string_view, kMaxIndex> kNameToPrefix = {
     etl::string_view{"Content-Length: "}
 };
 
-Headers GetHeaders(const etl::ivector<etl::string_view>& lines) {
+Headers GetHeaders(const etl::string_view& str) {
     Headers headers;
-    for(size_t i = 1; i < lines.size(); ++i) { // skip first line
-        const auto& line = lines[i];
+    size_t pos = 0;
+    while(pos != etl::string_view::npos) {
+        auto line = SplitNext(str, pos, kClRf);
         if((line == kClRf) || line.empty()) {
+            break;
+        }
+        if(headers.full()) {
             break;
         }
         for(uint8_t name = HeaderName::kCSeq; name < HeaderName::kMaxIndex; ++name) {

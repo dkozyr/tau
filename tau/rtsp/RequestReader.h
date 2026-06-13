@@ -9,7 +9,7 @@ namespace tau::rtsp {
 class RequestReader {
 public:
     static std::optional<Request> Read(etl::string_view str) {
-        SplitTokens<128> lines; //TODO: rework with SplitNext
+        SplitTokens<2> lines;
         Split(lines, str, kClRf);
         if(lines.size() < 2) {
             return std::nullopt;
@@ -23,7 +23,7 @@ public:
         if(!method) {
             return std::nullopt;
         }
-        auto headers = GetHeaders(lines);
+        auto headers = GetHeaders(str);
         if(GetHeaderValue(HeaderName::kCSeq, headers).empty()) {
             return std::nullopt;
         }
