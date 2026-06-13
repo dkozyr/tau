@@ -50,6 +50,12 @@ etl::string_stream& operator<<(etl::string_stream& ss, const IpAddress& address)
 
 }
 
+namespace tau {
+
+using IpAddress = net::IpAddress;
+
+}
+
 namespace etl {
 
 template <>

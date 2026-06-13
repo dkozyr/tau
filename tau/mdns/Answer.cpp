@@ -33,7 +33,7 @@ std::optional<Answer> ParseAnswer(const BufferViewConst& view) {
     };
 }
 
-bool AnswerWriter::Write(Writer& writer, std::string_view name, Type type, uint16_t class_, uint32_t ttl, uint32_t ip_address_v4) {
+bool AnswerWriter::Write(Writer& writer, const etl::string_view& name, Type type, uint16_t class_, uint32_t ttl, uint32_t ip_address_v4) {
     SplitTokens<16> labels; //TODO: rework with SplitNext
     Split(labels, name, ".");
     const auto name_size = name.size() + 1 + 1;

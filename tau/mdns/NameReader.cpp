@@ -2,8 +2,8 @@
 
 namespace tau::mdns {
 
-std::string ParseName(const uint8_t*& ptr, const uint8_t* end) {
-    std::string name;
+Name ParseName(const uint8_t*& ptr, const uint8_t* end) {
+    Name name;
     while(ptr < end) {
         auto size = ptr[0];
         if(size == 0) {
@@ -29,10 +29,10 @@ std::string ParseName(const uint8_t*& ptr, const uint8_t* end) {
         if(!name.empty()) {
             name += '.';
         }
-        name.append(ptr + 1, ptr + 1 + size);
+        name.append(reinterpret_cast<const char*>(ptr + 1), size);
         ptr += 1 + size;
     }
-    return (ptr <= end) ? name : std::string{};
+    return (ptr <= end) ? name : Name{};
 }
 
 }
