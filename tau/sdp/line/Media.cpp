@@ -1,6 +1,5 @@
 #include "tau/sdp/line/Media.h"
 #include "tau/common/String.h"
-#include <etl/string_stream.h>
 
 namespace tau::sdp {
 
@@ -22,10 +21,10 @@ etl::string_view MediaReader::GetProtocol(const etl::string_view& value) {
     return tokens[2];
 }
 
-etl::vector<uint8_t, 32> MediaReader::GetFmts(const etl::string_view& value) {
-    SplitTokens<3 + 32> tokens;
+etl::vector<uint8_t, kMaxCodecs> MediaReader::GetFmts(const etl::string_view& value) {
+    SplitTokens<3 + kMaxCodecs - 1> tokens;
     Split(tokens, value, " ");
-    etl::vector<uint8_t, 32> fmts(tokens.size() - 3);
+    etl::vector<uint8_t, kMaxCodecs> fmts(tokens.size() - 3);
     for(size_t i = 3; i < tokens.size(); ++i) {
         fmts[i - 3] = StringToUnsigned<uint8_t>(tokens[i]).value();
     }
@@ -33,7 +32,7 @@ etl::vector<uint8_t, 32> MediaReader::GetFmts(const etl::string_view& value) {
 }
 
 bool MediaReader::Validate(const etl::string_view& value) {
-    SplitTokens<3 + 32> tokens;
+    SplitTokens<3 + kMaxCodecs - 1> tokens;
     Split(tokens, value, " ");
     if(tokens.size() < 4) {
         return false;
@@ -58,7 +57,7 @@ bool MediaReader::Validate(const etl::string_view& value) {
     return true;
 }
 
-etl::string_stream& MediaWriter::Write(etl::string_stream& ss, MediaType type, uint16_t port, etl::string_view protocol, const etl::vector<uint8_t, 32>& fmts) {
+etl::string_stream& MediaWriter::Write(etl::string_stream& ss, MediaType type, uint16_t port, etl::string_view protocol, const etl::vector<uint8_t, kMaxCodecs>& fmts) {
     switch(type) {
         case MediaType::kAudio:       ss << "audio"; break;
         case MediaType::kVideo:       ss << "video"; break;

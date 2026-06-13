@@ -47,7 +47,7 @@ TEST(MediaWriterTest, Basic) {
     etl::string<256> value;
     etl::string_stream ss(value);
     {
-        etl::vector<uint8_t, 32> fmts;
+        etl::vector<uint8_t, kMaxCodecs> fmts;
         fmts.push_back(100);
         fmts.push_back(96);
         MediaWriter::Write(ss, MediaType::kVideo, 7777, "RTP/AVPF", fmts);

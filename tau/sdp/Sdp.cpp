@@ -145,6 +145,9 @@ bool OnMedia(Sdp& sdp, const etl::string_view& value) {
     if(!MediaReader::Validate(value)) {
         return false;
     }
+    if(sdp.medias.full()) {
+        return false;
+    }
 
     const auto media_type = MediaReader::GetType(value);
     sdp.medias.push_back(Media{
@@ -212,7 +215,7 @@ bool OnAttributeGroup(Sdp& sdp, const etl::string_view& value) {
         Split(mids, value, " ");
         if(!mids.empty() && (mids[0] == "BUNDLE")) {
             for(size_t i = 1; i < mids.size(); ++i) {
-                sdp.bundle_mids.push_back(etl::string<32>{mids[i]});
+                sdp.bundle_mids.push_back(Mid{mids[i]});
             }
         }
     }
@@ -256,6 +259,9 @@ bool OnAttributeCandidate(Sdp& sdp, const etl::string_view& value) {
     if(sdp.medias.size() == 1) { // bundle-only case only
         if(!sdp.ice) {
             sdp.ice = Ice{};
+        }
+        if(sdp.ice->candidates.full()) {
+            return false;
         }
         sdp.ice->candidates.push_back(value);
     }

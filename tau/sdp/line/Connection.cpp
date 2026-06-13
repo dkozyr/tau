@@ -1,6 +1,5 @@
 #include "tau/sdp/line/Connection.h"
 #include "tau/common/String.h"
-#include <etl/string_stream.h>
 
 namespace tau::sdp {
 

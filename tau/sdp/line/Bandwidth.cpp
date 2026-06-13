@@ -1,6 +1,5 @@
 #include "tau/sdp/line/Bandwidth.h"
 #include "tau/common/String.h"
-#include <etl/string_stream.h>
 
 namespace tau::sdp {
 

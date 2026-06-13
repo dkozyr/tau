@@ -8,7 +8,7 @@
 namespace tau::sdp {
 
 using Candidate = etl::string_view;
-using Candidates = etl::vector<Candidate, 32>; //TODO: revise this limit
+using Candidates = etl::vector<Candidate, 8>;
 
 struct Ice {
     using Ufrag = etl::string<32>;

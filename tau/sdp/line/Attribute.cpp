@@ -4,7 +4,6 @@
 #include "tau/sdp/line/attribute/Extmap.h"
 #include "tau/sdp/line/attribute/RtcpFb.h"
 #include "tau/sdp/line/attribute/Candidate.h"
-#include <etl/string_stream.h>
 
 namespace tau::sdp {
 

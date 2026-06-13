@@ -26,6 +26,9 @@ etl::vector<PtWithPriority, kMaxCodecs> GetPtWithPriority(const CodecsMap& codec
 CodecsMap MakeCodecsMap(std::initializer_list<std::pair<const uint8_t, Codec>> list) {
     CodecsMap result;
     for(auto&& p : list) {
+        if(result.full()) {
+            break;
+        }
         result[p.first] = std::move(p.second);
     }
     return result;

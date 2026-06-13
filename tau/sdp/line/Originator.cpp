@@ -2,7 +2,6 @@
 #include "tau/common/String.h"
 #include "tau/common/Ntp.h"
 #include "tau/common/SteadyClock.h" //TODO: can we use SystemClock?
-#include <etl/string_stream.h>
 
 namespace tau::sdp {
 
