@@ -136,7 +136,6 @@ void TurnClient::SendAllocationRequest(bool authenticated) {
     auto view = request.GetViewWithCapacity();
     stun::Writer writer(view, kAllocateRequest);
     if(!authenticated) {
-        _transaction_id.resize(kTransactionIdSize);
         _transaction_hash = GenerateTransactionId(_transaction_id.data());
     }
     memcpy(view.ptr + 2 * sizeof(uint32_t), _transaction_id.data(), _transaction_id.size());

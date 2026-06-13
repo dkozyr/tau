@@ -4,9 +4,11 @@
 #include "tau/ice/Candidate.h"
 #include "tau/ice/Credentials.h"
 #include "tau/ice/Constants.h"
+#include "tau/stun/Header.h"
 #include "tau/crypto/Hmac.h"
 #include "tau/memory/Buffer.h"
 #include <etl/unordered_map.h>
+#include <etl/array.h>
 #include <functional>
 
 namespace tau::ice {
@@ -72,15 +74,15 @@ private:
     bool _stopped = false;
     TransactionTracker _transaction_tracker;
     uint32_t _transaction_hash = 0;
-    etl::vector<uint8_t, 16> _transaction_id; //TODO: check capacity
+    etl::array<uint8_t, stun::kTransactionIdSize> _transaction_id;
     std::optional<Endpoint> _relayed;
 
     struct Permission {
         bool done;
         Timepoint rto_tp;
     };
-    etl::unordered_map<IpAddress, Permission, 16> _permissions; //TODO: check capacity
-    etl::unordered_map<Endpoint, etl::vector<Buffer, 16>, 16> _queue; //TODO: check capacity
+    etl::unordered_map<IpAddress, Permission, 4> _permissions;
+    etl::unordered_map<Endpoint, etl::vector<Buffer, 16>, 4> _queue;
 
     etl::string<32> _realm; //TODO: check capacity
     etl::string<32> _nonce; //TODO: check capacity
