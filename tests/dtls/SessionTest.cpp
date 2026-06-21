@@ -169,6 +169,7 @@ TEST_F(SessionTest, WithRemoteCertificateValidation) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();
@@ -192,6 +193,7 @@ TEST_F(SessionTest, SelectNonDefaultSrtpProfile) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_32));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();
@@ -218,6 +220,7 @@ TEST_F(SessionTest, PacketLoss) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();
