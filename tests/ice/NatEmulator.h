@@ -5,7 +5,7 @@
 #include <etl/string_stream.h>
 #include <etl/unordered_map.h>
 #include <etl/unordered_set.h>
-#include <vector>
+#include <etl/vector.h>
 #include <functional>
 
 namespace tau::ice {
@@ -15,7 +15,7 @@ using namespace tau::net;
 // NAT emulator for tests only
 class NatEmulator {
 public:
-    static inline const auto kPublicIpDefault = MakeIpAddressV4("1.1.1.1");
+    static inline const IpAddress kPublicIpDefault{1, 1, 1, 1};
 
     enum class Type {
         kFullCone,
@@ -75,13 +75,13 @@ private:
 
     uint16_t _latest_port = 33333;
 
-    etl::unordered_map<Endpoint, Endpoint, 6553> _local_to_public;
-    etl::unordered_map<Endpoint, etl::unordered_set<Endpoint, 6553>, 6553> _public_to_remote;
+    etl::unordered_map<Endpoint, Endpoint, 256> _local_to_public;
+    etl::unordered_map<Endpoint, etl::unordered_set<Endpoint, 256>, 256> _public_to_remote;
 
     using LocalAndRemote = std::pair<Endpoint, Endpoint>;
-    etl::unordered_map<Endpoint, LocalAndRemote, 6553> _public_to_local_remote; // symmetric case only
+    etl::unordered_map<Endpoint, LocalAndRemote, 256> _public_to_local_remote; // symmetric case only
 
-    std::vector<Context> _send_queue;
+    etl::vector<Context, 256> _send_queue;
 
     Callback _on_send_callback;
     Callback _on_recv_callback;

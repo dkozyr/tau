@@ -8,9 +8,9 @@
 #include "tau/srtp/Session.h"
 #include "tau/rtp-session/Session.h"
 #include "tau/net/UdpSocket.h"
-// #include "tau/mdns/Client.h"
+#include "tau/mdns/Client.h"
 #include "tau/crypto/Certificate.h"
-#include "tau/common/SteadyClock.h"
+#include "tau/common/SystemClock.h"
 #include "tau/common/Random.h"
 
 namespace tau::webrtc {
@@ -30,12 +30,11 @@ public:
         Sdp sdp;
         struct Ice {
             etl::vector<etl::string_view, 2> uri_stun_servers = {};
-            //TODO: fix mdns
-            // struct Mdns {
-            //     std::string address = "224.0.0.251"; // mDns default IP
-            //     uint16_t port = 5353;                // mDns default port
-            // };
-            // std::optional<Mdns> mdns = std::nullopt;
+            struct Mdns {
+                IpAddress address = net::IpAddress{224, 0, 0, 251}; // mDns default IP
+                uint16_t port = 5353;                               // mDns default port
+            };
+            std::optional<Mdns> mdns = std::nullopt;
         };
         Ice ice = {};
         struct Debug {
@@ -80,7 +79,7 @@ public:
 private:
     void StartIceAgent();
     void StartDtlsSession();
-    // void InitMdnsClient();
+    void InitMdnsClient();
     void InitMediaDemuxer();
 
     void SetRemoteIceCandidateInternal(ice::CandidateStr candidate);
@@ -94,14 +93,13 @@ private:
 private:
     Dependencies _deps;
     const Options _options;
-    // SystemClock _system_clock;
-    SteadyClock _system_clock; //TODO: fix it
+    SystemClock _system_clock;
 
-//     struct MdnsContext {
-//         net::UdpSocketPtr socket;
-//         mdns::Client client;
-//     };
-//     std::optional<MdnsContext> _mdns_ctx;
+    struct MdnsContext {
+        net::UdpSocketPtr socket;
+        mdns::Client client;
+    };
+    std::optional<MdnsContext> _mdns_ctx;
 
     State _state = State::kInitial;
 

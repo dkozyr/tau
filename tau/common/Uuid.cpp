@@ -7,9 +7,9 @@ namespace tau {
 const etl::string_view kHex = "0123456789abcdef-";
 
 Uuid GenerateUuid() {
-    Uuid uuid(36, 0);
+    Uuid uuid(kUuidSize, 0);
     Random random;
-    for(size_t i = 0; i < 36; ++i) {
+    for(size_t i = 0; i < kUuidSize; ++i) {
         uint8_t v = 16;
         switch(i) {
             case 8:

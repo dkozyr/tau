@@ -29,7 +29,7 @@ struct Candidate {
     bool operator<(const Candidate& other) const;
 };
 using Candidates = etl::vector<Candidate, 8>;
-using CandidateStr = etl::string<64>;
+using CandidateStr = etl::string<96>;
 
 CandidateStr ToCandidateAttributeString(CandidateType type, size_t socket_idx, Endpoint endpoint, etl::string_view mdns_name = {});
 CandidateType CandidateTypeFromString(const etl::string_view& type);

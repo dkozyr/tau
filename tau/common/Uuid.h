@@ -5,7 +5,8 @@
 
 namespace tau {
 
-using Uuid = etl::string<36>;
+constexpr auto kUuidSize = 36;
+using Uuid = etl::string<kUuidSize>;
 
 Uuid GenerateUuid();
 bool IsUuidTrivialCheck(etl::string_view uuid);

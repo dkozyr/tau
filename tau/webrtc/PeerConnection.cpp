@@ -6,6 +6,7 @@
 #include "tau/net/Resolver.h"
 #include "tau/net/Uri.h"
 #include "tau/crypto/Random.h"
+#include "tau/common/Uuid.h"
 #include "tau/common/String.h"
 #include "tau/common/Log.h"
 
@@ -15,7 +16,7 @@ PeerConnection::PeerConnection(Dependencies&& deps, Options&& options)
     : _deps(std::move(deps))
     , _options(std::move(options))
 {
-    // InitMdnsClient();
+    InitMdnsClient();
 }
 
 PeerConnection::~PeerConnection() {
@@ -25,7 +26,7 @@ PeerConnection::~PeerConnection() {
 void PeerConnection::Stop() {
     TAU_LOG_DEBUG("");
     // asio::post(_deps.executor, [this]() {
-        // _mdns_ctx.reset();
+        _mdns_ctx.reset();
         _udp_sockets.clear();
         _ice_agent.reset();
         if(_dtls_session) {
@@ -40,7 +41,10 @@ void PeerConnection::Stop() {
 void PeerConnection::Process() {
 //     asio::post(_deps.executor, [this]() {
         for(auto& udp_socket : _udp_sockets) {
-            udp_socket->Receive(); //TODO: process?
+            udp_socket->Receive();
+        }
+        if(_mdns_ctx) {
+            _mdns_ctx->socket->Receive();
         }
         if(_ice_agent) {
             _ice_agent->Process();
@@ -312,11 +316,11 @@ void PeerConnection::StartIceAgent() {
     _ice_agent->SetSendCallback([this](size_t socket_idx, net::Endpoint remote, Buffer&& message) {
         _udp_sockets[socket_idx]->Send(std::move(message), remote);
     });
-    // if(_mdns_ctx) {
-    //     _ice_agent->SetMdnsEndpointCallback([this](net::Endpoint endpoint) {
-    //         return _mdns_ctx->client.CreateName(endpoint.address);
-    //     });
-    // }
+    if(_mdns_ctx) {
+        _ice_agent->SetMdnsEndpointCallback([this](net::Endpoint endpoint) {
+            return _mdns_ctx->client.CreateName(endpoint.address);
+        });
+    }
     _ice_agent->Start();
 }
 
@@ -336,7 +340,10 @@ void PeerConnection::StartDtlsSession() {
             .type = (local_sdp.dtls->setup == sdp::Setup::kActive)
                 ? dtls::Session::Type::kClient
                 : dtls::Session::Type::kServer,
-            // .srtp_profiles = dtls::Session::kSrtpProfilesDefault,
+            .srtp_profiles = etl::vector<dtls::Session::SrtpProfile, 2>{
+                dtls::Session::SrtpProfile::kAes128CmSha1_80,
+                dtls::Session::SrtpProfile::kAes128CmSha1_32
+            },
             .remote_peer_cert_digest = remote_sdp.dtls->fingerprint_sha256,
             .log_ctx = _options.log_ctx
         }
@@ -344,12 +351,24 @@ void PeerConnection::StartDtlsSession() {
     _dtls_session->SetStateCallback([this](dtls::Session::State state) {
         TAU_LOG_INFO(_options.log_ctx << "DTLS state: " << state);
         if(state == dtls::Session::State::kConnected) {
-            auto srtp_profile = _dtls_session->GetSrtpProfile();
+            const auto negotaited_srtp_profile = _dtls_session->GetSrtpProfile();
+            auto srtp_profile = srtp_profile_t::srtp_profile_null_null;
+            if(negotaited_srtp_profile) {
+                switch(*negotaited_srtp_profile) {
+                    case dtls::Session::SrtpProfile::kAes128CmSha1_80:
+                        srtp_profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_80;
+                        break;
+                    case dtls::Session::SrtpProfile::kAes128CmSha1_32:
+                        srtp_profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_32;
+                        break;
+                }
+            }
+
             // try {
                 _srtp_decryptor.emplace(srtp::Session::Options{
                     .type = srtp::Session::Type::kDecryptor,
-                    .profile = static_cast<srtp_profile_t>(srtp_profile.value()),
-                    .key = _dtls_session->GetKeyingMaterial(false), //TODO: fix
+                    .profile = srtp_profile,
+                    .key_material = _dtls_session->GetKeyingMaterial(false),
                     .log_ctx = _options.log_ctx
                 });
                 _srtp_decryptor->SetCallback([this](Buffer&& packet, bool is_rtp) {
@@ -358,8 +377,8 @@ void PeerConnection::StartDtlsSession() {
 
                 _srtp_encryptor.emplace(srtp::Session::Options{
                     .type = srtp::Session::Type::kEncryptor,
-                    .profile = static_cast<srtp_profile_t>(srtp_profile.value()),
-                    .key = _dtls_session->GetKeyingMaterial(true), //TODO: fix it
+                    .profile = srtp_profile,
+                    .key_material = _dtls_session->GetKeyingMaterial(true),
                     .log_ctx = _options.log_ctx
                 });
                 _srtp_encryptor->SetCallback([this](Buffer&& packet, bool /*is_rtp*/) {
@@ -387,35 +406,37 @@ void PeerConnection::StartDtlsSession() {
     });
 }
 
-// void PeerConnection::InitMdnsClient() {
-//     if(!_options.ice.mdns) {
-//         return;
-//     }
-//     const auto& mdns = *_options.ice.mdns;
+void PeerConnection::InitMdnsClient() {
+    if(!_options.ice.mdns) {
+        return;
+    }
+    const auto& mdns = *_options.ice.mdns;
 
-//     _mdns_ctx.emplace(MdnsContext{
-//         net::UdpSocket::Create(
-//             net::UdpSocket::Options{
-//                 .allocator = _deps.udp_allocator,
-//                 .executor = _deps.executor,
-//                 .local_address = {},
-//                 .local_port = mdns.port,
-//                 .multicast_address = mdns.address
-//             }),
-//         mdns::Client::Dependencies{
-//             .udp_allocator = _deps.udp_allocator,
-//             .clock = _deps.clock
-//         }
-//     });
+    _mdns_ctx.emplace(MdnsContext{
+        net::UdpSocket::Create(
+            net::UdpSocket::Options{
+                .allocator = _deps.udp_allocator,
+                .local_address = {},
+                .local_port = mdns.port,
+                .multicast_address = mdns.address
+            }),
+        mdns::Client::Dependencies{
+            .udp_allocator = _deps.udp_allocator,
+            .clock = _deps.clock
+        }
+    });
 
-//     _mdns_ctx->socket->SetRecvCallback([this](Buffer&& packet, Endpoint /*remote_endpoint*/) {
-//         _mdns_ctx->client.Recv(std::move(packet));
-//     });
-//     auto mdns_endpoint = Endpoint{asio_ip::make_address(mdns.address), mdns.port};
-//     _mdns_ctx->client.SetSendCallback([this, mdns_endpoint](Buffer&& packet) {
-//         _mdns_ctx->socket->Send(std::move(packet), mdns_endpoint);
-//     });
-// }
+    _mdns_ctx->socket->SetRecvCallback([this](Buffer&& packet, net::Endpoint /*remote_endpoint*/) {
+        _mdns_ctx->client.Recv(std::move(packet));
+    });
+    auto mdns_endpoint = net::Endpoint{
+        .address = mdns.address,
+        .port = mdns.port
+    };
+    _mdns_ctx->client.SetSendCallback([this, mdns_endpoint](Buffer&& packet) {
+        _mdns_ctx->socket->Send(std::move(packet), mdns_endpoint);
+    });
+}
 
 void PeerConnection::InitMediaDemuxer() {
     _media_demuxer.emplace(MediaDemuxer::Options{
@@ -486,15 +507,14 @@ void PeerConnection::SetRemoteIceCandidateInternal(ice::CandidateStr candidate) 
         return;
     }
     if(auto pos = candidate.find(".local"); pos != std::string::npos) {
-        // constexpr auto kUuidSize = 36; //TODO: move to Uuid;
-        // if(_mdns_ctx && (pos > kUuidSize)) {
-        //     auto mdns_name = candidate.substr(pos - kUuidSize, kUuidSize + 6);
-        //     _mdns_ctx->client.FindIpAddressByName(mdns_name,
-        //         [this, candidate = std::move(candidate), mdns_name](IpAddressV4 address) mutable {
-        //             candidate.replace(candidate.find(mdns_name), mdns_name.size(), address.to_string());
-        //             _ice_agent->RecvRemoteCandidate(std::move(candidate));
-        //         });
-        // }
+        if(_mdns_ctx && (pos > kUuidSize)) {
+            auto mdns_name = candidate.substr(pos - kUuidSize, kUuidSize + 6);
+            _mdns_ctx->client.FindIpAddressByName(mdns_name,
+                [this, candidate = std::move(candidate), mdns_name](IpAddress address) mutable {
+                    candidate.replace(candidate.find(mdns_name), mdns_name.size(), net::ToString(address));
+                    _ice_agent->RecvRemoteCandidate(std::move(candidate));
+                });
+        }
     } else {
         _ice_agent->RecvRemoteCandidate(std::move(candidate));
     }

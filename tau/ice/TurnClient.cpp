@@ -223,7 +223,7 @@ void TurnClient::OnStunResponse(const BufferViewConst& view) {
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    _relayed.emplace(Endpoint{net::MakeIpAddressV4(address), port});
+                    _relayed.emplace(Endpoint{net::IpAddress{address}, port});
                 }
                 break;
             case AttributeType::kRealm:
@@ -271,7 +271,7 @@ void TurnClient::OnCreatePermissionResponse(uint32_t hash) {
 
             for(auto it = _queue.begin(); it != _queue.end();) {
                 auto& [remote, packets] = *it;
-                if(remote.address == net::MakeIpAddressV4(ip4_addr)) { //TODO: could we use remote (above) instead of MakeIpAddressV4?
+                if(remote.address == net::IpAddress{ip4_addr}) { //TODO: could we use remote (above) instead of creating address here?
                     for(auto& packet : packets) {
                         SendDataIndication(std::move(packet), remote);
                     }
@@ -296,7 +296,7 @@ void TurnClient::OnDataIndication(Buffer&& message) {
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    remote_peer.emplace(Endpoint{net::MakeIpAddressV4(address), port});
+                    remote_peer.emplace(Endpoint{net::IpAddress{address}, port});
                 }
                 break;
             case AttributeType::kData:

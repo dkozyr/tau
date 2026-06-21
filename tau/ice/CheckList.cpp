@@ -283,7 +283,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    reflexive.emplace(Endpoint{net::MakeIpAddressV4(address), port});
+                    reflexive.emplace(Endpoint{net::IpAddress{address}, port});
                 }
                 break;
             default:
