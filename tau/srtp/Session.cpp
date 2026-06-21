@@ -1,7 +1,6 @@
-#include "tau/srtp/Session.h"
-#include "tau/common/Exception.h"
-#include "tau/common/Log.h"
-#include <cstring>
+#include <tau/srtp/Session.h>
+#include <tau/common/Exception.h>
+#include <tau/common/Log.h>
 
 namespace tau::srtp {
 
@@ -24,8 +23,8 @@ Session::Session(Options&& options)
     });
 
     srtp_policy_add_key(policy,
-        options.key.data(), options.key.size(),
-        options.salt.data(), options.salt.size(),
+        options.key_material.key.data(), options.key_material.key.size(),
+        options.key_material.salt.data(), options.key_material.salt.size(),
         nullptr, 0);
 
     if(auto error = srtp_create(&_session, policy)) {

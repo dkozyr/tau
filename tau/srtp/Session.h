@@ -1,16 +1,13 @@
 #pragma once
 
-#include "tau/memory/Buffer.h"
-#include <srtp3/srtp.h>
-#include <etl/vector.h>
+#include <tau/srtp/KeyMaterial.h>
+#include <tau/memory/Buffer.h>
 #include <functional>
 
 namespace tau::srtp {
 
 class Session {
 public:
-    static constexpr auto kKeyCapacity = SRTP_MAX_KEY_LEN;
-    static constexpr auto kSaltCapacity = SRTP_SALT_LEN;
     static constexpr auto kRtxWindowSize = 256;
 
     enum Type {
@@ -21,8 +18,7 @@ public:
     struct Options {
         Type type;
         srtp_profile_t profile;
-        etl::vector<uint8_t, kKeyCapacity> key;
-        etl::vector<uint8_t, kSaltCapacity> salt;
+        KeyMaterial key_material;
         etl::string_view log_ctx;
     };
 

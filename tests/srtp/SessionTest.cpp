@@ -35,15 +35,19 @@ public:
         _encryptor.emplace(Session::Options{
             .type = Session::Type::kEncryptor,
             .profile = GetParam().profile,
-            .key = _key,
-            .salt = _salt,
+            .key_material = KeyMaterial{
+                .key = _key,
+                .salt = _salt
+            },
             .log_ctx = "[test] "
         });
         _decryptor.emplace(Session::Options{
             .type = Session::Type::kDecryptor,
             .profile = GetParam().profile,
-            .key = _key,
-            .salt = _salt,
+            .key_material = KeyMaterial{
+                .key = _key,
+                .salt = _salt
+            },
             .log_ctx = "[test] "
         });
         ASSERT_TRUE(_encryptor->IsValid());
@@ -126,8 +130,8 @@ public:
     }
 
 protected:
-    etl::vector<uint8_t, Session::kKeyCapacity> _key;
-    etl::vector<uint8_t, Session::kSaltCapacity> _salt;
+    etl::vector<uint8_t, kKeyCapacity> _key;
+    etl::vector<uint8_t, kSaltCapacity> _salt;
     std::optional<Session> _encryptor;
     std::optional<Session> _decryptor;
     rtp::Writer::Options _rtp_options{
@@ -180,8 +184,7 @@ TEST(SessionTest, WrongProfile) {
     Session session(Session::Options{
         .type = Session::Type::kEncryptor,
         .profile = srtp_profile_t::srtp_profile_null_sha1_32,
-        .key = {},
-        .salt = {},
+        .key_material = {},
         .log_ctx = "[test] "
     });
     ASSERT_FALSE(session.IsValid());
