@@ -25,7 +25,7 @@ std::optional<Endpoint> ResolveEndpointV4(const etl::string_view& host, const et
             auto addr = reinterpret_cast<sockaddr_in*>(entry->ai_addr);
             auto addr_v4 = addr->sin_addr.s_addr;
             endpoint.emplace(Endpoint{
-                .address = MakeIpAddressV4(addr_v4, true),
+                .address = IpAddress(addr_v4, true),
                 .port = htons(addr->sin_port)
             });
             break;

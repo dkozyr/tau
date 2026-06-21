@@ -14,6 +14,26 @@ using IpAddressStrV4 = etl::string<15>; //xxx.xxx.xxx.xxx
 struct IpAddress {
     etl::array<uint8_t, 4> bytes = {0, 0, 0, 0}; //TODO: uint32_t?
 
+    IpAddress() = default;
+
+    IpAddress(uint8_t a, uint8_t b, uint8_t c, uint8_t d)
+        : bytes{a, b, c, d}
+    {}
+
+    IpAddress(uint32_t value, bool network_order = false) {
+        if(network_order) {
+            bytes[0] =  value        & 0xFF;
+            bytes[1] = (value >> 8)  & 0xFF;
+            bytes[2] = (value >> 16) & 0xFF;
+            bytes[3] = (value >> 24) & 0xFF;
+        } else {
+            bytes[0] = (value >> 24) & 0xFF;
+            bytes[1] = (value >> 16) & 0xFF;
+            bytes[2] = (value >> 8)  & 0xFF;
+            bytes[3] =  value        & 0xFF;
+        }
+    }
+
     uint32_t GetUint32(bool network_order = false) const {
         if(network_order) {
             return (static_cast<uint32_t>(bytes[0]) << 0) |
@@ -41,7 +61,6 @@ struct IpAddress {
     } 
 };
 
-IpAddress MakeIpAddressV4(uint32_t value, bool network_order = false);
 IpAddress MakeIpAddressV4(const etl::string_view& address_str);
 
 IpAddressStrV4 ToString(const IpAddress& address);
@@ -53,6 +72,7 @@ etl::string_stream& operator<<(etl::string_stream& ss, const IpAddress& address)
 namespace tau {
 
 using IpAddress = net::IpAddress;
+using IpAddressStrV4 = net::IpAddressStrV4;
 
 }
 

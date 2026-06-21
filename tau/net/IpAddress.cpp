@@ -3,22 +3,6 @@
 
 namespace tau::net {
 
-IpAddress MakeIpAddressV4(uint32_t value, bool network_order) {
-    IpAddress address;
-    if(network_order) {
-        address.bytes[0] = value & 0xFF;
-        address.bytes[1] = (value >> 8) & 0xFF;
-        address.bytes[2] = (value >> 16) & 0xFF;
-        address.bytes[3] = (value >> 24) & 0xFF;
-    } else {
-        address.bytes[0] = (value >> 24) & 0xFF;
-        address.bytes[1] = (value >> 16) & 0xFF;
-        address.bytes[2] = (value >> 8) & 0xFF;
-        address.bytes[3] = value & 0xFF;
-    }
-    return address;
-}
-
 IpAddress MakeIpAddressV4(const etl::string_view& address_str) {
     etl::vector<etl::string_view, 4 + 1> tokens;
     Split(tokens, address_str, ".");

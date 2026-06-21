@@ -10,7 +10,7 @@ Interfaces EnumerateInterfaces(bool skip_loopback, bool ipv6) {
         esp_netif_ip_info_t ip;
         if(esp_netif_get_ip_info(netif, &ip) == ESP_OK) {
             if(ip.ip.addr != 0) {
-                auto local_address = MakeIpAddressV4(ip.ip.addr, true);
+                IpAddress local_address{ip.ip.addr, true};
                 if(skip_loopback && local_address.IsLoopback()) {
                     continue;
                 }

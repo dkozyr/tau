@@ -17,7 +17,7 @@ Interfaces EnumerateInterfaces(bool skip_loopback, bool ipv6) {
 
         if(addr->ifa_addr->sa_family == AF_INET) {
             auto addr_v4 = reinterpret_cast<sockaddr_in*>(addr->ifa_addr)->sin_addr.s_addr;
-            auto address = MakeIpAddressV4(addr_v4, true);
+            IpAddress address{addr_v4, true};
             if(skip_loopback && address.IsLoopback()) {
                 continue;
             }
