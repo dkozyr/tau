@@ -89,22 +89,24 @@ TEST_F(UdpSocketTest, PortsPair) {
     ASSERT_EQ(endpoint1.port + 1, endpoint2.port);
 }
 
-// TEST_F(UdpSocketTest, DISABLED_MANUAL_Multicast) {
-//     auto mdns_socket = UdpSocket::Create(
-//         UdpSocket::Options{
-//             .allocator = g_udp_allocator,
-//             .executor = _io.GetExecutor(),
-//             .local_address = {},
-//             .local_port = 5353,                 // mDns port
-//             .multicast_address = "224.0.0.251"  // mDns IPv4
-//         });
+TEST_F(UdpSocketTest, DISABLED_MANUAL_Multicast) {
+    auto mdns_socket = UdpSocket::Create(
+        UdpSocket::Options{
+            .allocator = g_udp_allocator,
+            .local_address = {},
+            .local_port = 5353,                            // mDns port
+            .multicast_address = IpAddress{224, 0, 0, 251} // mDns IPv4
+        });
 
-//     mdns_socket->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
-//         TAU_LOG_INFO("Multicast remote endpoint: " << remote_endpoint << ", packet size: " << packet.GetSize());
-//     });
+    mdns_socket->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
+        TAU_LOG_INFO("Multicast remote endpoint: " << remote_endpoint << ", packet size: " << packet.GetSize());
+    });
 
-//     Event().WaitFor(600s);
-// }
+    while(true) {
+        std::this_thread::sleep_for(5ms);
+        mdns_socket->Receive();
+    }
+}
 
 TEST_F(UdpSocketTest, Load) {
     constexpr auto kPacketSize1 = 1234;

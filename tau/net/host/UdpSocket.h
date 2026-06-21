@@ -14,7 +14,7 @@ public:
         Allocator& allocator;
         IpAddress local_address;
         std::optional<uint16_t> local_port = std::nullopt;
-        // std::optional<IpAddress> multicast_address = std::nullopt; //TODO: implement
+        std::optional<IpAddress> multicast_address = std::nullopt;
     };
 
     using RecvCallback = std::function<void(Buffer&& packet, Endpoint remote_endpoint)>;

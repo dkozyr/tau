@@ -21,17 +21,49 @@ UdpSocket::UdpSocket(Options&& options)
         return;
     }
 
+    if(options.multicast_address) {
+        int reuse = 1;
+        auto error = setsockopt(_socket, SOL_SOCKET, SO_REUSEADDR, (char*)&reuse, sizeof(reuse));
+        if(error < 0) {
+            TAU_LOG_ERROR("setsockopt SO_REUSEADDR failed, error: " << error << ", errno: " << errno);
+            close(_socket);
+            return;
+        }
+    }
+
     sockaddr_in local_addr = {
         .sin_family = AF_INET,
         .sin_port = htons(options.local_port.value_or(0)),
-        .sin_addr = {.s_addr = options.local_address.GetUint32(true)},
+        .sin_addr = {
+            .s_addr = options.multicast_address.has_value()
+                    ? INADDR_ANY
+                    : options.local_address.GetUint32(true)
+        },
         .sin_zero = {}
     };
     auto error = bind(_socket, (sockaddr*)&local_addr, sizeof(local_addr));
     if(error < 0) {
-        TAU_LOG_ERROR("bind failed, error: " << error);
+        TAU_LOG_ERROR("bind failed, error: " << error << ", errno: " << errno);
         close(_socket);
         return;
+    }
+
+    if(options.multicast_address) {
+        ip_mreq mreq;
+        mreq.imr_multiaddr.s_addr = options.multicast_address->GetUint32(true); 
+        mreq.imr_interface.s_addr = INADDR_ANY; 
+        auto error = setsockopt(_socket, IPPROTO_IP, IP_ADD_MEMBERSHIP, (char*)&mreq, sizeof(mreq));
+        if(error < 0) {
+            TAU_LOG_ERROR("setsockopt failed, error: " << error << ", errno: " << errno);
+            close(_socket);
+            return;
+        }
+
+        // char loop = 0;
+        // setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_LOOP, &loop, sizeof(loop));
+
+        // unsigned char ttl = 1;
+        // setsockopt(_socket, IPPROTO_IP, IP_MULTICAST_TTL, &ttl, sizeof(ttl));
     }
 
     SetRecvBufferSize(64 * 1024);
@@ -89,6 +121,7 @@ bool UdpSocket::Receive() {
             _recv_callback(std::move(item.packet), item.endpoint);
         } else {
             TAU_LOG_WARNING("TryPop failed");
+            break;
         }
         count++;
     }
@@ -96,14 +129,10 @@ bool UdpSocket::Receive() {
 }
 
 void UdpSocket::StartRxTask() {
-    //TODO: name constant CPU1 = 1
-    //TODO: use log_ctx as name?
     _rx_task.socket = _socket;
     _rx_thread.emplace([this]() {
         UdpSocketRxTask(_rx_task);
     });
-
-    // xTaskCreatePinnedToCore(detail::UdpSocketRxTask, "udp_rx", 4096, &_rx_task, 5, &_rx_task.task, 1);
 }
 
 void UdpSocket::SetRecvBufferSize(int recv_buffer_size) {
@@ -134,7 +163,7 @@ void UdpSocket::UpdateLocalEndpoint() {
     if(storage.ss_family == AF_INET) {
         auto in = reinterpret_cast<sockaddr_in*>(&storage);
         _local_endpoint = Endpoint{
-            .address = MakeIpAddressV4(in->sin_addr.s_addr, true),
+            .address = IpAddress{in->sin_addr.s_addr, true},
             .port = ntohs(in->sin_port)
         };
     }

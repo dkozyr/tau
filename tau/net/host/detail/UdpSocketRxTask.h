@@ -11,7 +11,8 @@ struct PacketContext {
     Endpoint endpoint;
 };
 
-using UdpSocketRxBuffer = StaticQueue<PacketContext, 64>;
+//TODO: make capacity configurable?
+using UdpSocketRxBuffer = StaticQueue<PacketContext, 128>;
 
 struct UdpSocketRxContext {
     Allocator& allocator;

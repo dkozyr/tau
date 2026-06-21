@@ -126,7 +126,7 @@ void UdpSocket::UpdateLocalEndpoint() {
     if(storage.ss_family == AF_INET) {
         auto in = reinterpret_cast<sockaddr_in*>(&storage);
         _local_endpoint = Endpoint{
-            .address = MakeIpAddressV4(in->sin_addr.s_addr, true),
+            .address = IpAddress{in->sin_addr.s_addr, true},
             .port = ntohs(in->sin_port)
         };
     }

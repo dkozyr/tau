@@ -34,7 +34,7 @@ void UdpSocketRxTask(void* arg) {
 
             if(src_addr.ss_family == AF_INET) {
                 auto in = reinterpret_cast<sockaddr_in*>(&src_addr);
-                item.endpoint.address = MakeIpAddressV4(in->sin_addr.s_addr, true);
+                item.endpoint.address = IpAddress{in->sin_addr.s_addr, true};
                 item.endpoint.port = ntohs(in->sin_port);
             }
 
