@@ -83,12 +83,4 @@ bool Session::Decrypt(Buffer&& packet, bool is_rtp) {
     return true;
 }
 
-size_t Session::GetKeySize(srtp_profile_t profile) {
-    return srtp_profile_get_master_key_length(profile);
-}
-
-size_t Session::GetSaltSize(srtp_profile_t profile) {
-    return srtp_profile_get_master_salt_length(profile);
-}
-
 }

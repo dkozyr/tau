@@ -34,9 +34,6 @@ public:
     bool Encrypt(Buffer&& packet, bool is_rtp = true);
     bool Decrypt(Buffer&& packet, bool is_rtp = true);
 
-    static size_t GetKeySize(srtp_profile_t profile);
-    static size_t GetSaltSize(srtp_profile_t profile);
-
 private:
     const etl::string_view _log_ctx;
     srtp_t _session = nullptr;

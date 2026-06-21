@@ -18,6 +18,7 @@
 
 #include <etl/array.h>
 #include <etl/vector.h>
+#include <etl/queue.h>
 #include <etl/string.h>
 #include <etl/string_view.h>
 

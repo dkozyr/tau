@@ -14,4 +14,12 @@ struct KeyMaterial {
     etl::vector<uint8_t, kSaltCapacity> salt;
 };
 
+inline size_t GetKeySize(srtp_profile_t profile) {
+    return srtp_profile_get_master_key_length(profile);
+}
+
+inline size_t GetSaltSize(srtp_profile_t profile) {
+    return srtp_profile_get_master_salt_length(profile);
+}
+
 }

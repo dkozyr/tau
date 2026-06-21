@@ -1,14 +1,13 @@
 #pragma once
 
 #include "tau/crypto/Certificate.h"
+#include "tau/srtp/KeyMaterial.h"
 #include "tau/memory/Buffer.h"
-
 #include "mbedtls/ssl.h"
 #include "mbedtls/x509_crt.h"
 #include "mbedtls/pk.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
-#include <etl/vector.h>
 #include <etl/string.h>
 #include <etl/string_view.h>
 #include <etl/string_stream.h>
@@ -18,7 +17,6 @@
 namespace tau::dtls {
 
 class Session {
-
 public:
 //     static constexpr auto kSrtpProfilesDefault = "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"; //SRTP_AEAD_AES_128_GCM:SRTP_AEAD_AES_256_GCM
 //     static constexpr auto kFailureTimeout = 10 * kSec;
@@ -58,8 +56,6 @@ public:
         etl::string_view log_ctx;
     };
 
-    using KeyMaterial = etl::vector<uint8_t, 64>;
-
     using Callback = std::function<void(Buffer&&)>;
     using StateCallback = std::function<void(State)>;
 
@@ -81,7 +77,7 @@ public:
 //     std::optional<Timepoint> GetTimeout();
 
     std::optional<SrtpProfile> GetSrtpProfile() const;
-    KeyMaterial GetKeyingMaterial(bool encryption) const;
+    srtp::KeyMaterial GetKeyingMaterial(bool encryption) const;
 
 private:
     bool Init();

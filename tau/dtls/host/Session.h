@@ -1,11 +1,9 @@
 #pragma once
 
-#include "tau/crypto/Certificate.h"
-#include "tau/memory/Buffer.h"
+#include <tau/crypto/Certificate.h>
+#include <tau/srtp/KeyMaterial.h>
+#include <tau/memory/Buffer.h>
 #include <openssl/ssl.h>
-#include <etl/vector.h>
-#include <etl/string.h>
-#include <etl/string_view.h>
 #include <etl/string_stream.h>
 #include <functional>
 #include <optional>
@@ -13,11 +11,7 @@
 namespace tau::dtls {
 
 class Session {
-    // using BioData = etl::vector<uint8_t, 1500>;
-    using KeyMaterial = etl::vector<uint8_t, 64>;
-
 public:
-    static constexpr auto kSrtpProfilesDefault = "SRTP_AES128_CM_SHA1_80:SRTP_AES128_CM_SHA1_32"; //SRTP_AEAD_AES_128_GCM:SRTP_AEAD_AES_256_GCM
     static constexpr auto kFailureTimeout = 10 * kSec;
 
     enum Type {
@@ -42,6 +36,7 @@ public:
         // kAeadAes128Gcm   = 7,
         // kAeadAes256Gcm   = 8,
     };
+    static constexpr size_t kSrtpProfilesCount = 2;
 
     struct Dependencies {
         Allocator& udp_allocator;
@@ -50,7 +45,7 @@ public:
 
     struct Options{
         Type type;
-        // etl::string<128> srtp_profiles; //TODO: check capacity
+        etl::vector<SrtpProfile, 2> srtp_profiles;
         etl::string_view remote_peer_cert_digest;
         etl::string_view log_ctx;
     };
@@ -76,11 +71,15 @@ public:
     std::optional<Timepoint> GetTimeout();
 
     std::optional<SrtpProfile> GetSrtpProfile() const;
-    KeyMaterial GetKeyingMaterial(bool encryption) const;
+    srtp::KeyMaterial GetKeyingMaterial(bool encryption) const;
 
 private:
+    void ProcessPending();
+
     static int OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx);
     int OnVerifyPeer(int preverify_ok, X509_STORE_CTX* x509_ctx);
+
+    static void SrtpProfilesToString(etl::istring& output, const Options& options);
 
 private:
     Dependencies _deps;

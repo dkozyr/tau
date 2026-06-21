@@ -26,8 +26,8 @@ public:
     }
 
     void Init() {
-        _key.resize(Session::GetKeySize(GetParam().profile));
-        _salt.resize(Session::GetSaltSize(GetParam().profile));
+        _key.resize(GetKeySize(GetParam().profile));
+        _salt.resize(GetSaltSize(GetParam().profile));
 
         crypto::RandomBytes(_key.data(), _key.size());
         crypto::RandomBytes(_salt.data(), _salt.size());
