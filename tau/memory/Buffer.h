@@ -48,6 +48,8 @@ public:
     BufferView GetViewWithCapacity();
     BufferViewConst GetViewWithCapacity() const;
 
+    const etl::string_view GetStringView() const;
+
     void SetSize(size_t size);
 
     size_t GetSize() const { return _size; }

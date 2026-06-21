@@ -105,6 +105,10 @@ BufferViewConst Buffer::GetViewWithCapacity() const {
     };
 }
 
+const etl::string_view Buffer::GetStringView() const {
+    return etl::string_view{reinterpret_cast<const char*>(_block), _size};
+}
+
 void Buffer::SetSize(size_t size) {
     if(size > _capacity) {
         //TODO: do exception?
