@@ -25,16 +25,16 @@ public:
         });
 
         _client->SetRecvCallback([&](Buffer&& packet) {
-            auto view = packet.GetView();
-            auto message = etl::string_view{reinterpret_cast<char*>(view.ptr), view.size};
+            auto message = packet.GetStringView();
             TAU_LOG_INFO("[client] [recv] message: " << message);
             EXPECT_EQ(message, "Hello from server!");
+            _client_recevied_ok = (message == "Hello from server!");
         });
         _server->SetRecvCallback([&](Buffer&& packet) {
-            auto view = packet.GetView();
-            auto message = etl::string_view{reinterpret_cast<char*>(view.ptr), view.size};
+            auto message = packet.GetStringView();
             TAU_LOG_INFO("[server] [recv] message: " << message);
             EXPECT_EQ(message, "Hello from client!");
+            _server_recevied_ok = (message == "Hello from client!");
         });
 
         _client->SetStateCallback([&](Session::State state) { _client_states.push_back(state); });
@@ -101,6 +101,11 @@ public:
         ASSERT_EQ(client_decrypting.salt, server_encrypting.salt);
     }
 
+    void AssertReceivedData() const {
+        ASSERT_TRUE(_client_recevied_ok);
+        ASSERT_TRUE(_server_recevied_ok);
+    }
+
 protected:
     crypto::Certificate _client_certificate;
     crypto::Certificate _server_certificate;
@@ -130,6 +135,9 @@ protected:
     etl::queue<std::pair<bool, Buffer>, 32> _queue;
     etl::vector<Session::State, 8> _client_states;
     etl::vector<Session::State, 8> _server_states;
+
+    bool _client_recevied_ok = false;
+    bool _server_recevied_ok = false;
 };
 
 TEST_F(SessionTest, Basic) {
@@ -140,6 +148,7 @@ TEST_F(SessionTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();

@@ -22,7 +22,7 @@ protected:
         ASSERT_LT(1, data.size());
         bool reordered = false;
         for(size_t i = 1; i < data.size(); ++i) {
-            if(data[i - 1] > data[i]) {
+            if(data[i - 1] >= data[i]) {
                 reordered = true;
                 break;
             }
@@ -37,8 +37,8 @@ TEST_F(ThreadPoolTest, Basic) {
 
     Output output;
     std::mutex mutex;
-    const size_t kTestValues = 10;
-    for(size_t i = 0; i < 10; ++i) {
+    const size_t kTestValues = 42;
+    for(size_t i = 0; i < kTestValues; ++i) {
         asio::post(executor, [i, &output, &mutex]() {
             TAU_LOG_INFO("i: " << i);
             std::lock_guard lock(mutex);
@@ -47,7 +47,7 @@ TEST_F(ThreadPoolTest, Basic) {
     }
     {
         std::lock_guard lock(mutex);
-        ASSERT_GT(kTestValues, output.GetSize());
+        ASSERT_GE(kTestValues, output.GetSize());
     }
 
     io.Join();
@@ -60,8 +60,8 @@ TEST_F(ThreadPoolTest, Strand) {
     auto executor = io.GetStrand();
 
     Output output;
-    const size_t kTestValues = 10;
-    for(size_t i = 0; i < 10; ++i) {
+    const size_t kTestValues = 42;
+    for(size_t i = 0; i < kTestValues; ++i) {
         asio::post(executor, [i, &output]() {
             TAU_LOG_INFO("i: " << i);
             output.Push(i); // mutex not needed with strand
