@@ -7,8 +7,7 @@ namespace tau::audio {
 class CodecBaseTest {
 public:
     CodecBaseTest()
-        : _rtp_allocator(1500)
-        , _frame_allocator(48000 * OpusDecoder::kDefaultFrameDurationMs / 1000 * sizeof(int16_t) * 2)
+        : _frame_allocator(_allocated_memory.data(), _allocated_memory.size(), 48000 * OpusDecoder::kDefaultFrameDurationMs / 1000 * sizeof(int16_t) * 2)
         , _pcm_data(ReadFile(std::string{PROJECT_SOURCE_DIR} + "/data/audio/16khz_mono_pcm_s16le.raw"))
         , _pcm_samples(reinterpret_cast<const int16_t*>(_pcm_data.data()))
         , _pcm_samples_count(_pcm_data.size() / sizeof(int16_t)) {
@@ -80,8 +79,8 @@ protected:
     }
 
 protected:
-    PoolAllocator _rtp_allocator;
-    PoolAllocator _frame_allocator;
+    etl::array<uint8_t, 1'000'000> _allocated_memory;
+    PoolAllocator<> _frame_allocator;
 
     uint32_t _sample_rate = 48000;
     uint32_t _channels = 1;

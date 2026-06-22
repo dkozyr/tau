@@ -2,6 +2,7 @@
 #include "tau/common/Exception.h"
 #include "tau/common/Log.h"
 #include <algorithm>
+#include <cstring>
 
 namespace tau::audio {
 

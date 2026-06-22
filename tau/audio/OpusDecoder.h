@@ -2,6 +2,7 @@
 
 #include "tau/audio/DecoderInterface.h"
 #include "3rdparty/opus/include/opus.h"
+#include <etl/vector.h>
 
 namespace tau::audio {
 
@@ -42,7 +43,7 @@ private:
     ::OpusDecoder* _decoder;
     Timepoint _tp = 0;
 
-    std::vector<uint8_t> _decode_buffer;
+    etl::vector<uint8_t, 24'000> _decode_buffer; //TODO: check capacity
     const size_t _decode_buffer_samples_per_channel;
 
     Callback _callback;
