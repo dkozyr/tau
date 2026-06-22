@@ -1,11 +1,11 @@
 #include "tau/ws/Connection.h"
+#include "tau/asio/ToString.h"
 #include "tau/common/Variant.h"
 #include "tau/common/Log.h"
-#include <boost/algorithm/string/trim.hpp>
 
 namespace tau::ws {
 
-Connection::Connection(asio_tcp::socket&& socket, SslContext& ssl_ctx)
+Connection::Connection(asio::ip::tcp::socket&& socket, SslContext& ssl_ctx)
     : _socket(std::move(socket), ssl_ctx)
     , _log_ctx(CreateLogContext(_socket)) {
     TAU_LOG_DEBUG(_log_ctx);
@@ -32,7 +32,7 @@ void Connection::Close() {
         });
 }
 
-void Connection::PostMessage(std::string message) {
+void Connection::PostMessage(String message) {
     if(_is_closed) {
         return;
     }
@@ -52,7 +52,7 @@ void Connection::OnStart() {
 
 void Connection::OnHandshake(beast_ec ec) {
     if(ec) {
-        TAU_LOG_WARNING("Error: " << ec.message());
+        TAU_LOG_WARNING("Error: " << ec);
         return;
     }
 
@@ -73,7 +73,7 @@ void Connection::OnHandshake(beast_ec ec) {
 
 void Connection::OnFirstRequest(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
-        TAU_LOG_WARNING(_log_ctx<< "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
+        TAU_LOG_WARNING(_log_ctx<< "Error: " << ec << ", bytes_transferred: " << bytes_transferred);
         return;
     }
 
@@ -89,7 +89,7 @@ void Connection::OnFirstRequest(beast_ec ec, std::size_t bytes_transferred) {
 
 void Connection::OnAccept(beast_ec ec) {
     if(ec) {
-        TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message());
+        TAU_LOG_WARNING(_log_ctx << "Error: " << ec);
     } else {
         DoRead();
     }
@@ -106,12 +106,16 @@ void Connection::DoRead() {
 void Connection::OnRead(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
         if((ec != beast_ws::error::closed) && (ec != asio::error::eof) && (ec != boost::system::errc::operation_canceled)) {
-            TAU_LOG_WARNING(_log_ctx << "Error: " << ec.value() << ", message: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
+            TAU_LOG_WARNING(_log_ctx << "Error: " << ec << ", bytes_transferred: " << bytes_transferred);
         }
         return;
     }
 
-    auto request = boost::algorithm::trim_copy(beast::buffers_to_string(_buffer.data()));
+    String request;
+    const auto& data = _buffer.data();
+    for(auto it = asio::buffer_sequence_begin(data); it != asio::buffer_sequence_end(data); ++it) {
+        request.append(static_cast<const char*>(it->data()), it->size());
+    }
     DoPostMessage(_process_message_callback(std::move(request)));
 
     DoRead();
@@ -131,8 +135,8 @@ void Connection::DoWriteLoop() {
 
     auto& message = _message_queue.front();
     std::visit(overloaded{
-        [this](std::string& msg) {
-            _socket.async_write(asio::buffer(msg),
+        [this](String& message) {
+            _socket.async_write(asio::buffer(message.data(), message.size()),
                 [self = shared_from_this()](beast_ec ec, std::size_t bytes_transferred) {
                     self->OnWrite(ec, bytes_transferred);
                 });
@@ -152,7 +156,7 @@ void Connection::DoWriteLoop() {
 
 void Connection::OnWrite(beast_ec ec, std::size_t bytes_transferred) {
     if(ec) {
-        TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
+        TAU_LOG_WARNING(_log_ctx << "Error: " << ec << ", bytes_transferred: " << bytes_transferred);
         return;
     }
 
@@ -163,18 +167,19 @@ void Connection::OnWrite(beast_ec ec, std::size_t bytes_transferred) {
 void Connection::OnClose(beast_ec ec) {
     if(ec) {
         if(ec != asio_ssl::error::stream_truncated) {
-            TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message());
+            TAU_LOG_WARNING(_log_ctx << "Error: " << ec);
         } else {
-            TAU_LOG_DEBUG(_log_ctx << "Error: " << ec.message());
+            TAU_LOG_DEBUG(_log_ctx << "Error: " << ec);
         }
     }
     _message_queue.pop_front();
 }
 
-std::string Connection::CreateLogContext(const SocketType& socket) {
-    std::stringstream ss;
+Connection::LogCtx Connection::CreateLogContext(const SocketType& socket) {
+    LogCtx ctx;
+    etl::string_stream ss(ctx);
     ss << "[" << beast::get_lowest_layer(socket).socket().remote_endpoint() << "] ";
-    return ss.str();
+    return ctx;
 }
 
 }

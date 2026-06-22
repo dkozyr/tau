@@ -44,7 +44,7 @@ void Session::PcInitCallbacks() {
             CloseConnection();
         }
     });
-    _pc.SetIceCandidateCallback([this](std::string candidate) {
+    _pc.SetIceCandidateCallback([this](ice::CandidateStr candidate) {
         TAU_LOG_INFO(_log_ctx << "candidate: " << candidate);
         _local_ice_candidates.push_back(std::move(candidate));
         SendLocalIceCandidates();
