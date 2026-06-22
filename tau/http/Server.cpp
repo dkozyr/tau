@@ -1,5 +1,5 @@
 #include "tau/http/Server.h"
-// #include "tau/net/Endpoint.h"
+#include "tau/asio/ToString.h"
 #include "tau/common/Log.h"
 
 namespace tau::http {
@@ -7,7 +7,7 @@ namespace tau::http {
 Server::Server(Dependencies&& deps, Options&& options)
     : _executor(std::move(deps.executor))
     , _ssl_ctx(std::move(options.ssl_ctx))
-    , _acceptor(_executor, {options.local_address, options.port}) {
+    , _acceptor(_executor, {asio::ip::address_v4{options.local_address.GetUint32()}, options.port}) {
 }
 
 Server::~Server() {
@@ -21,7 +21,7 @@ void Server::SetRequestCallback(RequestCallback callback) {
 }
 
 void Server::Start() {
-    TAU_LOG_INFO("Listening: " << net::ToString(_acceptor.local_endpoint().) << (_ssl_ctx ? " (TLS)" : ""));
+    TAU_LOG_INFO("Listening: " << _acceptor.local_endpoint() << (_ssl_ctx ? " (TLS)" : ""));
     Accept();
 }
 
@@ -33,7 +33,7 @@ void Server::Accept() {
                 OnAccept(ec, std::move(socket));
             });
     } else {
-        auto socket = std::make_shared<asio_tcp::socket>(_executor);
+        auto socket = std::make_shared<asio::ip::tcp::socket>(_executor);
         _acceptor.async_accept(*socket,
             [this, socket](auto ec) mutable {
                 OnAccept(ec, std::move(socket));
@@ -44,10 +44,10 @@ void Server::Accept() {
 void Server::OnAccept(boost_ec ec, Socket socket) {
     if(ec) {
         if((ec == boost::system::errc::bad_file_descriptor) || (ec == boost::system::errc::operation_canceled)) {
-            TAU_LOG_DEBUG("Acceptor stopped, error: " << ec.message());
+            TAU_LOG_DEBUG("Acceptor stopped, ec: " << ec);
             return;
         }
-        TAU_LOG_ERROR("Failed accept from client, error: " << ec.message());
+        TAU_LOG_ERROR("Failed accept from client, ec: " << ec);
     } else {
         try{
             Connection::CreateAndStart(socket, _request_callback);

@@ -2,6 +2,7 @@
 #include "tau/http/Client.h"
 #include "tau/asio/Ssl.h"
 #include "tau/asio/ThreadPool.h"
+#include "tau/asio/ToString.h"
 #include "tau/crypto/Certificate.h"
 #include "tests/lib/Common.h"
 
@@ -12,15 +13,15 @@ public:
     static constexpr uint16_t kHttpPort  = 8888;
     static constexpr uint16_t kHttpsPort = 8889;
 
-    static inline const std::string kCaCertPath = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.crt";
-    static inline const std::string kCaKeyPath  = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.key";
+    static inline const char kCaCertPath[] = PROJECT_SOURCE_DIR "/data/keys/ca.crt";
+    static inline const char kCaKeyPath[]  = PROJECT_SOURCE_DIR "/data/keys/ca.key";
 
 public:
     ClientServerTest()
         : _io(std::thread::hardware_concurrency())
         , _ca(crypto::Certificate::Options{
-            .cert = kCaCertPath,
-            .key  = kCaKeyPath
+            .cert = etl::string_view{kCaCertPath},
+            .key  = etl::string_view{kCaKeyPath}
         })
         , _server_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})
         , _client_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})
@@ -216,7 +217,7 @@ TEST_F(ClientServerTest, DISABLED_MANUAL_Localhost) {
             if(!ec) {
                 TAU_LOG_INFO("Response: " << response.body().size());
             } else {
-                TAU_LOG_WARNING("Client error: " << ec.message());
+                TAU_LOG_WARNING("Client error: " << ec);
             }
         }
     );

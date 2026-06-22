@@ -1,6 +1,6 @@
 #include "tau/http/Connection.h"
+#include "tau/asio/ToString.h"
 #include "tau/common/Log.h"
-#include <sstream>
 
 namespace tau::http {
 
@@ -21,8 +21,8 @@ Connection::~Connection() {
     _timeout.cancel();
 
     std::visit(overloaded{
-        [&ec](SslSocketPtr& socket)                      { socket->lowest_layer().close(ec); },
-        [&ec](std::shared_ptr<asio_tcp::socket>& socket) { socket->close(ec); }
+        [&ec](SslSocketPtr& socket)                           { socket->lowest_layer().close(ec); },
+        [&ec](std::shared_ptr<asio::ip::tcp::socket>& socket) { socket->close(ec); }
     }, _socket);
 }
 
@@ -40,7 +40,7 @@ void Connection::Start() {
                 }
             );
         },
-        [this](std::shared_ptr<asio_tcp::socket>&) {
+        [this](std::shared_ptr<asio::ip::tcp::socket>&) {
             Read();
         }
     }, _socket);
@@ -71,7 +71,7 @@ void Connection::Read() {
 void Connection::OnRead(beast_ec ec, size_t bytes_transferred) {
     if(ec) {
         if(ec != beast_http::error::end_of_stream) {
-            TAU_LOG_WARNING(_log_ctx << "Stopped: " << ec.message() << ", error: " << ec.value() << ", bytes_transferred: " << bytes_transferred);
+            TAU_LOG_WARNING(_log_ctx << "Stopped, ec: " << ec << ", bytes_transferred: " << bytes_transferred);
         }
         Shutdown();
         return;
@@ -96,7 +96,7 @@ void Connection::Write(beast_response&& response) {
 
 void Connection::OnWrite(beast_ec ec, size_t bytes_transferred) {
     if(ec) {
-        TAU_LOG_WARNING(_log_ctx << "Error: " << ec.message() << ", bytes_transferred: " << bytes_transferred);
+        TAU_LOG_WARNING(_log_ctx << "Error: " << ec << ", bytes_transferred: " << bytes_transferred);
     }
 
     Shutdown();
@@ -110,9 +110,9 @@ void Connection::Shutdown() {
                     self->OnShutdown(ec);
                 });
         },
-        [](std::shared_ptr<asio_tcp::socket>& socket) {
+        [](std::shared_ptr<asio::ip::tcp::socket>& socket) {
             beast_ec ec;
-            socket->shutdown(asio_tcp::socket::shutdown_send, ec);
+            socket->shutdown(asio::ip::tcp::socket::shutdown_send, ec);
         }
     }, _socket);
 
@@ -121,32 +121,33 @@ void Connection::Shutdown() {
 
 void Connection::OnShutdown(beast_ec ec) {
     if(ec) {
-        TAU_LOG_DEBUG(_log_ctx << "error: " << ec.message());
+        TAU_LOG_DEBUG(_log_ctx << "ec: " << ec);
     }
 }
 
 void Connection::OnTimeout(beast_ec ec) {
     if(!ec) {
         std::visit(overloaded{
-            [&ec](SslSocketPtr& socket)                      { socket->lowest_layer().close(ec); },
-            [&ec](std::shared_ptr<asio_tcp::socket>& socket) { socket->close(ec); }
+            [&ec](SslSocketPtr& socket)                           { socket->lowest_layer().close(ec); },
+            [&ec](std::shared_ptr<asio::ip::tcp::socket>& socket) { socket->close(ec); }
         }, _socket);
 
         _timeout.cancel();
     }
 }
 
-std::string Connection::CreateLogContext(const Socket& socket) {
-    std::stringstream ss;
+etl::string<64> Connection::CreateLogContext(const Socket& socket) {
+    etl::string<64> text;
+    etl::string_stream ss(text);
     std::visit(overloaded{
         [&ss](const SslSocketPtr& socket) {
             ss << "[" << socket->lowest_layer().local_endpoint() << " -> " << socket->lowest_layer().remote_endpoint() << "] ";
         },
-        [&ss](const std::shared_ptr<asio_tcp::socket>& socket) {
+        [&ss](const std::shared_ptr<asio::ip::tcp::socket>& socket) {
             ss << "[" << socket->local_endpoint() << " -> " << socket->remote_endpoint() << "] ";
         }
     }, socket);
-    return ss.str();
+    return text;
 }
 
 }
