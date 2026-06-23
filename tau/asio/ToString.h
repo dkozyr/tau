@@ -3,13 +3,13 @@
 #include "tau/asio/Common.h"
 #include <etl/string_stream.h>
 
-namespace tau {
+namespace etl {
 
-inline etl::string_stream& operator<<(etl::string_stream& ss, boost_ec ec) {
+inline etl::string_stream& operator<<(etl::string_stream& ss, boost::system::error_code ec) {
     return ss << ec.value() << ", " << ec.message().c_str();
 }
 
-inline etl::string_stream& operator<<(etl::string_stream& ss, const asio::ip::address& address) {
+inline etl::string_stream& operator<<(etl::string_stream& ss, const boost::asio::ip::address& address) {
     const auto ipv4 = address.to_v4().to_uint();
     ss << ((ipv4 >> 24) & 0xFF) << "."
        << ((ipv4 >> 16) & 0xFF) << "."
@@ -18,11 +18,12 @@ inline etl::string_stream& operator<<(etl::string_stream& ss, const asio::ip::ad
     return ss;
 }
 
-inline etl::string_stream& operator<<(etl::string_stream& ss, const asio::ip::tcp::endpoint& endpoint) {
+template <typename TProtocol>
+inline etl::string_stream& operator<<(etl::string_stream& ss, const boost::asio::ip::basic_endpoint<TProtocol>& endpoint) {
     return ss << endpoint.address() << ":" << endpoint.port();
 }
 
-inline etl::string_stream& operator<<(etl::string_stream& ss, const beast_request& request) {
+inline etl::string_stream& operator<<(etl::string_stream& ss, const boost::beast::http::request<boost::beast::http::dynamic_body>& request) {
     for(const auto& chunk : request.body().data()) {
         ss << etl::string_view{static_cast<const char*>(chunk.data()), chunk.size()};
     }

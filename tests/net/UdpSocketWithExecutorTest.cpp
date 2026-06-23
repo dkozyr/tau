@@ -1,14 +1,24 @@
+#include "tau/net/UdpSocketWithExecutor.h"
 #include "tau/net/UdpSocketsPair.h"
-#include "tau/net/UdpSocket.h"
-#include "tau/memory/PoolAllocator.h"
+#include "tau/asio/ThreadPool.h"
+#include "tau/asio/ToString.h"
 #include "tau/common/Event.h"
 #include "tests/lib/Common.h"
 
 namespace tau::net {
 
-class UdpSocketTest : public ::testing::Test {
+class UdpSocketWithExecutorTest : public ::testing::Test {
 public:
     static inline const IpAddress kLocalHost{MakeIpAddressV4("127.0.0.1")};
+
+public:
+    UdpSocketWithExecutorTest()
+        : _io(std::thread::hardware_concurrency())
+    {}
+
+    ~UdpSocketWithExecutorTest() {
+        _io.Join();
+    }
 
 protected:
     Buffer CreatePacket(size_t size) {
@@ -30,16 +40,17 @@ protected:
     }
 
 protected:
-    SteadyClock _clock;
+    ThreadPool _io;
 };
 
-TEST_F(UdpSocketTest, Basic) {
+TEST_F(UdpSocketWithExecutorTest, Basic) {
     constexpr auto kPacketSize1 = 1234;
     constexpr auto kPacketSize2 = 800;
 
-    auto socket1 = UdpSocket::Create(
-        UdpSocket::Options{
+    auto socket1 = UdpSocketWithExecutor::Create(
+        UdpSocketWithExecutor::Options{
             .allocator = g_udp_allocator,
+            .executor = _io.GetExecutor(),
             .local_address = kLocalHost
         });
     Event event1;
@@ -49,9 +60,10 @@ TEST_F(UdpSocketTest, Basic) {
         EXPECT_NO_FATAL_FAILURE(AssertPacket(packet, kPacketSize2));
     });
 
-    auto socket2 = UdpSocket::Create(
-        UdpSocket::Options{
+    auto socket2 = UdpSocketWithExecutor::Create(
+        UdpSocketWithExecutor::Options{
             .allocator = g_udp_allocator,
+            .executor = _io.GetExecutor(),
             .local_address = kLocalHost
         });
     Event event2;
@@ -64,23 +76,15 @@ TEST_F(UdpSocketTest, Basic) {
     socket1->Send(CreatePacket(kPacketSize1), socket2->GetLocalEndpoint().value());
     socket2->Send(CreatePacket(kPacketSize2), socket1->GetLocalEndpoint().value());
 
-    bool ok = false;
-    auto begin = _clock.Now();
-    while(_clock.Now() - begin < 100 * kMs) {
-        if(event1.IsSet() && event2.IsSet()) {
-            ok = true;
-            break;
-        }
-        socket1->Receive();
-        socket2->Receive();
-    }
-    ASSERT_TRUE(ok);
+    ASSERT_TRUE(event1.WaitFor(100ms));
+    ASSERT_TRUE(event2.WaitFor(100ms));
 }
 
-TEST_F(UdpSocketTest, PortsPair) {
-    auto [socket1, socket2] = CreateUdpSocketsPair<UdpSocket>(
-        UdpSocket::Options{
+TEST_F(UdpSocketWithExecutorTest, PortsPair) {
+    auto [socket1, socket2] = CreateUdpSocketsPair<UdpSocketWithExecutor>(
+        UdpSocketWithExecutor::Options{
             .allocator = g_udp_allocator,
+            .executor = _io.GetExecutor(),
             .local_address = kLocalHost
         });
     auto endpoint1 = socket1->GetLocalEndpoint().value();
@@ -90,43 +94,33 @@ TEST_F(UdpSocketTest, PortsPair) {
     ASSERT_EQ(endpoint1.port + 1, endpoint2.port);
 }
 
-TEST_F(UdpSocketTest, Load) {
+TEST_F(UdpSocketWithExecutorTest, Load) {
     constexpr auto kPacketSize1 = 1234;
     constexpr auto kPacketSize2 = 800;
 
-    auto [socket1, socket2] = CreateUdpSocketsPair<UdpSocket>(
-        UdpSocket::Options{
+    auto [socket1, socket2] = CreateUdpSocketsPair<UdpSocketWithExecutor>(
+        UdpSocketWithExecutor::Options{
             .allocator = g_udp_allocator,
+            .executor = _io.GetExecutor(),
             .local_address = kLocalHost
         });
 
     for(size_t i = 0; i < 10'000; ++i) {
         Event event1;
-        socket1->SetRecvCallback([&](Buffer&&, Endpoint endpoint) {
-            TAU_LOG_DEBUG("[socket1] Received from: " << endpoint);
+        socket1->SetRecvCallback([&](Buffer&&, Endpoint) {
             event1.Set();
         });
 
         Event event2;
-        socket2->SetRecvCallback([&](Buffer&&, Endpoint endpoint) {
-            TAU_LOG_DEBUG("[socket2] Received from: " << endpoint);
+        socket2->SetRecvCallback([&](Buffer&&, Endpoint) {
             event2.Set();
         });
 
         socket1->Send(CreatePacket(kPacketSize1), socket2->GetLocalEndpoint().value());
         socket2->Send(CreatePacket(kPacketSize2), socket1->GetLocalEndpoint().value());
 
-        bool ok = false;
-        auto begin = _clock.Now();
-        while(_clock.Now() - begin < 100 * kMs) {
-            if(event1.IsSet() && event2.IsSet()) {
-                ok = true;
-                break;
-            }
-            socket1->Receive();
-            socket2->Receive();
-        }
-        ASSERT_TRUE(ok);
+        EXPECT_TRUE(event1.WaitFor(1000ms));
+        EXPECT_TRUE(event2.WaitFor(1000ms));
 
         if(i % 1000 == 0) {
             TAU_LOG_INFO("Iteration: #" << i);
@@ -134,10 +128,11 @@ TEST_F(UdpSocketTest, Load) {
     }
 }
 
-TEST_F(UdpSocketTest, DISABLED_MANUAL_Multicast) {
-    auto mdns_socket = UdpSocket::Create(
-        UdpSocket::Options{
+TEST_F(UdpSocketWithExecutorTest, DISABLED_MANUAL_Multicast) {
+    auto mdns_socket = UdpSocketWithExecutor::Create(
+        UdpSocketWithExecutor::Options{
             .allocator = g_udp_allocator,
+            .executor = _io.GetExecutor(),
             .local_address = {},
             .local_port = 5353,                            // mDns port
             .multicast_address = IpAddress{224, 0, 0, 251} // mDns IPv4
@@ -147,10 +142,7 @@ TEST_F(UdpSocketTest, DISABLED_MANUAL_Multicast) {
         TAU_LOG_INFO("Multicast remote endpoint: " << remote_endpoint << ", packet size: " << packet.GetSize());
     });
 
-    while(true) {
-        std::this_thread::sleep_for(5ms);
-        mdns_socket->Receive();
-    }
+    Event().WaitFor(600s);
 }
 
 }
