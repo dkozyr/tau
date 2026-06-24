@@ -1,5 +1,6 @@
 #include "apps/pcap-parser/Pipeline.h"
 #include "tau/memory/SystemAllocator.h"
+#include "tau/common/StdString.h"
 #include "tau/common/Log.h"
 #include <boost/program_options.hpp>
 #include <pcap.h>
@@ -11,8 +12,6 @@ constexpr auto kIpHeaderSize = 20;
 constexpr auto kUdpHeaderSize = 8;
 
 int main(int argc, char** argv) {
-    InitLogging("pcap-parser", true);
-
     std::string pcap_file = std::string{PROJECT_SOURCE_DIR} + "/data/pcap/wilson.pcap";
     auto processing_type = static_cast<size_t>(Pipeline::Type::kH265);
     size_t pt = 104;
@@ -33,7 +32,7 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     if(vm.count("help")) {
-        TAU_LOG_INFO(desc);
+        TAU_LOG_INFO(ToStdString(desc).c_str());
         return 1;
     }
 

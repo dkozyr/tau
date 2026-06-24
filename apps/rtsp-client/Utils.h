@@ -7,12 +7,12 @@
 namespace tau {
 
 inline std::optional<uint16_t> ParseServerRtpPort(const rtsp::Response& response) {
-    constexpr std::string_view kServerPortStr = "server_port=";
+    constexpr etl::string_view kServerPortStr = "server_port=";
     for(auto& header : response.headers) {
         if(header.name == rtsp::HeaderName::kTransport) {
-            SplitTokens<16> tokens; //TODO: rework with SplitNext
-            Split(tokens, header.value, ";");
-            for(auto& token : tokens) {
+            size_t pos = 0;
+            while(pos != etl::string_view::npos) {
+                auto token = SplitNext(header.value, pos, ";");
                 if(IsPrefix(token, kServerPortStr)) {
                     auto ports = token.substr(kServerPortStr.size());
                     ports = ports.substr(0, ports.find('-'));
@@ -25,7 +25,7 @@ inline std::optional<uint16_t> ParseServerRtpPort(const rtsp::Response& response
     return std::nullopt;
 }
 
-inline std::string_view ParseSessionId(const rtsp::Response& response) {
+inline etl::string_view ParseSessionId(const rtsp::Response& response) {
     for(auto& header : response.headers) {
         if(header.name == rtsp::HeaderName::kSession) {
             SplitTokens<3> tokens;

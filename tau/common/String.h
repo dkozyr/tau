@@ -88,6 +88,14 @@ R ParseStringAsFloat(const T& str) {
     return value;
 }
 
+template <size_t K, typename T>
+etl::string<K> ToString(T value) {
+    etl::string<K> str;
+    etl::string_stream ss(str);
+    ss << value;
+    return str;
+}
+
 template<bool UpperCase = true, typename T = size_t, size_t N = 2 * sizeof(T)>
 etl::string<N> ToHexString(T value) {
     static_assert(std::is_integral_v<T>);
@@ -99,13 +107,6 @@ etl::string<N> ToHexString(T value) {
     }
     return result;
 }
-
-// template<typename T>
-// std::string ToString(const T& value) {
-//     std::stringstream ss;
-//     ss << value;
-//     return ss.str();
-// }
 
 template<bool UpperCase = true>
 etl::istring& ToHexDump(const uint8_t* ptr, size_t size, etl::istring& output, etl::string_view separator = " ") {

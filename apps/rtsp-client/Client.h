@@ -25,22 +25,25 @@ public:
     void SendRequestTeardown();
 
 private:
-    Response SendRequestAndValidateResponse(Request&& request, const std::string& cseq);
+    Response SendRequestAndValidateResponse(Request&& request, const etl::string_view& cseq);
     std::optional<Response> SendRequest(Request&& request);
 
-    void ParseAndValidateSdp(const std::string_view& sdp_str);
+    void ParseAndValidateSdp(const etl::string_view& sdp_str);
     Session::Options CreateSessionOptions() const;
+
+    static etl::string<64> CreateUriString(const Options& options);
 
 private:
     Executor _executor;
-    const std::string _uri;
-    asio_tcp::resolver::results_type _endpoints;
+    const etl::string<64> _uri;
+    asio::ip::tcp::resolver::results_type _endpoints;
     size_t _cseq = 0;
+    etl::string<2048> _text;
 
     std::optional<Session> _session;
     std::optional<uint16_t> _server_rtp_port;
-    std::string _session_id;
-    std::optional<sdp::Sdp> _sdp;
+    etl::string<16> _session_id;
+    sdp::SdpPtr _sdp;
 };
 
 }

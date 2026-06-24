@@ -2,6 +2,7 @@
 #include "tau/net/UdpSocketsPair.h"
 #include "tau/video/AnnexB.h"
 #include "tau/memory/SystemAllocator.h"
+#include "tau/asio/ToString.h"
 #include "tau/common/Ntp.h"
 #include "tau/common/Random.h"
 #include "tau/common/Log.h"
@@ -9,8 +10,8 @@
 namespace tau::rtsp {
 
 Session::Session(Executor executor, Options&& options)
-    : _executor(std::move(executor))
-    , _udp_allocator(kUdpMtuSize)
+    : _udp_allocator(_allocated_memory.data(), _allocated_memory.size(), kUdpMtuSize)
+    , _executor(std::move(executor))
     , _rtp_session(
         rtp::Session::Dependencies{
             .allocator = _udp_allocator,
@@ -38,11 +39,11 @@ Session::Session(Executor executor, Options&& options)
 }
 
 Session::~Session() {
-    TAU_LOG_INFO("Output path: " << _output_path);
+    TAU_LOG_INFO("Output path: " << _output_path.string().c_str());
 }
 
 uint16_t Session::GetRtpPort() const {
-    return _socket_rtp->GetLocalEndpoint().port();
+    return _socket_rtp->GetLocalEndpoint()->port;
 }
 
 void Session::InitPipeline() {
@@ -75,20 +76,21 @@ void Session::InitPipeline() {
 }
 
 void Session::InitSockets() {
-    auto udp_sockets_pair = net::CreateUdpSocketsPair(net::UdpSocket::Options{
-        .allocator = _udp_allocator,
-        .executor = _executor,
-        .local_address = "0.0.0.0"
-    });
+    auto udp_sockets_pair = net::CreateUdpSocketsPair<net::UdpSocketWithExecutor>(
+        net::UdpSocketWithExecutor::Options{
+            .allocator = _udp_allocator,
+            .executor = _executor,
+            .local_address = net::IpAddress{0, 0, 0, 0}
+        });
     _socket_rtp = std::move(udp_sockets_pair.first);
     _socket_rtcp = std::move(udp_sockets_pair.second);
-    _socket_rtp->SetErrorCallback([](boost_ec ec)  { TAU_LOG_WARNING("[rtp socket] ec: " << ec.message()); });
-    _socket_rtcp->SetErrorCallback([](boost_ec ec) { TAU_LOG_WARNING("[rtcp socket] ec: " << ec.message()); });
+    _socket_rtp->SetErrorCallback([](boost_ec ec)  { TAU_LOG_WARNING("[rtp socket] ec: " << ec); });
+    _socket_rtcp->SetErrorCallback([](boost_ec ec) { TAU_LOG_WARNING("[rtcp socket] ec: " << ec); });
 
-    _socket_rtp->SetRecvCallback([&](Buffer&& packet, asio_udp::endpoint) {
+    _socket_rtp->SetRecvCallback([&](Buffer&& packet, net::Endpoint) {
         _rtp_session.RecvRtp(std::move(packet));
     });
-    _socket_rtcp->SetRecvCallback([&](Buffer&& packet, asio_udp::endpoint remote_endpoint) {
+    _socket_rtcp->SetRecvCallback([&](Buffer&& packet, net::Endpoint remote_endpoint) {
         _remote_endpoint_rtcp = remote_endpoint;
         _rtp_session.RecvRtcp(std::move(packet));
         const auto& stats = _rtp_session.GetStats().incoming;
