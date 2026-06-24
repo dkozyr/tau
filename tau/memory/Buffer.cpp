@@ -118,11 +118,17 @@ void Buffer::SetSize(size_t size) {
 }
 
 Buffer CreateBufferFromBase64(Allocator& allocator, etl::string_view str, Buffer::Info info) {
+    constexpr size_t kMaxOutputCapacity = 1024;
     const auto expected_size = DivCeil(str.size() * 6, 8);
+    if(expected_size > kMaxOutputCapacity) {
+        return Buffer::Create(allocator, 0, {});
+    }
+
+    etl::string<kMaxOutputCapacity> decoded;
+    Base64Decode(str, decoded);
     auto buffer = Buffer::Create(allocator, expected_size, info);
-    // auto data = Base64Decode(str);
-    // std::memcpy(buffer.GetView().ptr, data.data(), data.size());
-    // buffer.SetSize(data.size());
+    std::memcpy(buffer.GetView().ptr, decoded.data(), decoded.size());
+    buffer.SetSize(decoded.size());
     return buffer;
 }
 

@@ -8,6 +8,7 @@ ninja -j 4
 
 ./bin/tau-common-test-app
 ./bin/tau-asio-test-app
+./bin/tau-memory-test-app
 ./bin/tau-crypto-test-app
 ./bin/tau-net-test-app
 ./bin/tau-http-test-app
