@@ -45,6 +45,13 @@ TEST(JsonTest, GetString) {
     ASSERT_EQ("", GetString(kObject, "answer", output));
 }
 
+TEST(JsonTest, GetStringView) {
+    ASSERT_EQ("world", GetStringView(kObject, "hello"));
+    ASSERT_TRUE(GetStringView(kObject, "pi").empty());
+    ASSERT_TRUE(GetStringView(kObject, "nothing").empty());
+    ASSERT_TRUE(GetStringView(kObject, "answer").empty());
+}
+
 TEST(JsonTest, GetDouble) {
     const double kEps = 1e-5;
     ASSERT_NEAR(3.14, GetDouble(kObject, "pi"), kEps);

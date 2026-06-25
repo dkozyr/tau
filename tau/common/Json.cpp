@@ -7,9 +7,17 @@ etl::istring& GetString(const Json::value& json, const etl::string_view& key, et
     if(!json.as_object().contains(key.data()) || !json.at(key.data()).is_string()) {
         return output;
     }
-    auto value = json.at(key.data()).get_string();
+    const auto& value = json.at(key.data()).get_string();
     output.append(value.data(), value.size());
     return output;
+}
+
+etl::string_view GetStringView(const Json::value& json, const etl::string_view& key) {
+    if(!json.as_object().contains(key.data()) || !json.at(key.data()).is_string()) {
+        return {};
+    }
+    const auto& value = json.at(key.data()).get_string();
+    return etl::string_view{value.data(), value.size()};
 }
 
 double GetDouble(const Json::value& json, const etl::string_view& key) {
@@ -25,8 +33,7 @@ double GetDouble(const Json::value& json, const etl::string_view& key) {
 }
 
 double GetDoubleFromString(const Json::value& json, const etl::string_view& key) {
-    etl::string<16> value;
-    GetString(json, key, value);
+    auto value = GetStringView(json, key);
     if(!value.empty()) {
         return std::stod(value.data());
     }
