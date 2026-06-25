@@ -43,6 +43,11 @@ TEST(JsonTest, GetString) {
     ASSERT_EQ("", GetString(kObject, "pi", output));
     ASSERT_EQ("", GetString(kObject, "nothing", output));
     ASSERT_EQ("", GetString(kObject, "answer", output));
+
+    ASSERT_EQ("world", GetString(kObject.at("hello"), output));
+    ASSERT_TRUE(GetString(kObject.at("pi"), output).empty());
+    ASSERT_TRUE(GetString(kObject.at("nothing"), output).empty());
+    ASSERT_TRUE(GetString(kObject.at("answer"), output).empty());
 }
 
 TEST(JsonTest, GetStringView) {

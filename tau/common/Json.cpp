@@ -12,6 +12,16 @@ etl::istring& GetString(const Json::value& json, const etl::string_view& key, et
     return output;
 }
 
+etl::istring& GetString(const Json::value& value, etl::istring& output) {
+    output.clear();
+    if(!value.is_string()) {
+        return output;
+    }
+    const auto& value_str = value.get_string();
+    output.append(value_str.data(), value_str.size());
+    return output;
+}
+
 etl::string_view GetStringView(const Json::value& json, const etl::string_view& key) {
     if(!json.as_object().contains(key.data()) || !json.at(key.data()).is_string()) {
         return {};
