@@ -2,30 +2,33 @@
 
 namespace tau::json {
 
-std::string GetString(const Json::value& json, const std::string& key) {
-    if(!json.as_object().contains(key) || !json.at(key).is_string()) {
-        return {};
+etl::istring& GetString(const Json::value& json, const etl::string_view& key, etl::istring& output) {
+    output.clear();
+    if(!json.as_object().contains(key.data()) || !json.at(key.data()).is_string()) {
+        return output;
     }
-    auto value = json.at(key).get_string();
-    return std::string(value.data(), value.size());
+    auto value = json.at(key.data()).get_string();
+    output.append(value.data(), value.size());
+    return output;
 }
 
-double GetDouble(const Json::value& json, const std::string& key) {
-    if(json.as_object().contains(key)) {
-        if(json.at(key).is_double()) {
-            return json.at(key).get_double();
+double GetDouble(const Json::value& json, const etl::string_view& key) {
+    if(json.as_object().contains(key.data())) {
+        if(json.at(key.data()).is_double()) {
+            return json.at(key.data()).get_double();
         }
-        if(json.at(key).is_int64()) {
-            return json.at(key).get_int64();
+        if(json.at(key.data()).is_int64()) {
+            return json.at(key.data()).get_int64();
         }
     }
     return 0;
 }
 
-double GetDoubleFromString(const Json::value& json, const std::string& key) {
-    auto value = GetString(json, key);
+double GetDoubleFromString(const Json::value& json, const etl::string_view& key) {
+    etl::string<16> value;
+    GetString(json, key, value);
     if(!value.empty()) {
-        return std::stod(value);
+        return std::stod(value.data());
     }
     return 0;
 }

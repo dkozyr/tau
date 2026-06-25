@@ -38,10 +38,11 @@ TEST(JsonTest, Basic) {
 }
 
 TEST(JsonTest, GetString) {
-    ASSERT_EQ("world", GetString(kObject, "hello"));
-    ASSERT_EQ("", GetString(kObject, "pi"));
-    ASSERT_EQ("", GetString(kObject, "nothing"));
-    ASSERT_EQ("", GetString(kObject, "answer"));
+    etl::string<8> output;
+    ASSERT_EQ("world", GetString(kObject, "hello", output));
+    ASSERT_EQ("", GetString(kObject, "pi", output));
+    ASSERT_EQ("", GetString(kObject, "nothing", output));
+    ASSERT_EQ("", GetString(kObject, "answer", output));
 }
 
 TEST(JsonTest, GetDouble) {
