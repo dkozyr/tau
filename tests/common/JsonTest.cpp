@@ -50,6 +50,11 @@ TEST(JsonTest, GetStringView) {
     ASSERT_TRUE(GetStringView(kObject, "pi").empty());
     ASSERT_TRUE(GetStringView(kObject, "nothing").empty());
     ASSERT_TRUE(GetStringView(kObject, "answer").empty());
+
+    ASSERT_EQ("world", GetStringView(kObject.at("hello")));
+    ASSERT_TRUE(GetStringView(kObject.at("pi")).empty());
+    ASSERT_TRUE(GetStringView(kObject.at("nothing")).empty());
+    ASSERT_TRUE(GetStringView(kObject.at("answer")).empty());
 }
 
 TEST(JsonTest, GetDouble) {

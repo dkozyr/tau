@@ -20,6 +20,14 @@ etl::string_view GetStringView(const Json::value& json, const etl::string_view& 
     return etl::string_view{value.data(), value.size()};
 }
 
+etl::string_view GetStringView(const Json::value& value) {
+    if(!value.is_string()) {
+        return {};
+    }
+    const auto& value_str = value.get_string();
+    return etl::string_view{value_str.data(), value_str.size()};
+}
+
 double GetDouble(const Json::value& json, const etl::string_view& key) {
     if(json.as_object().contains(key.data())) {
         if(json.at(key.data()).is_double()) {

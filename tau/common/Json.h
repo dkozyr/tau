@@ -15,6 +15,7 @@ namespace tau::json {
 
 etl::istring& GetString(const Json::value& json, const etl::string_view& key, etl::istring& output);
 etl::string_view GetStringView(const Json::value& json, const etl::string_view& key);
+etl::string_view GetStringView(const Json::value& json);
 double GetDouble(const Json::value& json, const etl::string_view& key);
 double GetDoubleFromString(const Json::value& json, const etl::string_view& key);
 
