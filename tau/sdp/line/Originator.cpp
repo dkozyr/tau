@@ -1,7 +1,7 @@
 #include "tau/sdp/line/Originator.h"
 #include "tau/common/String.h"
 #include "tau/common/Ntp.h"
-#include "tau/common/SteadyClock.h" //TODO: can we use SystemClock?
+#include "tau/common/SystemClock.h"
 
 namespace tau::sdp {
 
@@ -27,7 +27,9 @@ bool OriginatorReader::Validate(const etl::string_view& value) {
 }
 
 etl::string_stream& OriginatorWriter::Write(etl::string_stream& ss, etl::string_view addr_type, etl::string_view ip_addr) {
-    ss << "- " << ToNtp(SteadyClock{}.Now()) << " 1 IN " << addr_type << " " << ip_addr;
+    constexpr uint64_t kMaxSigned64bit = 0x7FFF'FFFF'FFFF'FFFFull;
+    const auto ntp = ToNtp(SystemClock{}.Now());
+    ss << "- " << (ntp & kMaxSigned64bit) << " 1 IN " << addr_type << " " << ip_addr;
     return ss;
 }
 

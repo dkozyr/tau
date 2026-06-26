@@ -11,7 +11,9 @@ inline constexpr uint64_t kUnixTimeToNtpTimeSeconds = 2'208'988'800;
 
 inline NtpTimepoint ToNtp(Timepoint system_clock_tp) {
     const auto div = std::lldiv(system_clock_tp, kSec);
-    return (((div.quot + kUnixTimeToNtpTimeSeconds) << 32) | ((div.rem << 32) / kSec));
+    const auto seconds = static_cast<uint64_t>(div.quot) + kUnixTimeToNtpTimeSeconds;
+    const auto fraction = (static_cast<uint64_t>(div.rem) << 32) / kSec;
+    return (seconds << 32) | fraction;
 }
 
 inline Timepoint FromNtp(NtpTimepoint ntp) {
