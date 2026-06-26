@@ -73,7 +73,7 @@ etl::string_stream& Serialize(etl::string_stream& ss, const Json::object& object
     bool first = true;
     for(const auto& [key, value] : object) {
         if(!first) {
-            ss <<",";
+            ss << ",";
         }
         first = false;
         ss << "\"" << key.data() << "\":";

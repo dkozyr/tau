@@ -9,7 +9,7 @@
 
 namespace tau::sdp {
 
-using CName = etl::string<16>;
+using CName = etl::string<48>;
 
 struct Sdp {
     CName cname = {};

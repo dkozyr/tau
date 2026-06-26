@@ -101,7 +101,7 @@ TEST(BufferTest, FromBase64_Randomized) {
     tau::Random random;
 
     for(size_t iteration = 0; iteration < 100; ++iteration) {
-        etl::vector<uint8_t, 1024> data(random.Int(1, 1024));
+        etl::vector<uint8_t, 1023> data(random.Int(1, 1023));
         for(size_t i = 0; i < data.size() - 1; ++i) {
             data[i] = random.Int<uint8_t>();
         }

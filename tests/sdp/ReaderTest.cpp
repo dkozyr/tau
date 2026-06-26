@@ -221,4 +221,65 @@ TEST_F(ReaderTest, WebrtcSafari) {
     ASSERT_NO_FATAL_FAILURE(AssertSdp(target_sdp, *parsed_sdp));
 }
 
+TEST_F(ReaderTest, WebrtcFirefox) {
+    ASSERT_TRUE(Reader::Validate(kWebrtcFirefoxSdpExample));
+
+    Sdp target_sdp{
+        .cname = "{0081d7d9-16d1-465e-9c6f-a3f8e4832efb}",
+        .bundle_mids = MakeBundleMids({"0", "1"}),
+        .ice = Ice{
+            .trickle = true,
+            .ufrag = "a42bbe2e",
+            .pwd = "6fa4556ab1fc0ad7adf0750f0a9d75d5",
+            .candidates = {}
+        },
+        .dtls = Dtls{
+            .setup = Setup::kActive,
+            .fingerprint_sha256 = "AC:BC:60:D2:80:43:03:EB:F6:7C:89:11:81:FE:16:C9:A6:31:B3:33:BA:D4:28:92:FA:D3:18:54:F3:1C:3E:23"
+        },
+        .medias = {}
+    };
+    target_sdp.medias.push_back(Media{
+        .type = MediaType::kAudio,
+        .mid = "0",
+        .direction = Direction::kSend,
+        .codecs = MakeCodecsMap({
+            {109, Codec{.index = 0, .name = "opus", .clock_rate = 48000, .rtcp_fb = 0, .format = "maxplaybackrate=48000;stereo=1;useinbandfec=1"}},
+            {  9, Codec{.index = 1, .name = "G722", .clock_rate = 8000, .rtcp_fb = 0}},
+            {  0, Codec{.index = 2, .name = "PCMU", .clock_rate = 8000}},
+            {  8, Codec{.index = 3, .name = "PCMA", .clock_rate = 8000}},
+            {101, Codec{.index = 4, .name = "telephone-event", .clock_rate = 8000, .rtcp_fb = 0, .format = "0-15"}},
+        }),
+        .ssrc = 2661432430
+    });
+    target_sdp.medias.push_back(Media{
+        .type = MediaType::kVideo,
+        .mid = "1",
+        .direction = Direction::kSendRecv,
+        .codecs = MakeCodecsMap({
+            {120, Codec{.index = 0,  .name = "VP8",  .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "max-fs=12288;max-fr=60"}},
+            {124, Codec{.index = 1,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=120"}},
+            {121, Codec{.index = 2,  .name = "VP9",  .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "max-fs=12288;max-fr=60"}},
+            {125, Codec{.index = 3,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=121"}},
+            {126, Codec{.index = 4,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "profile-level-id=42e01f;level-asymmetry-allowed=1;packetization-mode=1"}},
+            {127, Codec{.index = 5,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=126"}},
+            { 97, Codec{.index = 6,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "profile-level-id=42e01f;level-asymmetry-allowed=1"}},
+            { 98, Codec{.index = 7,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=97"}},
+            {105, Codec{.index = 8,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "profile-level-id=42001f;level-asymmetry-allowed=1;packetization-mode=1"}},
+            {106, Codec{.index = 9,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=105"}},
+            {103, Codec{.index = 10, .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "profile-level-id=42001f;level-asymmetry-allowed=1"}},
+            {104, Codec{.index = 11, .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=103"}},
+            { 99, Codec{.index = 12, .name = "AV1",  .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = {}}},
+            {100, Codec{.index = 13, .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=99"}},
+            {123, Codec{.index = 14, .name = "ulpfec", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault}},
+            {122, Codec{.index = 15, .name = "red",  .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault}},
+            {119, Codec{.index = 16, .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=122"}}
+        }),
+        .ssrc = 1713748556
+    });
+    const auto parsed_sdp = ParseSdp(kWebrtcFirefoxSdpExample);
+    ASSERT_NE(nullptr, parsed_sdp);
+    ASSERT_NO_FATAL_FAILURE(AssertSdp(target_sdp, *parsed_sdp));
+}
+
 }
