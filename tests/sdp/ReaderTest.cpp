@@ -149,10 +149,6 @@ TEST_F(ReaderTest, WebrtcChrome) {
     const auto parsed_sdp = ParseSdp(kWebrtcChromeSdpExample);
     ASSERT_NE(nullptr, parsed_sdp);
     ASSERT_NO_FATAL_FAILURE(AssertSdp(target_sdp, *parsed_sdp));
-
-    TAU_LOG_INFO("Sdp: " << sizeof(Sdp) << "---------------------------------");
-    TAU_LOG_INFO("medias: " << sizeof(parsed_sdp->medias));
-    TAU_LOG_INFO("codecs: " << sizeof(parsed_sdp->medias[0].codecs));
 }
 
 TEST_F(ReaderTest, WebrtcSafari) {
@@ -280,6 +276,12 @@ TEST_F(ReaderTest, WebrtcFirefox) {
     const auto parsed_sdp = ParseSdp(kWebrtcFirefoxSdpExample);
     ASSERT_NE(nullptr, parsed_sdp);
     ASSERT_NO_FATAL_FAILURE(AssertSdp(target_sdp, *parsed_sdp));
+}
+
+TEST_F(ReaderTest, SizeOf) {
+    ASSERT_EQ(20832, sizeof(Sdp));
+    ASSERT_EQ(20064, sizeof(Medias));
+    ASSERT_EQ(6608, sizeof(CodecsMap));
 }
 
 }

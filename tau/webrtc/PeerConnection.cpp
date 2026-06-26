@@ -58,7 +58,7 @@ void PeerConnection::Process() {
 //     });
 }
 
-PeerConnection::SdpStr PeerConnection::CreateSdpOffer() {
+void PeerConnection::CreateSdpOffer() {
     _offerer = true;
     _sdp_offer = std::make_unique<sdp::Sdp>(sdp::Sdp{
         .cname = {},
@@ -89,19 +89,15 @@ PeerConnection::SdpStr PeerConnection::CreateSdpOffer() {
         _sdp_offer->medias[i].mid = _sdp_offer->bundle_mids[i];
         _sdp_offer->medias[i].ssrc = _random.Int<uint32_t>();
     }
-
-    SdpStr sdp_str;
-    sdp::WriteSdp(sdp_str, *_sdp_offer);
-    return sdp_str;
 }
 
-PeerConnection::SdpStr PeerConnection::ProcessSdpOffer(const etl::string_view& offer) {
+bool PeerConnection::ProcessSdpOffer(const etl::string_view& offer) {
     TAU_LOG_INFO(_options.log_ctx << "SDP offer:\n" << offer);
     _offerer = false;
     _sdp_offer = sdp::ParseSdp(offer);
     if(!_sdp_offer || !ValidateSdpOffer(*_sdp_offer, _options.log_ctx)) {
         _sdp_offer.reset();
-        return {};
+        return false;
     }
 
     _sdp_answer = std::make_unique<sdp::Sdp>(sdp::Sdp{
@@ -130,7 +126,7 @@ PeerConnection::SdpStr PeerConnection::ProcessSdpOffer(const etl::string_view& o
         if(!local_media || local_media->codecs.empty()) {
             TAU_LOG_WARNING(_options.log_ctx << "SDP negotiation failed, media type: " << (size_t)remote_media.type);
             _sdp_offer.reset();
-            return {};
+            return false;
         }
         local_media->ssrc = _random.Int<uint32_t>();
         _sdp_answer->medias.push_back(*local_media);
@@ -141,10 +137,7 @@ PeerConnection::SdpStr PeerConnection::ProcessSdpOffer(const etl::string_view& o
     if(GetLocalSdp().dtls->setup != sdp::Setup::kActive) {
         StartDtlsSession();
     }
-
-    SdpStr sdp_str;
-    sdp::WriteSdp(sdp_str, *_sdp_answer);
-    return sdp_str;
+    return true;
 }
 
 bool PeerConnection::ProcessSdpAnswer(const etl::string_view& answer) {
@@ -184,10 +177,6 @@ bool PeerConnection::ProcessSdpAnswer(const etl::string_view& answer) {
 
     InitMediaDemuxer();
     StartIceAgent();
-
-    SdpStr sdp_str;
-    sdp::WriteSdp(sdp_str, *_sdp_offer);
-    TAU_LOG_INFO(_options.log_ctx << "SDP negotiated: " << sdp_str);
     return true;
 }
 
@@ -224,6 +213,18 @@ const sdp::Sdp& PeerConnection::GetLocalSdp() const {
 
 const sdp::Sdp& PeerConnection::GetRemoteSdp() const {
     return *_offerer ? *_sdp_answer : *_sdp_offer;
+}
+
+PeerConnection::SdpStr PeerConnection::GetLocalSdpStr(etl::string_view end_of_line) const {
+    SdpStr sdp_str;
+    sdp::WriteSdp(sdp_str, GetLocalSdp(), end_of_line);
+    return sdp_str;
+}
+
+PeerConnection::SdpStr PeerConnection::GetRemoteSdpStr(etl::string_view end_of_line) const {
+    SdpStr sdp_str;
+    sdp::WriteSdp(sdp_str, GetRemoteSdp(), end_of_line);
+    return sdp_str;
 }
 
 State PeerConnection::GetState() const {

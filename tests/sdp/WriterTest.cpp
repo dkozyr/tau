@@ -59,4 +59,30 @@ TEST_F(WriterTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(AssertSdp(sdp, *parsed_sdp));
 }
 
+TEST_F(WriterTest, EndOfLine) {
+    Sdp sdp{
+        .cname = "rand0m-cNaMe",
+        .bundle_mids = MakeBundleMids({"audio", "video", "data-42"}),
+        .ice = Ice{
+            .trickle = true,
+            .ufrag = "test-ufrag",
+            .pwd = "test-pwd",
+            .candidates = MakeCandidates({
+                "2651769019 1 udp 2113937151 127.0.0.1 44444 typ host"
+            })
+        },
+        .dtls = Dtls{
+            .setup = Setup::kActive,
+            .fingerprint_sha256 = "00:11:22::33::44:xx"
+        },
+        .medias = {}
+    };
+
+    etl::string<8192> sdp_string;
+    WriteSdp(sdp_string, sdp, "\\r\\n");
+
+    const auto pos = sdp_string.find(" 1 IN");
+    ASSERT_EQ(sdp_string.substr(pos), " 1 IN IP4 127.0.0.1\\r\\ns=-\\r\\nt=0 0\\r\\na=group:BUNDLE audio video data-42\\r\\n");
+}
+
 }

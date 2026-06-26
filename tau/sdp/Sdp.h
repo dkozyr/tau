@@ -21,7 +21,7 @@ struct Sdp {
 using SdpPtr = std::unique_ptr<Sdp>;
 
 SdpPtr ParseSdp(etl::string_view sdp_str);
-etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp);
+etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp, etl::string_view end_of_line = "\r\n");
 
 inline BundleMids MakeBundleMids(std::initializer_list<etl::string_view> list) {
     BundleMids bundle_mids;

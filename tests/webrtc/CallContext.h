@@ -27,11 +27,11 @@ public:
     {}
 
     void SdpNegotiation() {
-        auto sdp_offer_str = _pc1.Pc().CreateSdpOffer();
+        _pc1.Pc().CreateSdpOffer();
+        auto sdp_offer_str = _pc1.Pc().GetLocalSdpStr();
         // auto sdp_offer_str = std::string{sdp::kWebrtcSafariSdpExample};
-        ASSERT_FALSE(sdp_offer_str.empty());
-        auto sdp_answer_str = _pc2.Pc().ProcessSdpOffer(sdp_offer_str);
-        ASSERT_FALSE(sdp_answer_str.empty());
+        ASSERT_TRUE(_pc2.Pc().ProcessSdpOffer(sdp_offer_str));
+        auto sdp_answer_str = _pc2.Pc().GetLocalSdpStr();
         ASSERT_TRUE(_pc1.Pc().ProcessSdpAnswer(sdp_answer_str));
 
         _pc1.InitMediaSources();

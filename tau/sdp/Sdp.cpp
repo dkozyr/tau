@@ -61,81 +61,81 @@ SdpPtr ParseSdp(etl::string_view sdp_str) {
     return sdp;
 }
 
-etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp) {
+etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp, etl::string_view end_of_line) {
     output.clear();
     etl::string_stream ss(output);
-    ss << "v=0\n";
-    ss << "o="; OriginatorWriter::Write(ss, "IP4", "127.0.0.1"); ss << "\n";
-    ss << "s=-\n";
-    ss << "t=0 0\n";
+    ss << "v=0" << end_of_line;
+    ss << "o="; OriginatorWriter::Write(ss, "IP4", "127.0.0.1"); ss << end_of_line;
+    ss << "s=-" << end_of_line;
+    ss << "t=0 0" << end_of_line;
     if(!sdp.bundle_mids.empty()) {
         ss << "a=group:BUNDLE";
         for(auto& mid : sdp.bundle_mids) {
             ss << " " << mid;
         }
-        ss << "\n";
+        ss << end_of_line;
     }
     for(auto& media : sdp.medias) {
         const auto pts = GetPtOrdered(media.codecs);
         switch(media.type) {
             case MediaType::kAudio:
-                ss << "m="; MediaWriter::Write(ss, MediaType::kAudio, 9, "UDP/TLS/RTP/SAVPF", pts); ss << "\n";
+                ss << "m="; MediaWriter::Write(ss, MediaType::kAudio, 9, "UDP/TLS/RTP/SAVPF", pts); ss << end_of_line;
                 break;
             case MediaType::kVideo:
-                ss << "m="; MediaWriter::Write(ss, MediaType::kVideo, 9, "UDP/TLS/RTP/SAVPF", pts); ss << "\n";
+                ss << "m="; MediaWriter::Write(ss, MediaType::kVideo, 9, "UDP/TLS/RTP/SAVPF", pts); ss << end_of_line;
                 break;
             case MediaType::kApplication:
-                ss << "m="; MediaWriter::Write(ss, MediaType::kApplication, 9, "UDP/DTLS/SCTP", {}); ss << "\n";
+                ss << "m="; MediaWriter::Write(ss, MediaType::kApplication, 9, "UDP/DTLS/SCTP", {}); ss << end_of_line;
                 ss << "a=sctp-port:5000\n";
                 break;
             default:
                 break; //TODO: fix it
         }
-        ss << "c=IN IP4 0.0.0.0\n";
-        ss << "a=mid:" << media.mid << "\n";
+        ss << "c=IN IP4 0.0.0.0" << end_of_line;
+        ss << "a=mid:" << media.mid << end_of_line;
         switch(media.direction) {
-            case Direction::kSendRecv: ss << "a=sendrecv\n"; break;
-            case Direction::kSend:     ss << "a=sendonly\n"; break;
-            case Direction::kRecv:     ss << "a=recvonly\n"; break;
-            case Direction::kInactive: ss << "a=inactive\n"; break;
+            case Direction::kSendRecv: ss << "a=sendrecv" << end_of_line; break;
+            case Direction::kSend:     ss << "a=sendonly" << end_of_line; break;
+            case Direction::kRecv:     ss << "a=recvonly" << end_of_line; break;
+            case Direction::kInactive: ss << "a=inactive" << end_of_line; break;
         }
-        ss << "a=rtcp-mux\n";
-        ss << "a=rtcp-rsize\n";
+        ss << "a=rtcp-mux" << end_of_line;
+        ss << "a=rtcp-rsize" << end_of_line;
         if(sdp.ice) {
             if(sdp.ice->trickle) {
-                ss << "a="; AttributeWriter::Write(ss, "ice-options", "trickle"); ss << "\n";
+                ss << "a="; AttributeWriter::Write(ss, "ice-options", "trickle"); ss << end_of_line;
             }
-            ss << "a="; AttributeWriter::Write(ss, "ice-ufrag", sdp.ice->ufrag); ss << "\n";
-            ss << "a="; AttributeWriter::Write(ss, "ice-pwd", sdp.ice->pwd); ss << "\n";
+            ss << "a="; AttributeWriter::Write(ss, "ice-ufrag", sdp.ice->ufrag); ss << end_of_line;
+            ss << "a="; AttributeWriter::Write(ss, "ice-pwd", sdp.ice->pwd); ss << end_of_line;
             for(auto& candidate : sdp.ice->candidates) {
-                ss << "a="; AttributeWriter::Write(ss, "candidate", candidate); ss << "\n";
+                ss << "a="; AttributeWriter::Write(ss, "candidate", candidate); ss << end_of_line;
             }
         }
         if(sdp.dtls) {
             if(sdp.dtls->setup) {
-                ss << "a="; AttributeWriter::Write(ss, "setup", ToString(*sdp.dtls->setup)); ss << "\n";
+                ss << "a="; AttributeWriter::Write(ss, "setup", ToString(*sdp.dtls->setup)); ss << end_of_line;
             }
-            ss << "a="; AttributeWriter::Write(ss, "fingerprint", "sha-256 "); ss << sdp.dtls->fingerprint_sha256 << "\n";
+            ss << "a="; AttributeWriter::Write(ss, "fingerprint", "sha-256 "); ss << sdp.dtls->fingerprint_sha256 << end_of_line;
         }
         for(auto pt : pts) {
             const auto& codec = media.codecs.at(pt);
             const auto rtpmap_params = (codec.name == "opus") ? etl::string_view{"2"} : etl::string_view{};
-            ss << "a=rtpmap:"; RtpmapWriter::Write(ss, pt, codec.name, codec.clock_rate, rtpmap_params); ss << "\n";
+            ss << "a=rtpmap:"; RtpmapWriter::Write(ss, pt, codec.name, codec.clock_rate, rtpmap_params); ss << end_of_line;
             if(codec.rtcp_fb & RtcpFb::kNack) {
-                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "nack"); ss << "\n";
+                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "nack"); ss << end_of_line;
             }
             if(codec.rtcp_fb & RtcpFb::kPli) {
-                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "nack pli"); ss << "\n";
+                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "nack pli"); ss << end_of_line;
             }
             if(codec.rtcp_fb & RtcpFb::kFir) {
-                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "ccm fir"); ss << "\n";
+                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "ccm fir"); ss << end_of_line;
             }
             if(!codec.format.empty()) {
-                ss << "a=fmtp:"; FmtpWriter::Write(ss, pt, codec.format); ss << "\n";
+                ss << "a=fmtp:"; FmtpWriter::Write(ss, pt, codec.format); ss << end_of_line;
             }
         }
         if(media.ssrc && !sdp.cname.empty()) {
-            ss << "a=ssrc:" << *media.ssrc << " cname:" << sdp.cname << "\n";
+            ss << "a=ssrc:" << *media.ssrc << " cname:" << sdp.cname << end_of_line;
         }
     }
     return output;

@@ -63,8 +63,8 @@ public:
     void Stop();
     void Process();
 
-    SdpStr CreateSdpOffer();
-    SdpStr ProcessSdpOffer(const etl::string_view& offer);
+    void CreateSdpOffer();
+    bool ProcessSdpOffer(const etl::string_view& offer);
     bool ProcessSdpAnswer(const etl::string_view& answer);
 
     void SetRemoteIceCandidate(ice::CandidateStr candidate);
@@ -74,6 +74,8 @@ public:
 
     const sdp::Sdp& GetLocalSdp() const;
     const sdp::Sdp& GetRemoteSdp() const;
+    SdpStr GetLocalSdpStr(etl::string_view end_of_line = "\r\n") const;
+    SdpStr GetRemoteSdpStr(etl::string_view end_of_line = "\r\n") const;
     State GetState() const;
 
 private:
