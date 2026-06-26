@@ -31,12 +31,14 @@ public:
 private:
     void StartInternal() {
         _timer.expires_after(std::chrono::milliseconds(_period_ms));
-        _timer.async_wait([this](beast_ec ec) {
-            OnTimer(ec);
+        _timer.async_wait([this](boost_ec ec) {
+            if(ec != boost::system::errc::operation_canceled) {
+                OnTimer(ec);
+            }
         });
     }
 
-    void OnTimer(beast_ec ec) {
+    void OnTimer(boost_ec ec) {
         if(_callback(ec)) {
             StartInternal();
         }

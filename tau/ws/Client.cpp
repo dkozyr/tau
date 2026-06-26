@@ -1,6 +1,7 @@
 #include "tau/ws/Client.h"
 #include "tau/asio/ToString.h"
 #include "tau/common/Exception.h"
+#include "tau/common/StdString.h"
 #include "tau/common/Log.h"
 
 namespace tau::ws {
@@ -105,11 +106,11 @@ void Client::OnSslHandshake(beast_ec ec) {
     _socket.set_option(timeouts);
     _socket.set_option(beast_ws::stream_base::decorator(
         [this](beast_ws::request_type& request) {
-            request.set(beast_http::field::user_agent, std::string("tau-ws-client-") + std::string(BOOST_BEAST_VERSION_STRING));
+            request.set(beast_http::field::user_agent, "tau-ws-client-" BOOST_BEAST_VERSION_STRING);
             for(auto& field : _options.http_fields) {
                 std::visit(overloaded{
-                    [&](beast_http::field name) { request.set(name, field.value.data()); },
-                    [&](etl::string_view name)  { request.set(name.data(), field.value.data()); }
+                    [&](beast_http::field name) { request.set(name, ToStdStringView(field.value)); },
+                    [&](etl::string_view name)  { request.set(ToStdStringView(name), ToStdStringView(field.value)); }
                 }, field.name);
             }
         }));

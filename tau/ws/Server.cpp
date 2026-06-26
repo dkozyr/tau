@@ -1,5 +1,6 @@
 #include "tau/ws/Server.h"
 #include "tau/asio/ToString.h"
+#include "tau/common/StdString.h"
 #include "tau/common/Log.h"
 
 namespace tau::ws {
@@ -70,8 +71,8 @@ bool Server::ValidateRequest(const beast_request& request) const {
 void Server::ProcessResponse(beast_ws::response_type& response) const {
     for(auto& field : _options.http_fields) {
         std::visit(overloaded{
-            [&](beast_http::field name) { response.set(name, field.value.data()); },
-            [&](etl::string_view name)  { response.set(name.data(), field.value.data()); }
+            [&](beast_http::field name) { response.set(name, ToStdStringView(field.value)); },
+            [&](etl::string_view name)  { response.set(ToStdStringView(name), ToStdStringView(field.value)); }
         }, field.name);
     }
 }
