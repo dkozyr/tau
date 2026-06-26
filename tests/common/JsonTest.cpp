@@ -15,11 +15,12 @@ const Json::object kObject = {
 };
 
 TEST(JsonTest, Basic) {
-    auto serialized = Json::serialize(kObject);
-    ASSERT_EQ(serialized, R"({"pi":3.14E0,"int":42,"hello":"world","nothing":null,"answer":{"everything":42},"list":[1,1,2,3,5,8,13,21]})");
+    etl::string<256> serialized;
+    json::Serialize(kObject, serialized);
+    ASSERT_STREQ(serialized.data(), R"({"pi":3.140000,"int":42,"hello":"world","nothing":null,"answer":{"everything":42},"list":[1,1,2,3,5,8,13,21]})");
 
     boost_ec ec;
-    auto parsed = Json::parse(serialized, ec);
+    auto parsed = Json::parse(serialized.data(), ec);
     ASSERT_EQ(0, ec.value());
 
     ASSERT_NEAR(3.14, kObject.at("pi").get_double(), 1e-5);
