@@ -28,13 +28,13 @@ std::optional<Question> ParseQuestion(const BufferViewConst& view) {
 }
 
 bool QuestionWriter::Write(Writer& writer, const etl::string_view& name, Type type, uint16_t class_) {
-    SplitTokens<16> labels; //TODO: rework with SplitNext
-    Split(labels, name, ".");
     const auto name_size = name.size() + 1 + 1;
     if(writer.GetAvailableSize() < name_size + 2 * sizeof(uint16_t)) {
         return false;
     }
-    for(auto& label : labels) {
+    size_t pos = 0;
+    while(pos != etl::string_view::npos) {
+        auto label = SplitNext(name, pos, ".");
         writer.Write(static_cast<uint8_t>(label.size()));
         writer.Write(label);
     }
