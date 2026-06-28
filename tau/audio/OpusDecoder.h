@@ -43,7 +43,7 @@ private:
     ::OpusDecoder* _decoder;
     Timepoint _tp = 0;
 
-    etl::vector<uint8_t, 24'000> _decode_buffer; //TODO: check capacity
+    etl::vector<uint8_t, 24'000> _decode_buffer;
     const size_t _decode_buffer_samples_per_channel;
 
     Callback _callback;

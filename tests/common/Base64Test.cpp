@@ -8,8 +8,8 @@ TEST(Base64Test, Randomized) {
     etl::string<256 * 8 / 6 + 4> encoded;
     etl::string<256> decoded;
     for(size_t iteration = 0; iteration < 200; ++iteration) {
-        const auto size = random.Int<size_t>(1, 256);
-        etl::vector<uint8_t, 256> data;
+        const auto size = random.Int<size_t>(1, 255);
+        etl::vector<uint8_t, 255> data;
         for(size_t i = 0; i < (size - 1); ++i) {
             data.push_back(random.Int<uint8_t>());
         }
@@ -21,7 +21,7 @@ TEST(Base64Test, Randomized) {
 
         Base64Decode(encoded, decoded);
         for(size_t i = 0; i < size; ++i) {
-            ASSERT_EQ(data[i], static_cast<uint8_t>(decoded[i]));
+            ASSERT_EQ(data[i], static_cast<uint8_t>(decoded[i])) << "size: " << size;
         }
         ASSERT_EQ(size, decoded.size());
     }
@@ -61,6 +61,12 @@ TEST(Base64Test, DecodeToHex) {
 
 TEST(Base64Test, Malformed) {
     const etl::string_view encoded = "aO48sA%";
+    etl::string<16> output;
+    ASSERT_TRUE(Base64Decode(encoded, output).empty());
+}
+
+TEST(Base64Test, SmallCapacity) {
+    const etl::string_view encoded = "aO48sA==";
     etl::string<1> output;
     ASSERT_TRUE(Base64Decode(encoded, output).empty());
 }
