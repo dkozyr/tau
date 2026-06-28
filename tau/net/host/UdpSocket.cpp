@@ -101,7 +101,7 @@ void UdpSocket::Send(const BufferViewConst& view, const Endpoint& remote_endpoin
 
     auto error = sendto(_socket, view.ptr, view.size, 0, (sockaddr *)&dest, sizeof(dest));
     if(error < 0) {
-        TAU_LOG_WARNING("sendto failed, error: " << error << ", view.size: " << view.size); //TODO: use threshold
+        TAU_LOG_WARNING_THR(128, "sendto failed, error: " << error << ", view.size: " << view.size);
     }
 }
 

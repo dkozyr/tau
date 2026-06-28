@@ -2,7 +2,7 @@
 
 #include <etl/string.h>
 #include <etl/string_view.h>
-#include <optional> //TODO: <etl/optional.h>?
+#include <optional>
 #include <cstdint>
 
 namespace tau::net {
