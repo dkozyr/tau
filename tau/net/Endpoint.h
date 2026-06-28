@@ -21,6 +21,13 @@ etl::string_stream& operator<<(etl::string_stream& ss, const Endpoint& endpoint)
 
 }
 
+namespace tau {
+
+using Endpoint = net::Endpoint;
+using EndpointStrV4 = net::EndpointStrV4;
+
+}
+
 namespace etl {
 
 template <>

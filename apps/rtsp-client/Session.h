@@ -45,7 +45,7 @@ private:
 
     net::UdpSocketWithExecutorPtr _socket_rtp;
     net::UdpSocketWithExecutorPtr _socket_rtcp;
-    std::optional<net::Endpoint> _remote_endpoint_rtcp;
+    std::optional<Endpoint> _remote_endpoint_rtcp;
 };
 
 }

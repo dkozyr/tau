@@ -232,7 +232,7 @@ State PeerConnection::GetState() const {
 }
 
 void PeerConnection::StartIceAgent() {
-    etl::vector<net::Endpoint, 3> interface_endpoints;
+    etl::vector<Endpoint, 3> interface_endpoints;
     auto interfaces = net::EnumerateInterfaces(true);
     for(auto& interface : interfaces) {
         if(interface_endpoints.full()) {
@@ -252,19 +252,19 @@ void PeerConnection::StartIceAgent() {
         }
         TAU_LOG_INFO(_options.log_ctx << "Name: " << interface.name << ", endpoint: " << net::ToString(udp_socket->GetLocalEndpoint().value()));
         interface_endpoints.push_back(udp_socket->GetLocalEndpoint().value());
-        udp_socket->SetRecvCallback([this, idx](Buffer&& packet, net::Endpoint remote_endpoint) {
+        udp_socket->SetRecvCallback([this, idx](Buffer&& packet, Endpoint remote_endpoint) {
             DemuxIncomingPacket(idx, std::move(packet), remote_endpoint);
         });
         _udp_sockets.push_back(std::move(udp_socket));
     }
 
-    etl::vector<net::Endpoint, 2> stun_endpoints;
+    etl::vector<Endpoint, 2> stun_endpoints;
     for(auto& stun_str : _options.ice.uri_stun_servers) {
         auto stun_uri = net::GetUriFromString(stun_str);
         if(stun_uri) {
             auto resolved = net::ResolveEndpointV4(stun_uri->host, {});
             if(resolved) {
-                stun_endpoints.emplace_back(net::Endpoint{
+                stun_endpoints.emplace_back(Endpoint{
                     .address = resolved->address,
                     .port = stun_uri->port
                 });
@@ -314,11 +314,11 @@ void PeerConnection::StartIceAgent() {
         TAU_LOG_INFO(_options.log_ctx << "Local candidate: " << candidate);
         _ice_candidate_callback(candidate);
     });
-    _ice_agent->SetSendCallback([this](size_t socket_idx, net::Endpoint remote, Buffer&& message) {
+    _ice_agent->SetSendCallback([this](size_t socket_idx, Endpoint remote, Buffer&& message) {
         _udp_sockets[socket_idx]->Send(std::move(message), remote);
     });
     if(_mdns_ctx) {
-        _ice_agent->SetMdnsEndpointCallback([this](net::Endpoint endpoint) {
+        _ice_agent->SetMdnsEndpointCallback([this](Endpoint endpoint) {
             return _mdns_ctx->client.CreateName(endpoint.address);
         });
     }
@@ -427,10 +427,10 @@ void PeerConnection::InitMdnsClient() {
         }
     });
 
-    _mdns_ctx->socket->SetRecvCallback([this](Buffer&& packet, net::Endpoint /*remote_endpoint*/) {
+    _mdns_ctx->socket->SetRecvCallback([this](Buffer&& packet, Endpoint /*remote_endpoint*/) {
         _mdns_ctx->client.Recv(std::move(packet));
     });
-    auto mdns_endpoint = net::Endpoint{
+    auto mdns_endpoint = Endpoint{
         .address = mdns.address,
         .port = mdns.port
     };
@@ -522,7 +522,7 @@ void PeerConnection::SetRemoteIceCandidateInternal(ice::CandidateStr candidate) 
 }
 
 // https://datatracker.ietf.org/doc/html/rfc7983#section-7
-void PeerConnection::DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, net::Endpoint remote_endpoint) {
+void PeerConnection::DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint) {
     const auto view = packet.GetView();
     if(view.size == 0) {
         return;

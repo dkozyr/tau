@@ -80,17 +80,17 @@ void Session::InitSockets() {
         net::UdpSocketWithExecutor::Options{
             .allocator = _udp_allocator,
             .executor = _executor,
-            .local_address = net::IpAddress{0, 0, 0, 0}
+            .local_address = IpAddress{0, 0, 0, 0}
         });
     _socket_rtp = std::move(udp_sockets_pair.first);
     _socket_rtcp = std::move(udp_sockets_pair.second);
     _socket_rtp->SetErrorCallback([](boost_ec ec)  { TAU_LOG_WARNING("[rtp socket] ec: " << ec); });
     _socket_rtcp->SetErrorCallback([](boost_ec ec) { TAU_LOG_WARNING("[rtcp socket] ec: " << ec); });
 
-    _socket_rtp->SetRecvCallback([&](Buffer&& packet, net::Endpoint) {
+    _socket_rtp->SetRecvCallback([&](Buffer&& packet, Endpoint) {
         _rtp_session.RecvRtp(std::move(packet));
     });
-    _socket_rtcp->SetRecvCallback([&](Buffer&& packet, net::Endpoint remote_endpoint) {
+    _socket_rtcp->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
         _remote_endpoint_rtcp = remote_endpoint;
         _rtp_session.RecvRtcp(std::move(packet));
         const auto& stats = _rtp_session.GetStats().incoming;

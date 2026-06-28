@@ -30,7 +30,7 @@ int main(int /*argc*/, char** /*argv*/) {
             .local_address = IpAddress{0, 0, 0, 0},
             .local_port = 3478
         });
-    udp_socket->SetRecvCallback([&](Buffer&& message, net::Endpoint remote_endpoint) {
+    udp_socket->SetRecvCallback([&](Buffer&& message, Endpoint remote_endpoint) {
         requests.fetch_add(1);
         auto view_const = ToConst(message.GetView());
         if(!stun::Reader::Validate(view_const)) {

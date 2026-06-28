@@ -86,7 +86,7 @@ private:
 
     void SetRemoteIceCandidateInternal(ice::CandidateStr candidate);
 
-    void DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, net::Endpoint remote_endpoint);
+    void DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint);
     void OnIncomingRtpRtcp(Buffer&& packet);
 
     static ice::Credentials CreateIceCredentials(const sdp::Sdp& local, const sdp::Sdp& remote);
