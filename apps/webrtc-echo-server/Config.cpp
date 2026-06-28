@@ -12,11 +12,11 @@ std::optional<Config> ParseAndValidateConfig(const etl::string_view& config_str)
 
         auto config_ip = config_json.at("ip");
         if(auto private_ip = config_ip.try_at("private")) {
-            config.ip.private_ip.append(json::GetStringView(*private_ip));
+            config.ip.private_ip = json::GetStringView(*private_ip);
         }
         if(auto public_ip = config_ip.try_at("public")) {
             if(public_ip->is_string()) {
-                config.ip.public_ip.append(json::GetStringView(*public_ip));
+                config.ip.public_ip = json::GetStringView(*public_ip);
             }
         }
 
@@ -48,7 +48,7 @@ std::optional<Config> ParseAndValidateConfig(const etl::string_view& config_str)
             if(auto validation = wss.try_at("validation")) {
                 if(auto origin_host = validation->try_at("origin_host")) {
                     if(origin_host->is_string()) {
-                        config.wss.validation.origin_host.append(json::GetStringView(*origin_host));
+                        config.wss.validation.origin_host = json::GetStringView(*origin_host);
                     }
                 }
             }

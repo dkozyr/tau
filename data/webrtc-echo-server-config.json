@@ -10,7 +10,7 @@
             "access_control_allow_origin":"*"
         },
         "validation":{
-            "origin_host":"127.0.0.1"
+            "origin_host":null
         }
     },
     "ssl":{
