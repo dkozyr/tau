@@ -15,7 +15,7 @@ public:
         sdp::Direction audio = sdp::Direction::kSendRecv;
         sdp::Direction video = sdp::Direction::kSendRecv;
         std::optional<double> loss_rate = std::nullopt;
-        std::string log_ctx;
+        etl::string<16> log_ctx;
     };
 
     using Dependencies = PeerConnection::Dependencies;
@@ -40,7 +40,7 @@ public:
             TAU_LOG_INFO(_options.log_ctx << " state: " << state);
             _state = state;
         });
-        _pc.SetIceCandidateCallback([this](std::string candidate) {
+        _pc.SetIceCandidateCallback([this](ice::CandidateStr candidate) {
             _local_ice_candidates.push_back(std::move(candidate));
         });
         _pc.SetRecvRtpCallback([this](size_t media_idx, Buffer&& packet) {
@@ -49,7 +49,7 @@ public:
     }
 
     void InitCallbacks(ClientContext& remote) {
-        _pc.SetIceCandidateCallback([&remote](std::string candidate) {
+        _pc.SetIceCandidateCallback([&remote](ice::CandidateStr candidate) {
             remote.Pc().SetRemoteIceCandidate(std::move(candidate));
         });
         for(auto& candidate : _local_ice_candidates) {
@@ -160,7 +160,7 @@ public:
     PeerConnection _pc;
     State _state = State::kInitial;
     Timepoint _start;
-    std::vector<std::string> _local_ice_candidates;
+    std::vector<ice::CandidateStr> _local_ice_candidates;
     std::vector<std::vector<Buffer>> _send_packets;
     std::vector<std::vector<Buffer>> _recv_packets;
     std::vector<rtp::RtpAllocator> _rtp_allocator;

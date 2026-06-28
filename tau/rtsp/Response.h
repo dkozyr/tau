@@ -6,9 +6,9 @@ namespace tau::rtsp {
 
 struct Response {
     size_t status_code;
-    std::string reason_phrase;
+    etl::string_view reason_phrase;
     Headers headers = {};
-    std::string body = {};
+    etl::string_view body = {};
 };
 
 }

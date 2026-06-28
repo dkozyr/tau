@@ -1,7 +1,8 @@
 #pragma once
 
 #include <optional>
-#include <string>
+#include <etl/string.h>
+#include <etl/string_view.h>
 
 namespace tau::sdp {
 
@@ -15,10 +16,10 @@ enum Setup {
 // https://www.rfc-editor.org/rfc/rfc4572.html#section-5
 struct Dtls {
     std::optional<Setup> setup = {};
-    std::string fingerprint_sha256 = {}; // only sha-256 is used as supported by all browsers for now
+    etl::string<96> fingerprint_sha256 = {}; // only sha-256 is used as supported by all browsers for now
 };
 
-inline std::string ToString(Setup setup) {
+inline etl::string_view ToString(Setup setup) {
     switch(setup) {
         case Setup::kActpass:  return "actpass";
         case Setup::kActive:   return "active";

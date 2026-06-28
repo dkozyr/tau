@@ -1,4 +1,4 @@
-#include "tests/ice/CheckListTest.h"
+#include "CheckListTest.h"
 
 namespace tau::ice {
 

@@ -6,13 +6,16 @@
 namespace tau::ws {
 
 class Server {
+    using Acceptor = asio::ip::tcp::acceptor;
+    using Socket = asio::ip::tcp::socket;
+
 public:
     struct Dependencies {
         Executor executor;
     };
 
     struct Options {
-        std::string host;
+        etl::string_view host;
         uint16_t port;
         SslContext& ssl_ctx;
         http::Fields http_fields = {};
@@ -32,7 +35,7 @@ public:
 
 private:
     void DoAccept();
-    void OnAccept(beast_ec ec, asio_tcp::socket socket);
+    void OnAccept(beast_ec ec, Socket socket);
 
     bool ValidateRequest(const beast_request& request) const;
     void ProcessResponse(beast_ws::response_type& response) const;
@@ -43,7 +46,7 @@ private:
 private:
     Executor _executor;
     Options _options;
-    asio_tcp::acceptor _acceptor;
+    Acceptor _acceptor;
     std::list<ConnectionWeakPtr> _connections;
 
     ValidateRequestCallback _validate_request_callback;

@@ -1,8 +1,8 @@
 #pragma once
 
+#include <etl/string_view.h>
+#include <etl/vector.h>
 #include <cstdint>
-#include <string_view>
-#include <vector>
 
 namespace tau::rtcp {
 
@@ -20,14 +20,14 @@ enum SdesType : uint8_t {
 
 struct SdesItem {
     SdesType type;
-    std::string_view data;
+    etl::string_view data;
 };
-using SdesItems = std::vector<SdesItem>;
+using SdesItems = etl::vector<SdesItem, 4>;
 
 struct SdesChunk {
     uint32_t ssrc;
     SdesItems items;
 };
-using SdesChunks = std::vector<SdesChunk>;
+using SdesChunks = etl::vector<SdesChunk, 4>;
 
 }

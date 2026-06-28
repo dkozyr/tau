@@ -1,10 +1,10 @@
 #pragma once
 
-#include <array>
+#include <etl/array.h>
 #include <cstdint>
 
 namespace tau {
 
-constexpr std::array<uint8_t, 4> kAnnexB = {0, 0, 0, 1};
+constexpr etl::array<uint8_t, 4> kAnnexB = {0, 0, 0, 1};
 
 }

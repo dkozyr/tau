@@ -1,19 +1,21 @@
-#include "tau/crypto/Random.h"
-#include "tau/common/Base64.h"
-#include <openssl/rand.h>
-#include <vector>
+#include <tau/crypto/Random.h>
+#include <tau/common/Base64.h>
+#include <tau/common/Math.h>
 
 namespace tau::crypto {
 
-bool RandomBytes(uint8_t* ptr, size_t size) {
-    return RAND_bytes(ptr, size);
-}
-
-std::string RandomBase64(size_t size) {
-    auto size_aligned = DivCeil(size * 6, 8);
-    std::vector<uint8_t> data(size_aligned, '.');
-    RandomBytes(data.data(), data.size());
-    return Base64Encode(data.data(), data.size()).substr(0, size);
+etl::istring& RandomBase64(etl::istring& output, size_t size) {
+    const auto data_size = DivCeil(size * 6, 8);
+    if(size <= output.capacity()) {
+        auto data = reinterpret_cast<uint8_t*>(malloc(data_size));
+        RandomBytes(data, data_size);
+        Base64Encode(data, data_size, output);
+        output.resize(size);
+        free(data);
+    } else {
+        output.clear();
+    }
+    return output;
 }
 
 }

@@ -1,4 +1,4 @@
-#include "tests/rtp-packetization/H265PacketizationBase.h"
+#include "H265PacketizationBase.h"
 
 namespace tau::rtp {
 
@@ -15,7 +15,8 @@ TEST_F(H265PacketizationTest, Randomized) {
         for(size_t i = 0; i < 10; ++i) {
             auto layer_id = g_random.Int<uint8_t>();
             auto tid = g_random.Int<uint8_t>();
-            auto nalu = CreateH265Nalu(NaluType::kPrefixSei, g_random.Int(3, 200'000), layer_id, tid);
+            const auto nalu_size = allocator_chunk_size * g_random.Int(2, 30);
+            auto nalu = CreateH265Nalu(NaluType::kPrefixSei, nalu_size, layer_id, tid);
             const auto last = g_random.Int(0, 1);
             ASSERT_TRUE(_ctx->packetizer.Process(nalu, last));
             ASSERT_FALSE(_rtp_packets.empty());

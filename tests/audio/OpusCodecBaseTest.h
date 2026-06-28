@@ -17,7 +17,7 @@ protected:
     void InitEncoder() {
         InitParams(_options.sample_rate, _options.channels);
 
-        _encoder = std::make_unique<OpusEncoder>(_rtp_allocator, OpusEncoder::Options{_options});
+        _encoder = std::make_unique<OpusEncoder>(g_udp_allocator, OpusEncoder::Options{_options});
         _encoder->SetCallback([this](Buffer&& encoded_frame) {
             // TAU_LOG_INFO("Encoded frame size: " << encoded_frame.GetView().size << ", tp: " << (int)DurationMs(encoded_frame.GetInfo().tp));
             _encoded_frames.push_back(encoded_frame.MakeCopy());

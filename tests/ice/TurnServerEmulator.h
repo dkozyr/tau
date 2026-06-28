@@ -1,19 +1,24 @@
 #include "tau/stun/Writer.h"
-#include "tau/asio/Common.h"
+#include "tau/net/Endpoint.h"
+#include "tau/net/Port.h"
 #include "tests/lib/Common.h"
+#include <etl/unordered_map.h>
+#include <etl/unordered_set.h>
 
 namespace tau::ice {
+
+using namespace tau::net;
 
 // TURN Server emulator for tests only
 class TurnServerEmulator {
 public:
-    static inline const auto kPortDefault = 3478;
-    static inline const auto kPublicIpDefault = asio_ip::make_address("222.222.222.222");
+    static inline const auto kPortDefault = kTurnUdpPort;
+    static inline const auto kPublicIpDefault = MakeIpAddressV4("222.222.222.222");
     static inline const Endpoint kEndpointDefault = Endpoint{kPublicIpDefault, kPortDefault};
 
     struct Options {
         IpAddress public_ip = kPublicIpDefault;
-        std::string password = "password"; // same password for each client
+        etl::string_view password = "password"; // same password for each client
     };
 
     using Callback = std::function<void(Buffer&&, Endpoint from, Endpoint to)>;
@@ -30,36 +35,36 @@ public:
 private:
     void OnAllocateRequest(Buffer&& message, Endpoint src, uint32_t hash);
     void OnAllocateRequestInitial(Buffer&& message, Endpoint src, uint32_t hash);
-    void OnAllocateRequest(Buffer&& message, Endpoint src, const std::string& user_name, const std::string& nonce);
+    void OnAllocateRequest(Buffer&& message, Endpoint src, const etl::istring& user_name, const etl::istring& nonce);
     void OnRefreshRequest(Buffer&& message, Endpoint src);
     void OnCreatePermissionRequest(Buffer&& message, Endpoint src);
     void OnSendIndication(Buffer&& message, Endpoint src);
 
     void OnRecvData(Buffer&& packet, Endpoint src, Endpoint dest);
 
-    void FinalizeStunMessage(Buffer& message, stun::Writer& writer, const std::string& user_name);
+    void FinalizeStunMessage(Buffer& message, stun::Writer& writer, const etl::istring& user_name);
 
-    void DropPacket(const std::string& message);
+    void DropPacket(const etl::string_view& message);
 
 private:
     Clock& _clock;
     const Options _options;
     const Endpoint _public_endpoint;
 
-    std::string _realm = "some_realm";
+    etl::string<256> _realm = "some_realm";
 
     uint16_t _latest_port = 33333;
 
     struct Allocation {
-        std::string user_name;
-        std::string nonce;
+        etl::string<256> user_name;
+        etl::string<256> nonce;
         uint16_t port;
         Timepoint expire_time;
-        std::unordered_set<IpAddress> permissions = {};
+        etl::unordered_set<IpAddress, 16> permissions = {};
     };
 
-    std::unordered_map<uint32_t, std::string> _hash_to_nonce;
-    std::unordered_map<Endpoint, Allocation> _client_to_allocation;
+    etl::unordered_map<uint32_t, etl::string<32>, 1024> _hash_to_nonce;
+    etl::unordered_map<Endpoint, Allocation, 1024> _client_to_allocation;
     size_t _dropped_packets_count = 0;
 
     Callback _on_send_callback;

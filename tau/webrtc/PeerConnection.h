@@ -10,7 +10,7 @@
 #include "tau/net/UdpSocket.h"
 #include "tau/mdns/Client.h"
 #include "tau/crypto/Certificate.h"
-#include "tau/common/Clock.h"
+#include "tau/common/SystemClock.h"
 #include "tau/common/Random.h"
 
 namespace tau::webrtc {
@@ -19,7 +19,6 @@ class PeerConnection {
 public:
     struct Dependencies {
         Clock& clock;
-        Executor executor;
         Allocator& udp_allocator;
     };
 
@@ -30,10 +29,10 @@ public:
         };
         Sdp sdp;
         struct Ice {
-            std::vector<std::string> uri_stun_servers = {};
+            etl::vector<etl::string_view, 2> uri_stun_servers = {};
             struct Mdns {
-                std::string address = "224.0.0.251"; // mDns default IP
-                uint16_t port = 5353;                // mDns default port
+                IpAddress address = IpAddress{224, 0, 0, 251}; // mDns default IP
+                uint16_t port = 5353;                          // mDns default port
             };
             std::optional<Mdns> mdns = std::nullopt;
         };
@@ -42,13 +41,15 @@ public:
             std::optional<double> loss_rate = std::nullopt;
         };
         Debug debug = {};
-        std::string log_ctx = {};
+        etl::string_view log_ctx = {};
     };
 
     using StateCallback = std::function<void(State state)>;
-    using IceCandidateCallback = std::function<void(std::string candidate)>;
+    using IceCandidateCallback = std::function<void(ice::CandidateStr candidate)>; //TODO: ice callback alias?
     using Callback = std::function<void(size_t media_idx, Buffer&& packet)>;
     using EventCallback = std::function<void(size_t media_idx, Event&& event)>;
+
+    using SdpStr = etl::string<8192>;
 
 public:
     PeerConnection(Dependencies&& deps, Options&& options);
@@ -62,17 +63,19 @@ public:
     void Stop();
     void Process();
 
-    std::string CreateSdpOffer();
-    std::string ProcessSdpOffer(const std::string& offer);
-    bool ProcessSdpAnswer(const std::string& answer);
+    void CreateSdpOffer();
+    bool ProcessSdpOffer(const etl::string_view& offer);
+    bool ProcessSdpAnswer(const etl::string_view& answer);
 
-    void SetRemoteIceCandidate(std::string candidate);
+    void SetRemoteIceCandidate(ice::CandidateStr candidate);
 
     void SendRtp(size_t media_idx, Buffer&& packet);
     void SendEvent(size_t media_idx, Event&& event);
 
     const sdp::Sdp& GetLocalSdp() const;
     const sdp::Sdp& GetRemoteSdp() const;
+    SdpStr GetLocalSdpStr(etl::string_view end_of_line = "\r\n") const;
+    SdpStr GetRemoteSdpStr(etl::string_view end_of_line = "\r\n") const;
     State GetState() const;
 
 private:
@@ -81,13 +84,13 @@ private:
     void InitMdnsClient();
     void InitMediaDemuxer();
 
-    void SetRemoteIceCandidateInternal(std::string candidate);
+    void SetRemoteIceCandidateInternal(ice::CandidateStr candidate);
 
     void DemuxIncomingPacket(size_t socket_idx, Buffer&& packet, Endpoint remote_endpoint);
     void OnIncomingRtpRtcp(Buffer&& packet);
 
     static ice::Credentials CreateIceCredentials(const sdp::Sdp& local, const sdp::Sdp& remote);
-    static bool ValidateSdpOffer(const sdp::Sdp& sdp, const std::string& log_ctx);
+    static bool ValidateSdpOffer(const sdp::Sdp& sdp, const etl::string_view& log_ctx);
 
 private:
     Dependencies _deps;
@@ -103,15 +106,18 @@ private:
     State _state = State::kInitial;
 
     std::optional<bool> _offerer; 
-    std::optional<sdp::Sdp> _sdp_offer;
-    std::optional<sdp::Sdp> _sdp_answer;
+    sdp::SdpPtr _sdp_offer;
+    sdp::SdpPtr _sdp_answer;
 
     std::optional<ice::Agent> _ice_agent;
-    std::vector<net::UdpSocketPtr> _udp_sockets;
+    etl::vector<net::UdpSocketPtr, 3> _udp_sockets;
+
+    etl::string<4> _ice_ufrag;
+    etl::string<24> _ice_password;
 
     struct IcePair{
         size_t socket_idx;
-        Endpoint remote_endpoint;
+        ice::Endpoint remote_endpoint;
     };
     std::optional<IcePair> _ice_pair;
 
@@ -121,7 +127,7 @@ private:
     std::optional<srtp::Session> _srtp_encryptor;
 
     std::optional<MediaDemuxer> _media_demuxer;
-    std::vector<rtp::Session> _rtp_sessions;
+    etl::vector<rtp::Session, 2> _rtp_sessions;
 
     StateCallback _state_callback;
     IceCandidateCallback _ice_candidate_callback;

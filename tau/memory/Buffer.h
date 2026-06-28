@@ -4,7 +4,7 @@
 #include "tau/memory/BufferView.h"
 #include "tau/memory/Flags.h"
 #include "tau/common/Clock.h"
-#include <utility>
+#include <etl/string_view.h>
 
 namespace tau {
 
@@ -30,6 +30,10 @@ public:
         return Buffer(allocator, info);
     }
 
+    static Buffer CreateEmpty(Allocator& allocator) {
+        return Buffer(allocator);
+    }
+
     Buffer(const Buffer&) = delete;
     Buffer(Buffer&&);
     Buffer& operator=(const Buffer& other) = delete;
@@ -44,6 +48,8 @@ public:
     BufferView GetViewWithCapacity();
     BufferViewConst GetViewWithCapacity() const;
 
+    const etl::string_view GetStringView() const;
+
     void SetSize(size_t size);
 
     size_t GetSize() const { return _size; }
@@ -55,6 +61,7 @@ public:
 private:
     Buffer(Allocator& allocator, size_t capacity, Info info);
     Buffer(Allocator& allocator, Info info);
+    Buffer(Allocator& allocator);
 
 private:
     Allocator& _allocator;
@@ -65,6 +72,6 @@ private:
     Info _info;
 };
 
-Buffer CreateBufferFromBase64(Allocator& allocator, std::string_view str, Buffer::Info info = Buffer::Info{.tp = 0, .flags = kFlagsNone});
+Buffer CreateBufferFromBase64(Allocator& allocator, etl::string_view str, Buffer::Info info = Buffer::Info{.tp = 0, .flags = kFlagsNone});
 
 }

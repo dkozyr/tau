@@ -4,8 +4,10 @@
 #include "tau/rtp-session/FrameProcessor.h"
 #include "tau/rtp-packetization/H264Depacketizer.h"
 #include "tau/video/h264/AvcNaluProcessor.h"
-#include "tau/net/UdpSocket.h"
+#include "tau/net/UdpSocketWithExecutor.h"
 #include "tau/memory/PoolAllocator.h"
+#include "tau/common/SystemClock.h"
+#include "tau/common/SteadyClock.h"
 #include "tau/common/File.h"
 
 namespace tau::rtsp {
@@ -29,8 +31,9 @@ private:
     void InitSockets();
 
 private:
+    std::array<uint8_t, 1 * 1024 * 1024> _allocated_memory;
+    PoolAllocator<> _udp_allocator;
     Executor _executor;
-    PoolAllocator _udp_allocator;
     SteadyClock _media_clock;
     SystemClock _system_clock;
 
@@ -40,9 +43,9 @@ private:
     h264::AvcNaluProcessor _avc1_nalu_processor;
     std::filesystem::path _output_path;
 
-    net::UdpSocketPtr _socket_rtp;
-    net::UdpSocketPtr _socket_rtcp;
-    std::optional<asio_udp::endpoint> _remote_endpoint_rtcp;
+    net::UdpSocketWithExecutorPtr _socket_rtp;
+    net::UdpSocketWithExecutorPtr _socket_rtcp;
+    std::optional<Endpoint> _remote_endpoint_rtcp;
 };
 
 }

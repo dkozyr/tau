@@ -15,14 +15,14 @@ Certificate::Certificate() {
 }
 
 Certificate::Certificate(Options&& options) {
-    auto cert_file = fopen(options.cert.c_str(), "r");
+    auto cert_file = fopen(options.cert.data(), "r");
     if(!cert_file) {
         TAU_EXCEPTION(std::runtime_error, "Certificate loading failed, cert: " << options.cert);
     }
     _certificate = PEM_read_X509(cert_file, nullptr, nullptr, nullptr);
     fclose(cert_file);
 
-    auto key_file = fopen(options.key.c_str(), "r");
+    auto key_file = fopen(options.key.data(), "r");
     if(!key_file) {
         X509_free(_certificate);
         TAU_EXCEPTION(std::runtime_error, "Certificate loading failed, key: " << options.key);
@@ -56,25 +56,27 @@ Certificate::~Certificate() {
     EVP_PKEY_free(_private_key);
 }
 
-std::vector<uint8_t> Certificate::GetCertificateBuffer() const {
+Certificate::DataBuffer Certificate::GetCertificateBuffer() const {
     auto bio = BIO_new(BIO_s_mem());
     PEM_write_bio_X509(bio, _certificate);
     return GetDataFromBio(bio);
 }
 
-std::vector<uint8_t> Certificate::GetPrivateKeyBuffer() const {
+Certificate::DataBuffer Certificate::GetPrivateKeyBuffer() const {
     auto bio = BIO_new(BIO_s_mem());
     PEM_write_bio_PrivateKey(bio, _private_key, nullptr, nullptr, 0, nullptr, nullptr);
     return GetDataFromBio(bio);
 }
 
-std::string Certificate::GetDigestSha256String() const {
+Certificate::DigestStr Certificate::GetDigestSha256String() const {
     auto digest = GetDigestSha256();
-    return ToHexDump(digest.data(), digest.size(), ":");
+    DigestStr dump;
+    ToHexDump(digest.data(), digest.size(), dump, ":");
+    return dump;
 }
 
 Certificate::Digest Certificate::GetDigestSha256() const {
-    Digest digest(EVP_MAX_MD_SIZE);
+    Digest digest(kSha256Size);
     uint32_t size = 0;
     if(X509_digest(_certificate, EVP_sha256(), digest.data(), &size)) {
         digest.resize(size);
@@ -131,13 +133,15 @@ void Certificate::GeneratePrivateKey() {
     EVP_PKEY_CTX_free(ctx);
 }
 
-std::vector<uint8_t> Certificate::GetDataFromBio(BIO* bio) {
+Certificate::DataBuffer Certificate::GetDataFromBio(BIO* bio) {
     BUF_MEM* buffer;
     BIO_get_mem_ptr(bio, &buffer);
 
-    std::vector<uint8_t> data;
-    data.reserve(buffer->length);
-    data.assign(buffer->data, buffer->data + buffer->length);
+    DataBuffer data;
+    if(buffer->length <= data.capacity()) {
+        data.resize(buffer->length);
+        memcpy(data.data(), buffer->data, buffer->length);
+    }
 
     BIO_free(bio);
     return data;
@@ -149,12 +153,12 @@ bool Certificate::SignWithCA(X509* certificate, const Certificate& ca) {
     return true;
 }
 
-void Certificate::SetCommonName(X509* certificate, const std::string& sn) {
-    auto name = X509_get_subject_name(certificate);
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)sn.c_str(), -1, -1, 0);
+void Certificate::SetCommonName(X509* certificate, const etl::string_view& sn) {
+    auto name = const_cast<X509_NAME*>(X509_get_subject_name(certificate));
+    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC, (uint8_t*)sn.data(), sn.size(), -1, 0);
 }
 
-void Certificate::SetSubjectAltName(X509_REQ* request, const std::string& san) {
+void Certificate::SetSubjectAltName(X509_REQ* request, const etl::string_view& san) {
     X509V3_CTX ctx;
     X509V3_set_ctx_nodb(&ctx);
     X509V3_set_ctx(&ctx, nullptr, nullptr, request, nullptr, 0);

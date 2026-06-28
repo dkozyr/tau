@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tau/http/Connection.h"
+#include "tau/net/IpAddress.h"
 
 namespace tau::http {
 
@@ -11,7 +12,7 @@ public:
     };
 
     struct Options {
-        IpAddress local_address = IpAddressV4::any();
+        IpAddress local_address = {};
         uint16_t port;
         SslContextPtr ssl_ctx = nullptr;
     };
@@ -34,7 +35,7 @@ private:
 private:
     Executor _executor;
     SslContextPtr _ssl_ctx;
-    asio_tcp::acceptor _acceptor;
+    asio::ip::tcp::acceptor _acceptor;
     RequestCallback _request_callback;
 };
 

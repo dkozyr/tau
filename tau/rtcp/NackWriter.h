@@ -25,7 +25,7 @@ public:
         uint16_t blp = 0;
         writer.Write(pid);
 
-        for(auto it = std::next(sns.begin()); it != sns.end(); it++) {
+        for(auto it = etl::next(sns.begin()); it != sns.end(); it++) {
             const auto delta = rtp::SnDelta(*it, pid);
             if(delta <= kBlpBitCount) {
                 blp |= (1u << (delta - 1));

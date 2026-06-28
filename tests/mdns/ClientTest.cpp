@@ -25,12 +25,13 @@ protected:
 };
 
 TEST_F(ClientTest, Basic) {
-    const auto address1 = IpAddressV4(g_random.Int<uint32_t>());
+    const IpAddress address1{g_random.Int<uint32_t>()};
     const auto name1 = _client1.CreateName(address1);
     TAU_LOG_INFO("Ip: " << address1 << ", name: " << name1);
+    ASSERT_FALSE(etl::string_view::npos == name1.find(".local"));
 
     bool found = false;
-    _client2.FindIpAddressByName(name1, [&](IpAddressV4 address) {
+    _client2.FindIpAddressByName(name1, [&](IpAddress address) {
         found = true;
         EXPECT_EQ(address1, address);
     });
@@ -38,11 +39,12 @@ TEST_F(ClientTest, Basic) {
 }
 
 TEST_F(ClientTest, NameNotFound) {
-    const auto unknown_name = GenerateUuid() + ".local";
+    Name unknown_name = GenerateUuid();
+    unknown_name.append(".local");
     TAU_LOG_INFO("Unknown name: " << unknown_name);
 
     bool found = false;
-    _client1.FindIpAddressByName(unknown_name, [&](IpAddressV4) {
+    _client1.FindIpAddressByName(unknown_name, [&](IpAddress) {
         found = true;
     });
     ASSERT_FALSE(found);

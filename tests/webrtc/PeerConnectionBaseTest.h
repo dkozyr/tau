@@ -18,7 +18,6 @@ protected:
     ClientContext::Dependencies CreatePcDependencies() {
         return ClientContext::Dependencies{
             .clock = _clock,
-            .executor = _io.GetStrand(),
             .udp_allocator = g_udp_allocator
         };
     }

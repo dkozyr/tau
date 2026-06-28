@@ -13,7 +13,7 @@ enum Method {
 };
 
 struct Request {
-    std::string uri;
+    etl::string_view uri;
     Method method;
     Headers headers = {};
 };

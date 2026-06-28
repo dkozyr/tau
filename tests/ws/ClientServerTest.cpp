@@ -1,6 +1,7 @@
 #include "tau/ws/Server.h"
 #include "tau/ws/Client.h"
 #include "tau/asio/ThreadPool.h"
+#include "tau/asio/ToString.h"
 #include "tau/crypto/Certificate.h"
 #include "tests/lib/Common.h"
 
@@ -8,18 +9,18 @@ namespace tau::ws {
 
 class ClientServerTest : public ::testing::Test {
 public:
-    static inline const std::string kLocalHost = "127.0.0.1";
+    static inline const etl::string_view kLocalHost = "127.0.0.1";
     static inline const uint16_t kWsPortTest = 12345;
 
-    static inline const std::string kCaCertPath = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.crt";
-    static inline const std::string kCaKeyPath  = std::string{PROJECT_SOURCE_DIR} + "/data/keys/ca.key";
+    static inline const char kCaCertPath[] = PROJECT_SOURCE_DIR "/data/keys/ca.crt";
+    static inline const char kCaKeyPath[]  = PROJECT_SOURCE_DIR "/data/keys/ca.key";
 
 public:
     ClientServerTest()
         : _io(std::thread::hardware_concurrency())
         , _ca(crypto::Certificate::Options{
-            .cert = kCaCertPath,
-            .key  = kCaKeyPath
+            .cert = etl::string_view{kCaCertPath},
+            .key  = etl::string_view{kCaKeyPath}
         })
         , _server_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})
         , _client_certificate(crypto::Certificate::OptionsSelfSigned{.ca = _ca})
@@ -48,7 +49,7 @@ TEST_F(ClientServerTest, Basic) {
         Server::Options{kLocalHost, kWsPortTest, *_server_ssl_ctx}
     );
     server.SetOnNewConnectionCallback([](ConnectionPtr connection) {
-        connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
+        connection->SetProcessMessageCallback([](String&& request) -> String {
             return request;
         });
     });
@@ -61,7 +62,7 @@ TEST_F(ClientServerTest, Basic) {
     client->SetOnConnectedCallback([&on_ready]() {
         on_ready.Set();
     });
-    client->SetOnMessageCallback([&on_done](std::string&& message) {
+    client->SetOnMessageCallback([&on_done](String&& message) {
         TAU_LOG_INFO("[client] incoming message: " << message);
         on_done.Set();
     });
@@ -90,13 +91,14 @@ TEST_F(ClientServerTest, ServerValidateRequestOrigin) {
             return false;
         }
         if(it_origin->value() != "example.com") {
-            TAU_LOG_WARNING("Wrong Origin: " << it_origin->value());
+            //TODO: fix it
+            // TAU_LOG_WARNING("Wrong Origin: " << it_origin->value());
             return false;
         }
         return true;
     });
     server.SetOnNewConnectionCallback([](ConnectionPtr connection) {
-        connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
+        connection->SetProcessMessageCallback([](String&& request) -> String {
             return request;
         });
     });
@@ -116,7 +118,7 @@ TEST_F(ClientServerTest, ServerValidateRequestOrigin) {
         good_client->SetOnConnectedCallback([&on_ready]() {
             on_ready.Set();
         });
-        good_client->SetOnMessageCallback([&on_done](std::string&& message) {
+        good_client->SetOnMessageCallback([&on_done](String&& message) {
             TAU_LOG_INFO("[client] incoming message: " << message);
             on_done.Set();
         });
@@ -139,7 +141,7 @@ TEST_F(ClientServerTest, ServerValidateRequestOrigin) {
         bad_client->SetOnConnectedCallback([&on_ready]() {
             on_ready.Set();
         });
-        bad_client->SetOnMessageCallback([](std::string&&) {
+        bad_client->SetOnMessageCallback([](String&&) {
             ASSERT_TRUE(false);
         });
         bad_client->Start();
@@ -154,7 +156,7 @@ TEST_F(ClientServerTest, CloseConnection) {
     );
     ConnectionPtr connection_ptr = nullptr;
     server.SetOnNewConnectionCallback([&connection_ptr](ConnectionPtr connection) {
-        connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
+        connection->SetProcessMessageCallback([](String&& request) -> String {
             return request;
         });
         connection_ptr = std::move(connection);
@@ -167,12 +169,12 @@ TEST_F(ClientServerTest, CloseConnection) {
     client->SetOnConnectedCallback([&on_ready]() {
         on_ready.Set();
     });
-    client->SetOnMessageCallback([&on_done](std::string&& message) {
+    client->SetOnMessageCallback([&on_done](String&& message) {
         TAU_LOG_INFO("[client] incoming message: " << message);
         on_done.Set();
     });
     client->SetOnErrorCallback([](beast_ec ec) {
-        TAU_LOG_INFO("[client] on error: " << ec << ", message: " << ec.message());
+        TAU_LOG_INFO("[client] on error: " << ec);
     });
     client->Start();
     ASSERT_TRUE(on_ready.WaitFor(1s));
@@ -190,7 +192,7 @@ TEST_F(ClientServerTest, SeveralClients) {
         Server::Options{kLocalHost, kWsPortTest, *_server_ssl_ctx}
     );
     server.SetOnNewConnectionCallback([](ConnectionPtr connection) {
-        connection->SetProcessMessageCallback([](std::string&& request) -> std::string {
+        connection->SetProcessMessageCallback([](String&& request) -> String {
             return request;
         });
     });
@@ -207,14 +209,14 @@ TEST_F(ClientServerTest, SeveralClients) {
                 self->PostMessage("Hello world");
             }
         });
-        client->SetOnMessageCallback([&done, &clients_done](std::string&&) {
+        client->SetOnMessageCallback([&done, &clients_done](String&&) {
             clients_done.fetch_add(1, std::memory_order_seq_cst);
             if(clients_done.load() == kTestClients) {
                 done.Set();
             }
         });
         client->SetOnErrorCallback([](beast_ec ec) {
-            TAU_LOG_INFO("[client] on error: " << ec << ", message: " << ec.message());
+            TAU_LOG_INFO("[client] on error: " << ec);
         });
         client->Start();
         clients.push_back(std::move(client));

@@ -1,8 +1,7 @@
 #include "tau/stun/Header.h"
 #include "tau/stun/MagicCookie.h"
+#include "tau/crypto/Random.h"
 #include "tau/common/NetToHost.h"
-#include "tau/common/Random.h" //TODO: crypto random?
-#include <cstring>
 
 namespace tau::stun {
 
@@ -25,14 +24,8 @@ bool HeaderReader::Validate(const BufferViewConst& view) {
 }
 
 uint32_t GenerateTransactionId(uint8_t* transaction_id_ptr) {
-    Random random;
-    uint32_t hash = 0;
-    for(size_t i = 0; i < kTransactionIdSize; i += sizeof(uint32_t)) {
-        const auto value = random.Int<uint32_t>();
-        hash ^= value;
-        Write32(transaction_id_ptr + i, value);
-    }
-    return hash;
+    crypto::RandomBytes(transaction_id_ptr, kTransactionIdSize);
+    return Read32(transaction_id_ptr) ^ Read32(transaction_id_ptr + 4) ^ Read32(transaction_id_ptr + 8);
 }
 
 }

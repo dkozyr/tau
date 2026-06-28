@@ -34,4 +34,12 @@ inline BufferViewConst ToConst(BufferView view) {
     };
 }
 
+template <typename TContainer>
+inline BufferViewConst ToViewConst(const TContainer& container) {
+    return BufferViewConst{
+        .ptr = reinterpret_cast<const uint8_t*>(container.data()),
+        .size = container.size()
+    };
+}
+
 }

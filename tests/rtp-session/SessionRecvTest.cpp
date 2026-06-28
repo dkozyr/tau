@@ -1,4 +1,4 @@
-#include "tests/rtp-session/SessionBaseTest.h"
+#include "SessionBaseTest.h"
 
 namespace tau::rtp::session {
 

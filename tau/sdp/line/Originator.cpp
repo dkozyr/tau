@@ -1,32 +1,37 @@
 #include "tau/sdp/line/Originator.h"
 #include "tau/common/String.h"
 #include "tau/common/Ntp.h"
-#include "tau/common/Clock.h"
+#include "tau/common/SystemClock.h"
+#include <limits>
 
 namespace tau::sdp {
 
-std::string_view OriginatorReader::GetAddressType(const std::string_view& value) {
-    const auto tokens = Split(value, " ");
+etl::string_view OriginatorReader::GetAddressType(const etl::string_view& value) {
+    SplitTokens<5> tokens;
+    Split(tokens, value, " ");
     return tokens[4];
 }
 
-std::string_view OriginatorReader::GetAddress(const std::string_view& value) {
-    const auto tokens = Split(value, " ");
+etl::string_view OriginatorReader::GetAddress(const etl::string_view& value) {
+    SplitTokens<6> tokens;
+    Split(tokens, value, " ");
     return tokens[5];
 }
 
-bool OriginatorReader::Validate(const std::string_view& value) {
-    const auto tokens = Split(value, " ");
+bool OriginatorReader::Validate(const etl::string_view& value) {
+    SplitTokens<6> tokens;
+    Split(tokens, value, " ");
     if(tokens.size() != 6) { return false; }
     if(tokens[3] != "IN") { return false; }
     if(!((tokens[4] == "IP4") || (tokens[4] == "IP6"))) { return false; }
     return true;
 }
 
-std::string OriginatorWriter::Write(std::string_view addr_type, std::string_view ip_addr) {
-    std::stringstream ss;
-    ss << "- " << ToNtp(SystemClock{}.Now()) << " 1 IN " << addr_type << " " << ip_addr;
-    return ss.str();
+etl::string_stream& OriginatorWriter::Write(etl::string_stream& ss, etl::string_view addr_type, etl::string_view ip_addr) {
+    constexpr auto kMaxSigned64bit = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
+    const auto ntp = ToNtp(SystemClock{}.Now());
+    ss << "- " << (ntp & kMaxSigned64bit) << " 1 IN " << addr_type << " " << ip_addr;
+    return ss;
 }
 
 }

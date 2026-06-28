@@ -1,5 +1,5 @@
 #include "tau/sdp/Negotiation.h"
-#include "tests/sdp/SdpExamples.h"
+#include "SdpExamples.h"
 #include "tests/lib/Common.h"
 
 namespace tau::sdp {
@@ -10,7 +10,7 @@ protected:
         .type = MediaType::kAudio,
         .mid = "0",
         .direction = Direction::kSend,
-        .codecs = {
+        .codecs = MakeCodecsMap({
             { 63, Codec{.index = 1, .name = "red", .clock_rate = 48000, .rtcp_fb = 0, .format = "111/111"}},
             {  9, Codec{.index = 2, .name = "G722", .clock_rate = 8000}},
             {  0, Codec{.index = 3, .name = "PCMU", .clock_rate = 8000}},
@@ -19,14 +19,14 @@ protected:
             {111, Codec{.index = 42, .name = "opus", .clock_rate = 48000, .rtcp_fb = 0, .format = "minptime=10;useinbandfec=1"}},
             {110, Codec{.index = 6, .name = "telephone-event", .clock_rate = 48000}},
             {126, Codec{.index = 7, .name = "telephone-event", .clock_rate = 8000}},
-        }
+        })
     };
 
     const Media kDefaultRemoteVideo{
         .type = MediaType::kVideo,
         .mid = "1",
         .direction = Direction::kSendRecv,
-        .codecs = {
+        .codecs = MakeCodecsMap({
             { 96, Codec{.index = 0,  .name = "VP8",  .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = {}}},
             { 97, Codec{.index = 1,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=96"}},
             {102, Codec{.index = 2,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f"}},
@@ -50,14 +50,14 @@ protected:
             {112, Codec{.index = 20, .name = "red",  .clock_rate = 90000}},
             {113, Codec{.index = 21, .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=112"}},
             {114, Codec{.index = 22, .name = "ulpfec", .clock_rate = 90000}},
-        }
+        })
     };
 
     const Media kRemoteVideoWithH265{
         .type = MediaType::kVideo,
         .mid = "1",
         .direction = Direction::kSendRecv,
-        .codecs = {
+        .codecs = MakeCodecsMap({
             { 96, Codec{.index = 0,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=640c1f"}},
             { 97, Codec{.index = 1,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=96"}},
             { 98, Codec{.index = 2,  .name = "H264", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42e01f"}},
@@ -68,7 +68,7 @@ protected:
             {103, Codec{.index = 7,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=102"}},
             {104, Codec{.index = 8,  .name = "H265", .clock_rate = 90000, .rtcp_fb = kRtcpFbDefault, .format = {}}},
             {105, Codec{.index = 9,  .name = "rtx",  .clock_rate = 90000, .rtcp_fb = 0,              .format = "apt=104"}},
-        }
+        })
     };
 };
 
@@ -77,11 +77,11 @@ TEST_F(NegotiationTest, Audio) {
         .type = MediaType::kAudio,
         .mid = "audio",
         .direction = Direction::kRecv,
-        .codecs = {
+        .codecs = MakeCodecsMap({
             {100, Codec{.index = 0, .name = "opus", .clock_rate = 48000}},
             {  0, Codec{.index = 1, .name = "PCMU", .clock_rate = 8000}},
             {  8, Codec{.index = 2, .name = "PCMA", .clock_rate = 8000}},
-        },
+        }),
         .ssrc = g_random.Int<uint32_t>()
     };
 
@@ -107,11 +107,11 @@ TEST_F(NegotiationTest, Audio2) {
         .type = MediaType::kAudio,
         .mid = "audio",
         .direction = Direction::kRecv,
-        .codecs = {
+        .codecs = MakeCodecsMap({
             {100, Codec{.index = 0, .name = "unknown", .clock_rate = 48000}},
             {111, Codec{.index = 1, .name = "nothing", .clock_rate = 8000}},
             { 88, Codec{.index = 2, .name = "PCMA", .clock_rate = 8000}},
-        },
+        }),
         .ssrc = g_random.Int<uint32_t>()
     };
 
@@ -137,13 +137,13 @@ TEST_F(NegotiationTest, Video) {
         .type = MediaType::kVideo,
         .mid = "video",
         .direction = Direction::kRecv,
-        .codecs = {
+        .codecs = MakeCodecsMap({
             {100, Codec{.index = 0, .name = "unknown", .clock_rate = 90000}},
             {101, Codec{.index = 1, .name = "nothing", .clock_rate = 90000}},
             {102, Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kPli, .format = "profile-level-id=62002a"}},
             {103, Codec{.index = 3, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = "profile-level-id=4d0029"}},
             {104, Codec{.index = 4, .name = "H265", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = {}}},
-        },
+        }),
         .ssrc = g_random.Int<uint32_t>()
     };
 
@@ -169,13 +169,13 @@ TEST_F(NegotiationTest, VideoH265) {
         .type = MediaType::kVideo,
         .mid = "video",
         .direction = Direction::kRecv,
-        .codecs = {
+        .codecs = MakeCodecsMap({
             {100, Codec{.index = 0, .name = "unknown", .clock_rate = 90000}},
             {101, Codec{.index = 1, .name = "nothing", .clock_rate = 90000}},
             {102, Codec{.index = 2, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kPli, .format = "profile-level-id=62002a"}},
             {103, Codec{.index = 3, .name = "H264", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = "profile-level-id=4d0029"}},
             {104, Codec{.index = 4, .name = "H265", .clock_rate = 90000, .rtcp_fb = RtcpFb::kNack, .format = {}}},
-        },
+        }),
         .ssrc = g_random.Int<uint32_t>()
     };
 
@@ -219,17 +219,16 @@ TEST_F(NegotiationTest, FilterH264Codec_Symmetric) {
 
 TEST_F(NegotiationTest, IsH264SupportAsymmetry) {
     ASSERT_TRUE(IsH264SupportAsymmetry(kDefaultRemoteVideo.codecs));
-    ASSERT_TRUE(IsH264SupportAsymmetry(CodecsMap{
+    ASSERT_TRUE(IsH264SupportAsymmetry(MakeCodecsMap({
         {102, Codec{.index = 2, .name = "H264", .format = "level-asymmetry-allowed=1;packetization-mode=1;profile-level-id=42001f"}},
-    }));
+    })));
 
-    ASSERT_FALSE(IsH264SupportAsymmetry(CodecsMap{
+    ASSERT_FALSE(IsH264SupportAsymmetry(MakeCodecsMap({
         {102, Codec{.index = 2, .name = "H264", .format = "level-asymmetry-allowed=0;packetization-mode=1;profile-level-id=42001f"}},
-    }));
-    ASSERT_FALSE(IsH264SupportAsymmetry(CodecsMap{
+    })));
+    ASSERT_FALSE(IsH264SupportAsymmetry(MakeCodecsMap({
         { 96, Codec{.index = 0, .name = "VP8", .format = {}}},
-    }));
-}
+    })));}
 
 TEST_F(NegotiationTest, IsH264SameProfile) {
     ASSERT_TRUE(IsH264SameProfile ("profile-level-id=42001f", "profile-level-id=42001f"));

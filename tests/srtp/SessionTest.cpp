@@ -11,33 +11,47 @@ struct SessionTestParams {
     srtp_profile_t profile;
 };
 
-const std::vector<SessionTestParams> kSessionTestParamsVec = {
-    {.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_80},
-    {.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_32},
-    {.profile = srtp_profile_t::srtp_profile_null_sha1_80},
-    {.profile = srtp_profile_t::srtp_profile_aead_aes_128_gcm},
-    {.profile = srtp_profile_t::srtp_profile_aead_aes_256_gcm},
+const etl::array<SessionTestParams, 5> kSessionTestParamsVec = {
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_80},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aes128_cm_sha1_32},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_null_sha1_80},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aead_aes_128_gcm},
+    SessionTestParams{.profile = srtp_profile_t::srtp_profile_aead_aes_256_gcm},
 };
 
 class SessionTest : public ::testing::TestWithParam<SessionTestParams> {
 public:
-    SessionTest()
-        : _key(SRTP_MAX_KEY_LEN) // max key size to cover all test cases
-    { 
+    SessionTest() {
+        Init();
+    }
+
+    void Init() {
+        _key.resize(GetKeySize(GetParam().profile));
+        _salt.resize(GetSaltSize(GetParam().profile));
+
         crypto::RandomBytes(_key.data(), _key.size());
+        crypto::RandomBytes(_salt.data(), _salt.size());
 
         _encryptor.emplace(Session::Options{
             .type = Session::Type::kEncryptor,
             .profile = GetParam().profile,
-            .key = _key,
+            .key_material = KeyMaterial{
+                .key = _key,
+                .salt = _salt
+            },
             .log_ctx = "[test] "
         });
         _decryptor.emplace(Session::Options{
             .type = Session::Type::kDecryptor,
             .profile = GetParam().profile,
-            .key = _key,
+            .key_material = KeyMaterial{
+                .key = _key,
+                .salt = _salt
+            },
             .log_ctx = "[test] "
         });
+        ASSERT_TRUE(_encryptor->IsValid());
+        ASSERT_TRUE(_decryptor->IsValid());
 
         _encryptor->SetCallback([this](Buffer&& encrypted, bool is_rtp) {
             ASSERT_EQ(is_rtp, !rtcp::IsRtcp(ToConst(encrypted.GetView())));
@@ -116,19 +130,20 @@ public:
     }
 
 protected:
-    std::vector<uint8_t> _key;
+    etl::vector<uint8_t, kKeyCapacity> _key;
+    etl::vector<uint8_t, kSaltCapacity> _salt;
     std::optional<Session> _encryptor;
     std::optional<Session> _decryptor;
     rtp::Writer::Options _rtp_options{
-        .pt = g_random.Int<uint8_t>(96, 127),
-        .ssrc = g_random.Int<uint32_t>(),
-        .ts = g_random.Int<uint32_t>(),
-        .sn = g_random.Int<uint16_t>(),
+        .pt     = g_random.Int<uint8_t>(96, 127),
+        .ssrc   = g_random.Int<uint32_t>(),
+        .ts     = g_random.Int<uint32_t>(),
+        .sn     = g_random.Int<uint16_t>(),
         .marker = false,
         .extension_length_in_words = 0
     };
-    std::vector<Buffer> _encrypted;
-    std::vector<Buffer> _decrypted;
+    etl::vector<Buffer, 2 * Session::kRtxWindowSize> _encrypted;
+    etl::vector<Buffer, 2 * Session::kRtxWindowSize> _decrypted;
 };
 
 INSTANTIATE_TEST_SUITE_P(Parametrized, SessionTest, ::testing::ValuesIn(kSessionTestParamsVec.begin(), kSessionTestParamsVec.end()));
@@ -166,12 +181,13 @@ TEST_P(SessionTest, Rtcp) {
 }
 
 TEST(SessionTest, WrongProfile) {
-    ASSERT_ANY_THROW(Session(Session::Options{
+    Session session(Session::Options{
         .type = Session::Type::kEncryptor,
         .profile = srtp_profile_t::srtp_profile_null_sha1_32,
-        .key = {},
+        .key_material = {},
         .log_ctx = "[test] "
-    }));
+    });
+    ASSERT_FALSE(session.IsValid());
 }
 
 }

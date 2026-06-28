@@ -1,4 +1,4 @@
-#include "tests/ice/NatEmulator.h"
+#include "NatEmulator.h"
 #include "tests/lib/Common.h"
 
 namespace tau::ice {
@@ -61,12 +61,12 @@ void NatEmulator::OnSendFullConeNat(Buffer&& packet, Endpoint src, Endpoint dest
 void NatEmulator::OnSendRestrictedConeNat(Buffer&& packet, Endpoint src, Endpoint dest) {
     if(auto it = _local_to_public.find(src); it != _local_to_public.end()) {
         auto& public_endpoint = it->second;
-        _public_to_remote[public_endpoint].insert(Endpoint{dest.address(), 0});
+        _public_to_remote[public_endpoint].insert(Endpoint{dest.address, 0});
         PushToQueue(std::move(packet), public_endpoint, dest);
     } else {
         auto public_endpoint = Endpoint{_options.public_ip, _latest_port};
         _local_to_public[src] = public_endpoint;
-        _public_to_remote[public_endpoint].insert(Endpoint{dest.address(), 0});
+        _public_to_remote[public_endpoint].insert(Endpoint{dest.address, 0});
         ++_latest_port;
         PushToQueue(std::move(packet), public_endpoint, dest);
     }
@@ -101,7 +101,7 @@ void NatEmulator::OnSendSymmetricNat(Buffer&& packet, Endpoint src, Endpoint des
 }
 
 void NatEmulator::OnSendLocalNetworkOnly(Buffer&& packet, Endpoint src, Endpoint dest) {
-    if(IsSameLocalNetwork(src, dest) && (src.address() == _options.public_ip)) {
+    if(IsSameLocalNetwork(src, dest) && (src.address == _options.public_ip)) {
         PushToQueue(std::move(packet), src, dest);
     }
 }
@@ -118,7 +118,7 @@ void NatEmulator::OnRecvFullConeNat(Buffer&& packet, Endpoint src, Endpoint dest
 void NatEmulator::OnRecvRestrictedConeNat(Buffer&& packet, Endpoint src, Endpoint dest) {
     for(auto& [local_src, pubic_endpoint] : _local_to_public) {
         if(dest == pubic_endpoint) {
-            Endpoint src_ip{src.address(), 0};
+            Endpoint src_ip{src.address, 0};
             if(Contains(_public_to_remote.at(dest), src_ip)) {
                 _on_recv_callback(std::move(packet), src, local_src);
             }
@@ -148,7 +148,7 @@ void NatEmulator::OnRecvSymmetricNat(Buffer&& packet, Endpoint src, Endpoint des
 }
 
 void NatEmulator::OnRecvLocalNetworkOnly(Buffer&& packet, Endpoint src, Endpoint dest) {
-    if(IsSameLocalNetwork(src, dest) && (dest.address() == _options.public_ip)) {
+    if(IsSameLocalNetwork(src, dest) && (dest.address == _options.public_ip)) {
         _on_recv_callback(std::move(packet), src, dest);
     }
 }
@@ -163,20 +163,20 @@ void NatEmulator::PushToQueue(Buffer&& packet, Endpoint src, Endpoint dest) {
 }
 
 bool NatEmulator::IsSameLocalNetwork(Endpoint a, Endpoint b) {
-    const auto a_uint = a.address().to_v4().to_uint() & 0xFFFFFF00;
-    const auto b_uint = b.address().to_v4().to_uint() & 0xFFFFFF00;
+    const auto a_uint = a.address.GetUint32() & 0xFFFFFF00;
+    const auto b_uint = b.address.GetUint32() & 0xFFFFFF00;
     return (a_uint == b_uint);
 }
 
-std::ostream& operator<<(std::ostream& s, const NatEmulator::Type& type) {
+etl::string_stream& operator<<(etl::string_stream& ss, const NatEmulator::Type& type) {
     switch(type) {
-        case NatEmulator::Type::kFullCone:           return s << "full";
-        case NatEmulator::Type::kRestrictedCone:     return s << "restricted";
-        case NatEmulator::Type::kPortRestrictedCone: return s << "port-restricted";
-        case NatEmulator::Type::kSymmetric:          return s << "symmetric";
-        case NatEmulator::Type::kLocalNetworkOnly:   return s << "local-network";
+        case NatEmulator::Type::kFullCone:           return ss << "full";
+        case NatEmulator::Type::kRestrictedCone:     return ss << "restricted";
+        case NatEmulator::Type::kPortRestrictedCone: return ss << "port-restricted";
+        case NatEmulator::Type::kSymmetric:          return ss << "symmetric";
+        case NatEmulator::Type::kLocalNetworkOnly:   return ss << "local-network";
     }
-    return s << "unknown";
+    return ss << "unknown";
 }
 
 }

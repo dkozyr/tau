@@ -17,20 +17,24 @@ public:
             Session::Dependencies{.udp_allocator = g_udp_allocator, .certificate = _server_certificate},
             Session::Options{_server_options});
 
-        _client->SetSendCallback([&](Buffer&& packet) { _queue.push(std::make_pair(false, std::move(packet))); });
-        _server->SetSendCallback([&](Buffer&& packet) { _queue.push(std::make_pair(true, std::move(packet))); });
+        _client->SetSendCallback([&](Buffer&& packet) {
+            _queue.push(std::make_pair(false, std::move(packet)));
+        });
+        _server->SetSendCallback([&](Buffer&& packet) {
+            _queue.push(std::make_pair(true, std::move(packet)));
+        });
 
         _client->SetRecvCallback([&](Buffer&& packet) {
-            auto view = packet.GetView();
-            auto message = std::string_view{reinterpret_cast<char*>(view.ptr), view.size};
+            auto message = packet.GetStringView();
             TAU_LOG_INFO("[client] [recv] message: " << message);
             EXPECT_EQ(message, "Hello from server!");
+            _client_recevied_ok = (message == "Hello from server!");
         });
         _server->SetRecvCallback([&](Buffer&& packet) {
-            auto view = packet.GetView();
-            auto message = std::string_view{reinterpret_cast<char*>(view.ptr), view.size};
+            auto message = packet.GetStringView();
             TAU_LOG_INFO("[server] [recv] message: " << message);
             EXPECT_EQ(message, "Hello from client!");
+            _server_recevied_ok = (message == "Hello from client!");
         });
 
         _client->SetStateCallback([&](Session::State state) { _client_states.push_back(state); });
@@ -38,7 +42,14 @@ public:
     }
 
     void Process() {
-        while(!_queue.empty()) {
+        while(true) {
+            _client->Process();
+            _server->Process();
+
+            if(_queue.empty()) {
+                break;
+            }
+
             auto& [from_server, packet] = _queue.front();
             if(from_server) {
                 _client->Recv(std::move(packet));
@@ -46,26 +57,27 @@ public:
                 _server->Recv(std::move(packet));
             }
             _queue.pop();
-
-            _client->Process();
-            _server->Process();
         }
     }
 
     void AssertSendData() {
-        constexpr std::string_view client_message = "Hello from client!";
+        constexpr etl::string_view client_message = "Hello from client!";
         ASSERT_TRUE(_client->Send(
             BufferViewConst{.ptr = (const uint8_t*)client_message.data(), .size = client_message.size()}));
         
-        constexpr std::string_view server_message = "Hello from server!";
+        constexpr etl::string_view server_message = "Hello from server!";
         ASSERT_TRUE(_server->Send(
             BufferViewConst{.ptr = (const uint8_t*)server_message.data(), .size = server_message.size()}));
+
+        Process();
     }
 
-    static void AssertStates(const std::vector<Session::State>& actual, const std::vector<Session::State>& target) {
+    static void AssertStates(const etl::ivector<Session::State>& actual, std::initializer_list<Session::State> target) {
         ASSERT_EQ(actual.size(), target.size());
-        for(size_t i = 0; i < actual.size(); ++i) {
-            ASSERT_EQ(target[i], actual[i]);
+        size_t i = 0;
+        for(auto target_state : target) {
+            ASSERT_EQ(target_state, actual[i]);
+            i++;
         }
     }
 
@@ -79,10 +91,19 @@ public:
         auto client_decrypting = _client->GetKeyingMaterial(false);
         auto server_encrypting = _server->GetKeyingMaterial(true);
         auto server_decrypting = _server->GetKeyingMaterial(false);
-        ASSERT_FALSE(client_encrypting.empty());
-        ASSERT_FALSE(server_encrypting.empty());
-        ASSERT_EQ(client_encrypting, server_decrypting);
-        ASSERT_EQ(client_decrypting, server_encrypting);
+        ASSERT_FALSE(client_encrypting.key.empty());
+        ASSERT_FALSE(client_encrypting.salt.empty());
+        ASSERT_FALSE(server_encrypting.key.empty());
+        ASSERT_FALSE(server_encrypting.salt.empty());
+        ASSERT_EQ(client_encrypting.key,  server_decrypting.key);
+        ASSERT_EQ(client_encrypting.salt, server_decrypting.salt);
+        ASSERT_EQ(client_decrypting.key,  server_encrypting.key);
+        ASSERT_EQ(client_decrypting.salt, server_encrypting.salt);
+    }
+
+    void AssertReceivedData() const {
+        ASSERT_TRUE(_client_recevied_ok);
+        ASSERT_TRUE(_server_recevied_ok);
     }
 
 protected:
@@ -94,24 +115,32 @@ protected:
 
     Session::Options _client_options{
         .type = Session::Type::kClient,
-        .srtp_profiles = Session::kSrtpProfilesDefault,
+        .srtp_profiles = etl::vector<Session::SrtpProfile, 2>{
+            Session::SrtpProfile::kAes128CmSha1_80,
+            Session::SrtpProfile::kAes128CmSha1_32
+        },
         .remote_peer_cert_digest = {},
         .log_ctx = "[client] "
     };
     Session::Options _server_options{
         .type = Session::Type::kServer,
-        .srtp_profiles = Session::kSrtpProfilesDefault,
+        .srtp_profiles = etl::vector<Session::SrtpProfile, 2>{
+            Session::SrtpProfile::kAes128CmSha1_80,
+            Session::SrtpProfile::kAes128CmSha1_32
+        },
         .remote_peer_cert_digest = {},
         .log_ctx = "[server] "
     };
 
-    std::queue<std::pair<bool, Buffer>> _queue;
-    std::vector<Session::State> _client_states;
-    std::vector<Session::State> _server_states;
+    etl::queue<std::pair<bool, Buffer>, 32> _queue;
+    etl::vector<Session::State, 8> _client_states;
+    etl::vector<Session::State, 8> _server_states;
+
+    bool _client_recevied_ok = false;
+    bool _server_recevied_ok = false;
 };
 
 TEST_F(SessionTest, Basic) {
-    _client->Process();
     Process();
 
     ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
@@ -119,6 +148,7 @@ TEST_F(SessionTest, Basic) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();
@@ -126,11 +156,12 @@ TEST_F(SessionTest, Basic) {
 }
 
 TEST_F(SessionTest, WithRemoteCertificateValidation) {
-    _client_options.remote_peer_cert_digest = _server_certificate.GetDigestSha256String();
-    _server_options.remote_peer_cert_digest = _client_certificate.GetDigestSha256String();
+    auto server_cert = _server_certificate.GetDigestSha256String();
+    auto client_cert = _client_certificate.GetDigestSha256String();
+    _client_options.remote_peer_cert_digest = server_cert;
+    _server_options.remote_peer_cert_digest = client_cert;
     Init();
 
-    _client->Process();
     Process();
 
     ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
@@ -138,6 +169,7 @@ TEST_F(SessionTest, WithRemoteCertificateValidation) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();
@@ -145,12 +177,15 @@ TEST_F(SessionTest, WithRemoteCertificateValidation) {
 }
 
 TEST_F(SessionTest, SelectNonDefaultSrtpProfile) {
-    _client_options.srtp_profiles = "SRTP_AES128_CM_SHA1_32";
-    _client_options.remote_peer_cert_digest = _server_certificate.GetDigestSha256String();
-    _server_options.remote_peer_cert_digest = _client_certificate.GetDigestSha256String();
+    _client_options.srtp_profiles = etl::vector<Session::SrtpProfile, 2>{
+        Session::SrtpProfile::kAes128CmSha1_32
+    };
+    auto server_cert = _server_certificate.GetDigestSha256String();
+    auto client_cert = _client_certificate.GetDigestSha256String();
+    _client_options.remote_peer_cert_digest = server_cert;
+    _server_options.remote_peer_cert_digest = client_cert;
     Init();
 
-    _client->Process();
     Process();
 
     ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kConnected}));
@@ -158,6 +193,7 @@ TEST_F(SessionTest, SelectNonDefaultSrtpProfile) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_32));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();
@@ -184,6 +220,7 @@ TEST_F(SessionTest, PacketLoss) {
     ASSERT_NO_FATAL_FAILURE(AssertSrtpProfile(Session::SrtpProfile::kAes128CmSha1_80));
     ASSERT_NO_FATAL_FAILURE(AssertKeyingMaterial());
     ASSERT_NO_FATAL_FAILURE(AssertSendData());
+    ASSERT_NO_FATAL_FAILURE(AssertReceivedData());
 
     _client->Stop();
     _server->Stop();
@@ -219,11 +256,12 @@ TEST_F(SessionTest, DISABLED_FailOnPacketLoss_BigTimeout) {
 
 TEST_F(SessionTest, WrongRemoteCertificate) {
     crypto::Certificate unknown_certificate;
-    _client_options.remote_peer_cert_digest = unknown_certificate.GetDigestSha256String();
-    _server_options.remote_peer_cert_digest = _client_certificate.GetDigestSha256String();
+    auto unknown_cert = unknown_certificate.GetDigestSha256String();
+    auto client_cert = _client_certificate.GetDigestSha256String();
+    _client_options.remote_peer_cert_digest = unknown_cert;
+    _server_options.remote_peer_cert_digest = client_cert;
     Init();
 
-    _client->Process();
     Process();
 
     ASSERT_NO_FATAL_FAILURE(AssertStates(_client_states, {Session::State::kConnecting, Session::State::kFailed}));

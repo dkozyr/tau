@@ -1,22 +1,37 @@
 #pragma once
 
-#include "tau/sdp/Ice.h"
-#include "tau/sdp/Dtls.h"
-#include "tau/sdp/Media.h"
-#include <vector>
-#include <optional>
+#include <tau/sdp/Mid.h>
+#include <tau/sdp/Ice.h>
+#include <tau/sdp/Dtls.h>
+#include <tau/sdp/Media.h>
+#include <memory>
+#include <initializer_list>
 
 namespace tau::sdp {
 
+using CName = etl::string<48>;
+
 struct Sdp {
-    std::string cname = {};
-    std::vector<std::string> bundle_mids = {};
+    CName cname = {};
+    BundleMids bundle_mids = {};
     std::optional<Ice> ice = std::nullopt;
     std::optional<Dtls> dtls = std::nullopt;
-    std::vector<Media> medias = {};
+    Medias medias = {};
 };
+using SdpPtr = std::unique_ptr<Sdp>;
 
-std::optional<Sdp> ParseSdp(std::string_view sdp_str);
-std::string WriteSdp(const Sdp& sdp);
+SdpPtr ParseSdp(etl::string_view sdp_str);
+etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp, etl::string_view end_of_line = "\r\n");
+
+inline BundleMids MakeBundleMids(std::initializer_list<etl::string_view> list) {
+    BundleMids bundle_mids;
+    for(auto&& mid : list) {
+        if(bundle_mids.full()) {
+            break;
+        }
+        bundle_mids.push_back(Mid{mid});
+    }
+    return bundle_mids;
+}
 
 }

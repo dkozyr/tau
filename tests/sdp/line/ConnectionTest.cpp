@@ -14,13 +14,15 @@ TEST(ConnectionReaderTest, Validate) {
 }
 
 TEST(ConnectionReaderTest, Basic) {
-    std::string_view value = "IN IP4 11.22.33.44";
+    etl::string_view value = "IN IP4 11.22.33.44";
     ASSERT_EQ("IP4", ConnectionReader::GetAddressType(value));
     ASSERT_EQ("11.22.33.44", ConnectionReader::GetAddress(value));
 }
 
 TEST(ConnectionWriterTest, Basic) {
-    const auto value = ConnectionWriter::Write("98.76.54.32.10.00");
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    ConnectionWriter::Write(ss, "98.76.54.32.10.00");
     TAU_LOG_INFO("c=" << value);
     ASSERT_TRUE(ConnectionReader::Validate(value));
     ASSERT_EQ("IP4", ConnectionReader::GetAddressType(value));

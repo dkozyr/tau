@@ -11,10 +11,11 @@ class Connection : public std::enable_shared_from_this<Connection> {
 public:
     using ValidateRequestCallback = std::function<bool(const beast_request& request)>;
     using ProcessResponseCallback = std::function<void(beast_ws::response_type& request)>;
-    using ProcessMessageCallback = std::function<Message(std::string&&)>;
+    using ProcessMessageCallback = std::function<Message(String&&)>;
+    using LogCtx = etl::string<32>;
 
 public:
-    Connection(asio_tcp::socket&& socket, SslContext& ssl_ctx);
+    Connection(asio::ip::tcp::socket&& socket, SslContext& ssl_ctx);
     ~Connection();
 
     void SetValidateRequest(ValidateRequestCallback callback) { _validate_request_callback = std::move(callback); }
@@ -23,7 +24,7 @@ public:
 
     void Start();
     void Close();
-    void PostMessage(std::string message);
+    void PostMessage(String message);
 
 private:
     using SocketType = beast_ws::stream<beast::ssl_stream<beast::tcp_stream>>;
@@ -40,11 +41,11 @@ private:
     void OnWrite(beast_ec ec, std::size_t bytes_transferred);
     void OnClose(beast_ec ec);
 
-    static std::string CreateLogContext(const SocketType& socket);
+    static LogCtx CreateLogContext(const SocketType& socket);
 
 private:
     SocketType _socket;
-    const std::string _log_ctx;
+    const LogCtx _log_ctx;
     beast::flat_buffer _buffer;
     std::deque<Message> _message_queue;
     bool _is_closed = false;

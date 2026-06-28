@@ -1,14 +1,15 @@
 #pragma once
 
 #include "tau/rtsp/Response.h"
-#include <sstream>
+#include <etl/string_stream.h>
 
 namespace tau::rtsp {
 
 class ResponseWriter {
 public:
-    static std::string Write(const Response& response) {
-        std::stringstream ss;
+    static etl::istring& Write(const Response& response, etl::istring& buffer) {
+        buffer.clear();
+        etl::string_stream ss(buffer);
         ss << kRtspVersion << " " << response.status_code << " " << response.reason_phrase << kClRf;
         for(auto& header : response.headers) {
             switch(header.name) {
@@ -30,7 +31,7 @@ public:
         if(!response.body.empty()) {
             ss << response.body;
         }
-        return ss.str();
+        return buffer;
     }
 };
 

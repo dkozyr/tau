@@ -4,21 +4,21 @@ namespace tau {
 
 using ssl_context = asio_ssl::context;
 
-void InitSslContext(SslContext& ctx, const std::vector<uint8_t>& cert, const std::vector<uint8_t>& key);
+void InitSslContext(SslContext& ctx, const etl::ivector<uint8_t>& cert, const etl::ivector<uint8_t>& key);
 
-SslContext CreateSslContext(const std::vector<uint8_t>& cert, const std::vector<uint8_t>& key) {
+SslContext CreateSslContext(const etl::ivector<uint8_t>& cert, const etl::ivector<uint8_t>& key) {
     SslContext ctx(ssl_context::tls);
     InitSslContext(ctx, cert, key);
     return ctx;
 }
 
-SslContextPtr CreateSslContextPtr(const std::vector<uint8_t>& cert, const std::vector<uint8_t>& key) {
+SslContextPtr CreateSslContextPtr(const etl::ivector<uint8_t>& cert, const etl::ivector<uint8_t>& key) {
     auto ctx = std::make_unique<SslContext>(ssl_context::tls);
     InitSslContext(*ctx, cert, key);
     return ctx;
 }
 
-void InitSslContext(SslContext& ctx, const std::vector<uint8_t>& cert, const std::vector<uint8_t>& key) {
+void InitSslContext(SslContext& ctx, const etl::ivector<uint8_t>& cert, const etl::ivector<uint8_t>& key) {
     ctx.set_options(ssl_context::default_workarounds | ssl_context::no_sslv2);
 
     ctx.set_default_verify_paths();

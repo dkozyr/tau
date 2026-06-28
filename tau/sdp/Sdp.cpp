@@ -8,138 +8,144 @@
 #include "tau/sdp/line/attribute/Extmap.h"
 #include "tau/sdp/line/attribute/RtcpFb.h"
 #include "tau/sdp/line/attribute/Candidate.h"
+#include "tau/common/String.h"
 
 namespace tau::sdp {
 
 using namespace attribute;
 
-bool OnMedia(Sdp& sdp, const std::string_view& value);
-bool OnAttributeRtpmap(Sdp& sdp, const std::string_view& value);
-bool OnAttributeFmtp(Sdp& sdp, const std::string_view& value);
-bool OnAttributeRtcpFb(Sdp& sdp, const std::string_view& value);
-bool OnAttributeGroup(Sdp& sdp, const std::string_view& value);
-bool OnAttributeSsrc(Sdp& sdp, const std::string_view& value);
-bool OnAttributeCandidate(Sdp& sdp, const std::string_view& value);
-bool OnAttributeIceUfrag(Sdp& sdp, const std::string_view& value);
-bool OnAttributeIcePwd(Sdp& sdp, const std::string_view& value);
-bool OnAttributeIceOptions(Sdp& sdp, const std::string_view& value);
-bool OnAttributeSetup(Sdp& sdp, const std::string_view& value);
-bool OnAttributeFingerprint(Sdp& sdp, const std::string_view& value);
+bool OnMedia(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeRtpmap(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeFmtp(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeRtcpFb(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeGroup(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeSsrc(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeCandidate(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeIceUfrag(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeIcePwd(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeIceOptions(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeSetup(Sdp& sdp, const etl::string_view& value);
+bool OnAttributeFingerprint(Sdp& sdp, const etl::string_view& value);
 
-std::optional<Sdp> ParseSdp(std::string_view sdp_str) {
-    Sdp sdp;
+SdpPtr ParseSdp(etl::string_view sdp_str) {
+    auto sdp = std::make_unique<Sdp>();
     const auto ok = Reader::ForEachLine(sdp_str,
-        [&](std::optional<size_t>, LineType type, std::string_view value) {
+        [&](std::optional<size_t>, LineType type, etl::string_view value) {
             if(type == kMedia) {
-                return OnMedia(sdp, value);
+                return OnMedia(*sdp, value);
             } else if(type == kAttribute) {
                 const auto attr_type = AttributeReader::GetType(value);
                 const auto attr_value = AttributeReader::GetValue(value);
-                if(attr_type == "rtpmap")           { return OnAttributeRtpmap(sdp, attr_value); }
-                else if(attr_type == "fmtp")        { return OnAttributeFmtp(sdp, attr_value); }
-                else if(attr_type == "rtcp-fb")     { return OnAttributeRtcpFb(sdp, attr_value); }
-                else if(attr_type == "sendrecv")    { sdp.medias.back().direction = Direction::kSendRecv; }
-                else if(attr_type == "sendonly")    { sdp.medias.back().direction = Direction::kSend; }
-                else if(attr_type == "recvonly")    { sdp.medias.back().direction = Direction::kRecv; }
-                else if(attr_type == "inactive")    { sdp.medias.back().direction = Direction::kInactive; }
-                else if(attr_type == "group")       { return OnAttributeGroup(sdp, attr_value); }
-                else if(attr_type == "mid")         { sdp.medias.back().mid = attr_value; }
-                else if(attr_type == "ssrc")        { return OnAttributeSsrc(sdp, attr_value); }
-                else if(attr_type == "candidate")   { return OnAttributeCandidate(sdp, attr_value); }
-                else if(attr_type == "ice-ufrag")   { return OnAttributeIceUfrag(sdp, attr_value); }
-                else if(attr_type == "ice-pwd")     { return OnAttributeIcePwd(sdp, attr_value); }
-                else if(attr_type == "ice-options") { return OnAttributeIceOptions(sdp, attr_value); }
-                else if(attr_type == "setup")       { return OnAttributeSetup(sdp, attr_value); }
-                else if(attr_type == "fingerprint") { return OnAttributeFingerprint(sdp, attr_value); }
+                if(attr_type == "rtpmap")           { return OnAttributeRtpmap(*sdp, attr_value); }
+                else if(attr_type == "fmtp")        { return OnAttributeFmtp(*sdp, attr_value); }
+                else if(attr_type == "rtcp-fb")     { return OnAttributeRtcpFb(*sdp, attr_value); }
+                else if(attr_type == "sendrecv")    { sdp->medias.back().direction = Direction::kSendRecv; }
+                else if(attr_type == "sendonly")    { sdp->medias.back().direction = Direction::kSend; }
+                else if(attr_type == "recvonly")    { sdp->medias.back().direction = Direction::kRecv; }
+                else if(attr_type == "inactive")    { sdp->medias.back().direction = Direction::kInactive; }
+                else if(attr_type == "group")       { return OnAttributeGroup(*sdp, attr_value); }
+                else if(attr_type == "mid")         { sdp->medias.back().mid = attr_value; }
+                else if(attr_type == "ssrc")        { return OnAttributeSsrc(*sdp, attr_value); }
+                else if(attr_type == "candidate")   { return OnAttributeCandidate(*sdp, attr_value); }
+                else if(attr_type == "ice-ufrag")   { return OnAttributeIceUfrag(*sdp, attr_value); }
+                else if(attr_type == "ice-pwd")     { return OnAttributeIcePwd(*sdp, attr_value); }
+                else if(attr_type == "ice-options") { return OnAttributeIceOptions(*sdp, attr_value); }
+                else if(attr_type == "setup")       { return OnAttributeSetup(*sdp, attr_value); }
+                else if(attr_type == "fingerprint") { return OnAttributeFingerprint(*sdp, attr_value); }
             }
             return true;
         });
     if(!ok) {
-        return std::nullopt;
+        return nullptr;
     }
     return sdp;
 }
 
-std::string WriteSdp(const Sdp& sdp) {
-    std::string output = "v=0\n";
-    output += "o=" + OriginatorWriter::Write("IP4", "127.0.0.1") + "\n";
-    output += "s=-\n";
-    output += "t=0 0\n";
+etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp, etl::string_view end_of_line) {
+    output.clear();
+    etl::string_stream ss(output);
+    ss << "v=0" << end_of_line;
+    ss << "o="; OriginatorWriter::Write(ss, "IP4", "127.0.0.1"); ss << end_of_line;
+    ss << "s=-" << end_of_line;
+    ss << "t=0 0" << end_of_line;
     if(!sdp.bundle_mids.empty()) {
-        output += "a=group:BUNDLE";
+        ss << "a=group:BUNDLE";
         for(auto& mid : sdp.bundle_mids) {
-            output += " " + mid;
+            ss << " " << mid;
         }
-        output += "\n";
+        ss << end_of_line;
     }
     for(auto& media : sdp.medias) {
         const auto pts = GetPtOrdered(media.codecs);
         switch(media.type) {
             case MediaType::kAudio:
-                output += "m=" + MediaWriter::Write(MediaType::kAudio, 9, "UDP/TLS/RTP/SAVPF", pts) + "\n";
+                ss << "m="; MediaWriter::Write(ss, MediaType::kAudio, 9, "UDP/TLS/RTP/SAVPF", pts); ss << end_of_line;
                 break;
             case MediaType::kVideo:
-                output += "m=" + MediaWriter::Write(MediaType::kVideo, 9, "UDP/TLS/RTP/SAVPF", pts) + "\n";
+                ss << "m="; MediaWriter::Write(ss, MediaType::kVideo, 9, "UDP/TLS/RTP/SAVPF", pts); ss << end_of_line;
                 break;
             case MediaType::kApplication:
-                output += "m=" + MediaWriter::Write(MediaType::kApplication, 9, "UDP/DTLS/SCTP", {}) + "\n";
-                output += "a=sctp-port:5000\n";
+                ss << "m="; MediaWriter::Write(ss, MediaType::kApplication, 9, "UDP/DTLS/SCTP", {}); ss << end_of_line;
+                ss << "a=sctp-port:5000\n";
                 break;
             default:
                 break; //TODO: fix it
         }
-        output += "c=IN IP4 0.0.0.0\n";
-        output += "a=mid:" + media.mid + "\n";
+        ss << "c=IN IP4 0.0.0.0" << end_of_line;
+        ss << "a=mid:" << media.mid << end_of_line;
         switch(media.direction) {
-            case Direction::kSendRecv: output += "a=sendrecv\n"; break;
-            case Direction::kSend:     output += "a=sendonly\n"; break;
-            case Direction::kRecv:     output += "a=recvonly\n"; break;
-            case Direction::kInactive: output += "a=inactive\n"; break;
+            case Direction::kSendRecv: ss << "a=sendrecv" << end_of_line; break;
+            case Direction::kSend:     ss << "a=sendonly" << end_of_line; break;
+            case Direction::kRecv:     ss << "a=recvonly" << end_of_line; break;
+            case Direction::kInactive: ss << "a=inactive" << end_of_line; break;
         }
-        output += "a=rtcp-mux\n";
-        output += "a=rtcp-rsize\n";
+        ss << "a=rtcp-mux" << end_of_line;
+        ss << "a=rtcp-rsize" << end_of_line;
         if(sdp.ice) {
             if(sdp.ice->trickle) {
-                output += "a=" + AttributeWriter::Write("ice-options", "trickle") + "\n";
+                ss << "a="; AttributeWriter::Write(ss, "ice-options", "trickle"); ss << end_of_line;
             }
-            output += "a=" + AttributeWriter::Write("ice-ufrag", sdp.ice->ufrag) + "\n";
-            output += "a=" + AttributeWriter::Write("ice-pwd", sdp.ice->pwd) + "\n";
+            ss << "a="; AttributeWriter::Write(ss, "ice-ufrag", sdp.ice->ufrag); ss << end_of_line;
+            ss << "a="; AttributeWriter::Write(ss, "ice-pwd", sdp.ice->pwd); ss << end_of_line;
             for(auto& candidate : sdp.ice->candidates) {
-                output += "a=" + AttributeWriter::Write("candidate", candidate) + "\n";
+                ss << "a="; AttributeWriter::Write(ss, "candidate", candidate); ss << end_of_line;
             }
         }
         if(sdp.dtls) {
             if(sdp.dtls->setup) {
-                output += "a=" + AttributeWriter::Write("setup", ToString(*sdp.dtls->setup)) + "\n";
+                ss << "a="; AttributeWriter::Write(ss, "setup", ToString(*sdp.dtls->setup)); ss << end_of_line;
             }
-            output += "a=" + AttributeWriter::Write("fingerprint", "sha-256 " + sdp.dtls->fingerprint_sha256) + "\n";
+            ss << "a="; AttributeWriter::Write(ss, "fingerprint", "sha-256 "); ss << sdp.dtls->fingerprint_sha256 << end_of_line;
         }
         for(auto pt : pts) {
             const auto& codec = media.codecs.at(pt);
-            const auto rtpmap_params = (codec.name == "opus") ? std::string_view{"2"} : std::string_view{};
-            output += "a=rtpmap:" + RtpmapWriter::Write(pt, codec.name, codec.clock_rate, rtpmap_params) + "\n";
+            const auto rtpmap_params = (codec.name == "opus") ? etl::string_view{"2"} : etl::string_view{};
+            ss << "a=rtpmap:"; RtpmapWriter::Write(ss, pt, codec.name, codec.clock_rate, rtpmap_params); ss << end_of_line;
             if(codec.rtcp_fb & RtcpFb::kNack) {
-                output += "a=rtcp-fb:" + RtcpFbWriter::Write(pt, "nack") + "\n";
+                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "nack"); ss << end_of_line;
             }
             if(codec.rtcp_fb & RtcpFb::kPli) {
-                output += "a=rtcp-fb:" + RtcpFbWriter::Write(pt, "nack pli") + "\n";
+                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "nack pli"); ss << end_of_line;
             }
             if(codec.rtcp_fb & RtcpFb::kFir) {
-                output += "a=rtcp-fb:" + RtcpFbWriter::Write(pt, "ccm fir") + "\n";
+                ss << "a=rtcp-fb:"; RtcpFbWriter::Write(ss, pt, "ccm fir"); ss << end_of_line;
             }
             if(!codec.format.empty()) {
-                output += "a=fmtp:" + FmtpWriter::Write(pt, codec.format) + "\n";
+                ss << "a=fmtp:"; FmtpWriter::Write(ss, pt, codec.format); ss << end_of_line;
             }
         }
         if(media.ssrc && !sdp.cname.empty()) {
-            output += "a=ssrc:" + std::to_string(*media.ssrc) + " cname:" + sdp.cname + "\n";
+            ss << "a=ssrc:" << *media.ssrc << " cname:" << sdp.cname << end_of_line;
         }
     }
     return output;
 }
 
-bool OnMedia(Sdp& sdp, const std::string_view& value) {
+bool OnMedia(Sdp& sdp, const etl::string_view& value) {
     if(!MediaReader::Validate(value)) {
+        return false;
+    }
+    if(sdp.medias.full()) {
         return false;
     }
 
@@ -159,7 +165,7 @@ bool OnMedia(Sdp& sdp, const std::string_view& value) {
     return true;
 }
 
-bool OnAttributeRtpmap(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeRtpmap(Sdp& sdp, const etl::string_view& value) {
     if(!RtpmapReader::Validate(value) || sdp.medias.empty()) {
         return false;
     }
@@ -167,12 +173,12 @@ bool OnAttributeRtpmap(Sdp& sdp, const std::string_view& value) {
     const auto pt = RtpmapReader::GetPt(value);
     auto& codecs = sdp.medias.back().codecs;
     auto& codec = codecs.at(pt);
-    codec.name = std::string{RtpmapReader::GetEncodingName(value)};
+    codec.name = etl::string<16>{RtpmapReader::GetEncodingName(value)};
     codec.clock_rate = RtpmapReader::GetClockRate(value);
     return true;
 }
 
-bool OnAttributeFmtp(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeFmtp(Sdp& sdp, const etl::string_view& value) {
     if(!FmtpReader::Validate(value) || sdp.medias.empty()) {
         return false;
     }
@@ -180,11 +186,11 @@ bool OnAttributeFmtp(Sdp& sdp, const std::string_view& value) {
     const auto pt = FmtpReader::GetPt(value);
     auto& codecs = sdp.medias.back().codecs;
     auto& codec = codecs.at(pt);
-    codec.format = FmtpReader::GetParameters(value);
+    codec.format = etl::string<256>{FmtpReader::GetParameters(value)};
     return true;
 }
 
-bool OnAttributeRtcpFb(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeRtcpFb(Sdp& sdp, const etl::string_view& value) {
     if(!RtcpFbReader::Validate(value) || sdp.medias.empty()) {
         return false;
     }
@@ -199,34 +205,37 @@ bool OnAttributeRtcpFb(Sdp& sdp, const std::string_view& value) {
     return true;
 }
 
-bool OnAttributeGroup(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeGroup(Sdp& sdp, const etl::string_view& value) {
     if(value.empty()) {
         return false;
     }
 
     if(sdp.medias.empty()) {
-        const auto mids = Split(value, " ");
-        if(mids[0] == "BUNDLE") {
+        SplitTokens<kMaxBundleMids> mids;
+        Split(mids, value, " ");
+        if(!mids.empty() && (mids[0] == "BUNDLE")) {
             for(size_t i = 1; i < mids.size(); ++i) {
-                sdp.bundle_mids.push_back(std::string{mids[i]});
+                sdp.bundle_mids.push_back(Mid{mids[i]});
             }
         }
     }
     return true;
 }
 
-bool OnAttributeSsrc(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeSsrc(Sdp& sdp, const etl::string_view& value) {
     if(value.empty() || sdp.medias.empty()) {
         return false;
     }
 
-    auto values = Split(value, " ");
+    SplitTokens<2> values;
+    Split(values, value, " ");
     if(values.size() == 2) {
         auto ssrc = StringToUnsigned<uint32_t>(values[0]);
         if(!ssrc) {
             return false;
         }
-        auto cname_splits = Split(values[1], ":");
+        SplitTokens<2> cname_splits;
+        Split(cname_splits, values[1], ":");
         if((cname_splits.size() == 2) && (cname_splits[0] == "cname")) {
             if(sdp.cname.empty()) {
                 sdp.cname = cname_splits[1];
@@ -242,7 +251,7 @@ bool OnAttributeSsrc(Sdp& sdp, const std::string_view& value) {
     return true;
 }
 
-bool OnAttributeCandidate(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeCandidate(Sdp& sdp, const etl::string_view& value) {
     if(!CandidateReader::Validate(value)) {
         return false;
     }
@@ -251,12 +260,15 @@ bool OnAttributeCandidate(Sdp& sdp, const std::string_view& value) {
         if(!sdp.ice) {
             sdp.ice = Ice{};
         }
-        sdp.ice->candidates.push_back(std::string{value});
+        if(sdp.ice->candidates.full()) {
+            return false;
+        }
+        sdp.ice->candidates.push_back(value);
     }
     return true;
 }
 
-bool OnAttributeIceUfrag(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeIceUfrag(Sdp& sdp, const etl::string_view& value) {
     if(!sdp.ice) {
         sdp.ice = Ice{};
     }
@@ -266,7 +278,7 @@ bool OnAttributeIceUfrag(Sdp& sdp, const std::string_view& value) {
     return true;
 }
 
-bool OnAttributeIcePwd(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeIcePwd(Sdp& sdp, const etl::string_view& value) {
     if(!sdp.ice) {
         sdp.ice = Ice{};
     }
@@ -276,7 +288,7 @@ bool OnAttributeIcePwd(Sdp& sdp, const std::string_view& value) {
     return true;
 }
 
-bool OnAttributeIceOptions(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeIceOptions(Sdp& sdp, const etl::string_view& value) {
     if(!sdp.ice) {
         sdp.ice = Ice{};
     }
@@ -284,7 +296,7 @@ bool OnAttributeIceOptions(Sdp& sdp, const std::string_view& value) {
     return true;
 }
 
-bool OnAttributeSetup(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeSetup(Sdp& sdp, const etl::string_view& value) {
     if(!sdp.dtls) {
         sdp.dtls = Dtls{};
     }
@@ -302,12 +314,12 @@ bool OnAttributeSetup(Sdp& sdp, const std::string_view& value) {
     return true;
 }
 
-bool OnAttributeFingerprint(Sdp& sdp, const std::string_view& value) {
+bool OnAttributeFingerprint(Sdp& sdp, const etl::string_view& value) {
     if(!sdp.dtls) {
         sdp.dtls = Dtls{};
     }
     auto pos = value.find(' ');
-    if(pos == std::string::npos) {
+    if(pos == etl::string_view::npos) {
         return false;
     }
     const auto func = value.substr(0, pos);

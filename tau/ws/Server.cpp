@@ -1,4 +1,6 @@
 #include "tau/ws/Server.h"
+#include "tau/asio/ToString.h"
+#include "tau/common/StdString.h"
 #include "tau/common/Log.h"
 
 namespace tau::ws {
@@ -7,11 +9,11 @@ Server::Server(Dependencies&& deps, Options&& options)
     : _executor(asio::make_strand(deps.executor))
     , _options(std::move(options))
     , _acceptor(_executor) {
-    asio_tcp::endpoint endpoint{asio_ip::make_address(_options.host), _options.port};
+    asio::ip::tcp::endpoint endpoint{asio::ip::make_address(_options.host.data()), _options.port};
     _acceptor.open(endpoint.protocol());
-    _acceptor.set_option(asio_tcp::acceptor::reuse_address(true));
+    _acceptor.set_option(Acceptor::reuse_address(true));
     _acceptor.bind(endpoint);
-    _acceptor.listen(asio_tcp::acceptor::max_listen_connections);
+    _acceptor.listen(Acceptor::max_listen_connections);
 }
 
 Server::~Server() {
@@ -27,15 +29,15 @@ void Server::Start() {
 
 void Server::DoAccept() {
     _acceptor.async_accept(
-        [this](beast_ec ec, asio_tcp::socket socket) {
+        [this](beast_ec ec, Socket socket) {
             OnAccept(ec, std::move(socket));
         });
 }
 
-void Server::OnAccept(beast_ec ec, asio_tcp::socket socket) {
+void Server::OnAccept(beast_ec ec, Socket socket) {
     if(ec) {
         if((ec != boost::system::errc::operation_canceled)) {
-            TAU_LOG_WARNING("Error: " << ec.message());
+            TAU_LOG_WARNING("Error: " << ec);
         }
     } else {
         try {
@@ -67,10 +69,11 @@ bool Server::ValidateRequest(const beast_request& request) const {
 }
 
 void Server::ProcessResponse(beast_ws::response_type& response) const {
-    for(auto& http_field : _options.http_fields) {
-        std::visit([&](auto name) {
-            response.set(name, http_field.value);
-        }, http_field.name);
+    for(auto& field : _options.http_fields) {
+        std::visit(overloaded{
+            [&](beast_http::field name) { response.set(name, ToStdStringView(field.value)); },
+            [&](etl::string_view name)  { response.set(ToStdStringView(name), ToStdStringView(field.value)); }
+        }, field.name);
     }
 }
 

@@ -1,19 +1,19 @@
 #pragma once
 
 #include "tau/asio/Common.h"
-#include <string>
-#include <variant>
-#include <vector>
+#include "tau/common/Variant.h"
+#include <etl/vector.h>
+#include <etl/string_view.h>
 
 namespace tau::http {
 
 struct Field {
-    using Name = std::variant<beast_http::field, std::string>;
+    using Name = std::variant<beast_http::field, etl::string_view>;
 
     Name name;
-    std::string value;
+    etl::string_view value;
 };
 
-using Fields = std::vector<Field>;
+using Fields = etl::vector<Field, 8>;
 
 }

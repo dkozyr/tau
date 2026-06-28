@@ -1,10 +1,11 @@
 #pragma once
 
 #include "tau/memory/Buffer.h"
-#include <vector>
+#include <etl/vector.h>
 
 namespace tau::rtp {
 
-using Frame = std::vector<Buffer>;
+//TODO: Huge key-frames could exceed capacity, so we have to process frames by chucks correctly
+using Frame = etl::vector<Buffer, 128>;
 
 }

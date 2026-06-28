@@ -1,7 +1,8 @@
 #pragma once
 
 #include <boost/json.hpp>
-#include <string>
+#include <etl/string.h>
+#include <etl/string_view.h>
 
 namespace tau {
 
@@ -12,8 +13,13 @@ using boost_ec = boost::system::error_code;
 
 namespace tau::json {
 
-std::string GetString(const Json::value& json, const std::string& key);
-double GetDouble(const Json::value& json, const std::string& key);
-double GetDoubleFromString(const Json::value& json, const std::string& key);
+etl::istring& Serialize(const Json::object& object, etl::istring& output);
+
+etl::istring& GetString(const Json::value& json, const etl::string_view& key, etl::istring& output);
+etl::istring& GetString(const Json::value& json, etl::istring& output);
+etl::string_view GetStringView(const Json::value& json, const etl::string_view& key);
+etl::string_view GetStringView(const Json::value& json);
+double GetDouble(const Json::value& json, const etl::string_view& key);
+double GetDoubleFromString(const Json::value& json, const etl::string_view& key);
 
 }

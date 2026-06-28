@@ -1,22 +1,25 @@
 #pragma once
 
-#include "tau/common/String.h"
+#include <etl/string.h>
+#include <etl/string_view.h>
+#include <etl/string_stream.h>
+#include <cstdint>
 
 namespace tau::sdp::attribute {
     
 class RtpmapReader {
 public:
-    static uint8_t GetPt(const std::string_view& value);
-    static std::string_view GetEncodingName(const std::string_view& value);
-    static size_t GetClockRate(const std::string_view& value);
-    static std::string_view GetParams(const std::string_view& value);
+    static uint8_t GetPt(const etl::string_view& value);
+    static etl::string_view GetEncodingName(const etl::string_view& value);
+    static size_t GetClockRate(const etl::string_view& value);
+    static etl::string_view GetParams(const etl::string_view& value);
 
-    static bool Validate(const std::string_view& value);
+    static bool Validate(const etl::string_view& value);
 };
 
 class RtpmapWriter {
 public:
-    static std::string Write(uint8_t pt, std::string_view encoding_name, size_t clock_rate, std::string_view params = {});
+    static etl::string_stream& Write(etl::string_stream& ss, uint8_t pt, etl::string_view encoding_name, size_t clock_rate, etl::string_view params = {});
 };
 
 }

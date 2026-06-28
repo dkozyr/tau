@@ -1,16 +1,16 @@
 #include "tau/ice/TurnClient.h"
-#include "tests/ice/TurnServerEmulator.h"
-#include "tests/ice/NatEmulator.h"
-#include "tau/net/Interface.h"
-#include "tau/net/UdpSocket.h"
-#include "tau/asio/ThreadPool.h"
-#include "tau/common/Event.h"
+#include "TurnServerEmulator.h"
+#include "NatEmulator.h"
+// #include "tau/net/Interface.h"
+// #include "tau/net/UdpSocket.h"
 
 namespace tau::ice {
 
+using namespace tau::net;
+
 class TurnClientTest : public ::testing::Test {
 public:
-    static inline Endpoint kClientEndpoint{asio_ip::make_address("192.168.0.77"), 44444};
+    static inline Endpoint kClientEndpoint{MakeIpAddressV4("192.168.0.77"), 44444};
     static inline Endpoint kServerEndpoint = TurnServerEmulator::kEndpointDefault;
 
 public:
@@ -36,16 +36,20 @@ public:
 
     void InitCallbacks() {
         _client->SetCandidateCallback([this](Endpoint remote) {
+            TAU_LOG_INFO("[SetCandidateCallback] remote: " << ToString(remote));
             _local_candidates.push_back(remote);
         });
         _client->SetSendCallback([this](Endpoint remote, Buffer&& message) {
+            TAU_LOG_INFO("[SetSendCallback] remote: " << ToString(remote));
             _nat.Send(std::move(message), kClientEndpoint, remote);
             _send_packets_count++;
         });
         _client->SetRecvCallback([this](Endpoint remote, Buffer&& message) {
+            TAU_LOG_INFO("[SetRecvCallback] remote: " << ToString(remote));
             _from_remote_peer_packets.push_back(std::make_pair(remote, std::move(message)));
         });
         _nat.SetOnSendCallback([this](Buffer&& message, Endpoint src, Endpoint dest) {
+            TAU_LOG_INFO("[SetOnSendCallback] remote: " << ToString(dest) << ", kServerEndpoint: " << ToString(kServerEndpoint));
             if(dest == kServerEndpoint) {
                 _turn_server.Recv(std::move(message), src, dest);
             }
@@ -56,7 +60,7 @@ public:
             }
         });
         _turn_server.SetOnSendCallback([this](Buffer&& message, Endpoint src, Endpoint dest) {
-            if(dest.address() == NatEmulator::kPublicIpDefault) {
+            if(dest.address == NatEmulator::kPublicIpDefault) {
                 _nat.Recv(std::move(message), src, dest);
             } else {
                 _to_remote_peer_packets.push_back(std::make_pair(dest, std::move(message)));
@@ -123,14 +127,16 @@ TEST_F(TurnClientTest, BasicAllocation) {
     ASSERT_EQ(2, _send_packets_count);
     ASSERT_EQ(1, _local_candidates.size());
     const auto& relayed = _local_candidates.back();
-    ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address());
+    ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address);
 
-    Endpoint remote_peer{asio_ip::make_address("55.66.77.88"), 54321};
-    _client->CreatePermission({remote_peer.address()});
+    Endpoint remote_peer{MakeIpAddressV4("55.66.77.88"), 54321};
+    etl::vector<IpAddress, 1> remote_ip_address;
+    remote_ip_address.push_back(remote_peer.address);
+    _client->CreatePermission(remote_ip_address);
     ASSERT_EQ(3, _send_packets_count);
-    ASSERT_FALSE(_client->HasPermission(remote_peer.address()));
+    ASSERT_FALSE(_client->HasPermission(remote_peer.address));
     ProcessNat();
-    ASSERT_TRUE(_client->HasPermission(remote_peer.address()));
+    ASSERT_TRUE(_client->HasPermission(remote_peer.address));
 
     auto outgoing_packet = CreatePacket();
     _client->Send(outgoing_packet.MakeCopy(), remote_peer);
@@ -174,9 +180,9 @@ TEST_F(TurnClientTest, SendDataToRequestPermission) {
     ASSERT_EQ(2, _send_packets_count);
     ASSERT_EQ(1, _local_candidates.size());
     const auto& relayed = _local_candidates.back();
-    ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address());
+    ASSERT_EQ(TurnServerEmulator::kPublicIpDefault, relayed.address);
 
-    Endpoint remote_peer{asio_ip::make_address("55.66.77.88"), 54321};
+    Endpoint remote_peer{MakeIpAddressV4("55.66.77.88"), 54321};
     auto outgoing_packet = CreatePacket();
     _client->Send(outgoing_packet.MakeCopy(), remote_peer);
     ProcessNat();
@@ -225,71 +231,71 @@ TEST_F(TurnClientTest, StopBeforeAllocationToPreventCreatingRelayedCandidate) {
     ASSERT_EQ(0, _local_candidates.size());
 }
 
-// turnserver --allow-loopback-peers --cli-password=nonempty --lt-cred-mech --user=username:password --realm testrealm --log-file stdout -v
-TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
-    ThreadPool io(1);
-    SteadyClock clock;
+// // turnserver --allow-loopback-peers --cli-password=nonempty --lt-cred-mech --user=username:password --realm testrealm --log-file stdout -v
+// TEST_F(TurnClientTest, DISABLED_MANUAL_Coturn) {
+//     ThreadPool io(1);
+//     SteadyClock clock;
 
-    net::UdpSocketPtr udp_socket;
-    auto interfaces = net::EnumerateInterfaces(true);
-    for(auto& interface : interfaces) {
-        TAU_LOG_INFO("Name: " << interface.name << ", address: " << interface.address);
-        if(IsPrefix(interface.name, "wlo")) {
-            udp_socket = net::UdpSocket::Create(net::UdpSocket::Options{
-                .allocator = g_udp_allocator,
-                .executor = io.GetExecutor(),
-                .local_address = interface.address.to_string()
-            });
-            TAU_LOG_INFO("Local endpoint: " << udp_socket->GetLocalEndpoint());
-            break;
-        }
-    }
+//     net::UdpSocketPtr udp_socket;
+//     auto interfaces = net::EnumerateInterfaces(true);
+//     for(auto& interface : interfaces) {
+//         TAU_LOG_INFO("Name: " << interface.name << ", address: " << interface.address);
+//         if(IsPrefix(interface.name, "wlo")) {
+//             udp_socket = net::UdpSocket::Create(net::UdpSocket::Options{
+//                 .allocator = g_udp_allocator,
+//                 .executor = io.GetExecutor(),
+//                 .local_address = interface.address.to_string()
+//             });
+//             TAU_LOG_INFO("Local endpoint: " << udp_socket->GetLocalEndpoint());
+//             break;
+//         }
+//     }
 
-    TurnClient client(
-        TurnClient::Dependencies{
-            .clock = clock, .udp_allocator = g_udp_allocator
-        },
-        TurnClient::Options{
-            .server = Endpoint{asio_ip::make_address("127.0.0.1"), 3478},
-            .credentials = {
-                .ufrag = "username",
-                .password = "password"
-            },
-            .log_ctx = "[test] "
-        });
+//     TurnClient client(
+//         TurnClient::Dependencies{
+//             .clock = clock, .udp_allocator = g_udp_allocator
+//         },
+//         TurnClient::Options{
+//             .server = Endpoint{MakeIpAddressV4("127.0.0.1"), 3478},
+//             .credentials = {
+//                 .ufrag = "username",
+//                 .password = "password"
+//             },
+//             .log_ctx = "[test] "
+//         });
 
-    client.SetCandidateCallback([&](Endpoint relayed) {
-        TAU_LOG_INFO("candidate relayed: " << relayed);
-    });
-    client.SetSendCallback([&](Endpoint remote, Buffer&& message) {
-        udp_socket->Send(std::move(message), remote);
-    });
-    udp_socket->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
-        TAU_LOG_INFO("[Recv] remote: " << remote_endpoint << ", packet: " << packet.GetSize());
-        if(client.IsServerEndpoint(remote_endpoint)) {
-            client.Recv(std::move(packet));
-        } else {
-            TAU_LOG_WARNING("Wrong server endpoint");
-        }
-    });
+//     client.SetCandidateCallback([&](Endpoint relayed) {
+//         TAU_LOG_INFO("candidate relayed: " << relayed);
+//     });
+//     client.SetSendCallback([&](Endpoint remote, Buffer&& message) {
+//         udp_socket->Send(std::move(message), remote);
+//     });
+//     udp_socket->SetRecvCallback([&](Buffer&& packet, Endpoint remote_endpoint) {
+//         TAU_LOG_INFO("[Recv] remote: " << remote_endpoint << ", packet: " << packet.GetSize());
+//         if(client.IsServerEndpoint(remote_endpoint)) {
+//             client.Recv(std::move(packet));
+//         } else {
+//             TAU_LOG_WARNING("Wrong server endpoint");
+//         }
+//     });
 
-    for(size_t i = 1; i < 50; ++i) { 
-        client.Process();
-        std::this_thread::sleep_for(100ms);
-    }
+//     for(size_t i = 1; i < 50; ++i) { 
+//         client.Process();
+//         std::this_thread::sleep_for(100ms);
+//     }
 
 
-    Endpoint remote_peer{asio_ip::make_address("192.168.0.154"), 54321};
-    client.CreatePermission({remote_peer.address()});
-    while(!client.HasPermission(remote_peer.address())) {
-        std::this_thread::sleep_for(100ms);
-    }
+//     Endpoint remote_peer{MakeIpAddressV4("192.168.0.154"), 54321};
+//     client.CreatePermission({remote_peer.address});
+//     while(!client.HasPermission(remote_peer.address)) {
+//         std::this_thread::sleep_for(100ms);
+//     }
 
-    client.Send(CreatePacket(), remote_peer);
-    std::this_thread::sleep_for(100ms);
+//     client.Send(CreatePacket(), remote_peer);
+//     std::this_thread::sleep_for(100ms);
 
-    client.Stop();
-    Event().WaitFor(150ms);
-}
+//     client.Stop();
+//     Event().WaitFor(150ms);
+// }
 
 }

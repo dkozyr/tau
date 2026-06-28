@@ -18,7 +18,7 @@ bool DataWriter::Write(Writer& writer, const BufferViewConst& data) {
     }
     writer.WriteAttributeHeader(AttributeType::kData, data.size);
 
-    writer.Write(std::string_view{reinterpret_cast<const char*>(data.ptr), data.size});
+    writer.Write(etl::string_view{reinterpret_cast<const char*>(data.ptr), data.size});
     for(size_t i = 0; i < padding; ++i) {
         writer.Write((uint8_t)0);
     }

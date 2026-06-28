@@ -3,15 +3,15 @@
 #include "tau/stun/Writer.h"
 #include "tau/stun/attribute/XorMappedAddress.h"
 #include "tau/stun/attribute/Fingerprint.h"
-#include "tests/ice/NatEmulator.h"
+#include "NatEmulator.h"
 #include "tests/lib/Common.h"
 
 namespace tau::ice {
 
 class StunClientTest : public ::testing::Test {
 public:
-    static inline Endpoint kServerEndpoint{asio_ip::make_address("77.77.77.77"), 33333};
-    static inline Endpoint kClientEndpoint{asio_ip::make_address("192.168.0.77"), 44444};
+    static inline Endpoint kServerEndpoint{MakeIpAddressV4("77.77.77.77"), 33333};
+    static inline Endpoint kClientEndpoint{MakeIpAddressV4("192.168.0.77"), 44444};
 
 public:
     StunClientTest() {
@@ -51,8 +51,8 @@ protected:
         stun::Writer writer(message.GetViewWithCapacity(), stun::kBindingResponse);
         stun::attribute::XorMappedAddressWriter::Write(writer,
             stun::AttributeType::kXorMappedAddress,
-            src.address().to_v4().to_uint(),
-            src.port());
+            src.address.GetUint32(),
+            src.port);
         stun::attribute::FingerprintWriter::Write(writer);
         message.SetSize(writer.GetSize());
     }
@@ -83,7 +83,7 @@ TEST_F(StunClientTest, Stun) {
     ASSERT_EQ(1, _send_packets_count);
     ASSERT_EQ(1, _local_candidates.size());
     const auto& reflexive = _local_candidates[0];
-    ASSERT_EQ(NatEmulator::kPublicIpDefault, reflexive.address());
+    ASSERT_EQ(NatEmulator::kPublicIpDefault, reflexive.address);
 
     for(size_t i = 2; i < 10; ++i) {
         _clock.Add(kStunServerKeepAlivePeriod / 2);

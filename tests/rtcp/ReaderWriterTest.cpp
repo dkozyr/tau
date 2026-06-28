@@ -15,6 +15,7 @@
 #include "tau/rtcp/SdesReader.h"
 #include "tau/rtcp/SdesWriter.h"
 #include "tau/memory/Buffer.h"
+#include "tau/crypto/Random.h"
 #include "tests/lib/Common.h"
 
 namespace tau::rtcp {
@@ -63,8 +64,8 @@ protected:
         return sns;
     }
 
-    std::vector<uint32_t> ByeSsrcs(size_t count) {
-        std::vector<uint32_t> ssrcs;
+    etl::vector<uint32_t, ByeReader::kMaxSsrcs> ByeSsrcs(size_t count) {
+        etl::vector<uint32_t, ByeReader::kMaxSsrcs> ssrcs;
         for(size_t i = 0; i < count; ++i) {
             ssrcs.push_back(g_random.Int<uint32_t>());
         }
@@ -169,7 +170,10 @@ TEST_F(ReaderWriterTest, Fir) {
 
 TEST_F(ReaderWriterTest, Nack) {
     auto packet = Buffer::Create(g_system_allocator, 1500);
-    const NackSns nack_sns = {1, 2, 3, 5, 8, 13, 21, 34, 55, 89};
+    NackSns nack_sns;
+    for(auto sn : {1, 2, 3, 5, 8, 13, 21, 34, 55, 89}) {
+        nack_sns.insert(sn);
+    }
 
     Writer writer(packet.GetViewWithCapacity());
     ASSERT_TRUE(NackWriter::Write(writer, _sender_ssrc, _media_ssrc, nack_sns));
@@ -185,7 +189,7 @@ TEST_F(ReaderWriterTest, Nack) {
 TEST_F(ReaderWriterTest, Nack_Randomized) {
     for(size_t i = 0; i < 100; ++i) {
         auto packet = Buffer::Create(g_system_allocator, 1500);
-        const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 100));
+        const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 32)); //TODO: name max capacity
 
         Writer writer(packet.GetViewWithCapacity());
         ASSERT_TRUE(NackWriter::Write(writer, _sender_ssrc, _media_ssrc, nack_sns));
@@ -208,29 +212,28 @@ TEST_F(ReaderWriterTest, WrongNack_EmptySns) {
 TEST_F(ReaderWriterTest, Sdes) {
     auto packet = Buffer::Create(g_system_allocator, 1500);
 
-    const SdesChunks chunks = {
-        SdesChunk{
-            .ssrc = _sender_ssrc,
-            .items = {
-                SdesItem{.type = SdesType::kCname, .data = "test_cname"},
-                SdesItem{.type = SdesType::kTool, .data = "some-tool-v.1.2.3.4"},
-                SdesItem{.type = SdesType::kNote, .data = "notes"},
-            }
-        },
-        SdesChunk{
-            .ssrc = _sender_ssrc + 1,
-            .items = {
-                SdesItem{.type = SdesType::kEmail, .data = "test@email.com"},
-                SdesItem{.type = SdesType::kLoc, .data = "location 123.45"},
-                SdesItem{.type = SdesType::kName, .data = "my name is"},
-                SdesItem{.type = SdesType::kPhone, .data = "+0(00)000-00-00"},
-            }
-        },
-        SdesChunk{
-            .ssrc = _sender_ssrc + 2,
-            .items = {}
-        },
-    };
+    SdesChunks chunks;
+    chunks.push_back(SdesChunk{
+        .ssrc = _sender_ssrc,
+        .items = {}
+    });
+    chunks.back().items.push_back(SdesItem{.type = SdesType::kCname, .data = "test_cname"});
+    chunks.back().items.push_back(SdesItem{.type = SdesType::kTool, .data = "some-tool-v.1.2.3.4"});
+    chunks.back().items.push_back(SdesItem{.type = SdesType::kNote, .data = "notes"});
+
+    chunks.push_back(SdesChunk{
+        .ssrc = _sender_ssrc + 1,
+        .items = {}
+    });
+    chunks.back().items.push_back(SdesItem{.type = SdesType::kEmail, .data = "test@email.com"});
+    chunks.back().items.push_back(SdesItem{.type = SdesType::kLoc, .data = "location 123.45"});
+    chunks.back().items.push_back(SdesItem{.type = SdesType::kName, .data = "my name is"});
+    chunks.back().items.push_back(SdesItem{.type = SdesType::kPhone, .data = "+0(00)000-00-00"});
+
+    chunks.push_back(SdesChunk{
+        .ssrc = _sender_ssrc + 2,
+        .items = {}
+    });
 
     Writer writer(packet.GetViewWithCapacity());
     ASSERT_TRUE(SdesWriter::Write(writer, chunks));
@@ -255,11 +258,13 @@ TEST_F(ReaderWriterTest, Compound_Randomized) {
         auto packet = Buffer::Create(g_system_allocator, 1500);
         const auto info = CreateSrInfo();
         const auto rr_blocks = CreateRrBlocks(g_random.Int<size_t>(1, 10));
-        const auto bye_ssrcs = ByeSsrcs(g_random.Int<size_t>(0, 30));
-        const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 100));
+        const auto bye_ssrcs = ByeSsrcs(g_random.Int<size_t>(0, ByeReader::kMaxSsrcs));
+        const auto nack_sns = CreateNackSns(g_random.Int<size_t>(1, 32)); //TODO: name capacity
         const auto fir_sn = g_random.Int<uint8_t>();
-        const auto cname = crypto::RandomBase64(g_random.Int<uint8_t>());
-        const auto tool = crypto::RandomBase64(g_random.Int<uint8_t>());
+        etl::string<64> cname;
+        etl::string<64> tool;
+        crypto::RandomBase64(cname, g_random.Int<uint8_t>(0, 63));
+        crypto::RandomBase64(tool, g_random.Int<uint8_t>(0, 63));
 
         Writer writer(packet.GetViewWithCapacity());
         size_t reports_count = 0;
@@ -288,15 +293,14 @@ TEST_F(ReaderWriterTest, Compound_Randomized) {
             reports_count++;
         }
         if(g_random.Bool() || (reports_count == 0))  {
-            ASSERT_TRUE(SdesWriter::Write(writer, SdesChunks{
-                SdesChunk{
-                    .ssrc = _sender_ssrc,
-                    .items = {
-                        SdesItem{.type = SdesType::kCname, .data = cname},
-                        SdesItem{.type = SdesType::kTool, .data = tool},
-                    }
-                }
-            }));
+            SdesChunks chunks;
+            chunks.push_back(SdesChunk{
+                .ssrc = _sender_ssrc,
+                .items = {}
+            });
+            chunks.back().items.push_back(SdesItem{.type = SdesType::kCname, .data = cname});
+            chunks.back().items.push_back(SdesItem{.type = SdesType::kTool, .data = tool});
+            ASSERT_TRUE(SdesWriter::Write(writer, chunks));
             reports_count++;
         }
         packet.SetSize(writer.GetSize());

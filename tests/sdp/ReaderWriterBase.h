@@ -54,7 +54,7 @@ protected:
             ASSERT_EQ(target->pwd,               actual->pwd);
             ASSERT_EQ(target->candidates.size(), actual->candidates.size());
             for(size_t i = 0; i < target->candidates.size(); ++i) {
-                ASSERT_EQ(target->candidates[i], actual->candidates[i]);
+                EXPECT_EQ(target->candidates[i], actual->candidates[i]);
             }
         } else {
             ASSERT_FALSE(actual.has_value());

@@ -2,6 +2,7 @@
 #include "tau/rtp/Writer.h"
 #include "tests/lib/Common.h"
 #include "tests/lib/RtpUtils.h"
+#include "SnsVector.h"
 
 namespace tau::rtp::session {
 
@@ -17,7 +18,7 @@ public:
     }
 
 protected:
-    void PushPackets(uint32_t ts, const std::vector<uint16_t>& sns, uint16_t sn_with_marker) {
+    void PushPackets(uint32_t ts, const SnsIVector& sns, uint16_t sn_with_marker) {
         for(auto sn : sns) {
             auto packet = CreatePacket(ts, sn, sn == sn_with_marker);
             _frame_processor.PushRtp(std::move(packet));
@@ -36,69 +37,69 @@ protected:
         Frame frame;
         bool losses;
     };
-    std::vector<ProcessedFrame> _frames;
+    etl::vector<ProcessedFrame, 128> _frames;
 };
 
 TEST_F(FrameProcessorTest, Basic) {
     uint32_t ts = g_random.Int<uint32_t>();
-    PushPackets(ts, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 10);
+    PushPackets(ts, ToVector({1, 2, 3, 4, 5, 6, 7, 8, 9, 10}), 10);
     ASSERT_EQ(1, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(0, 10, false));
 
     ts += 90000 / 30;
-    PushPackets(ts, {11, 12, 13, 14, 15, 16, 17}, 17);
+    PushPackets(ts, ToVector({11, 12, 13, 14, 15, 16, 17}), 17);
     ts += 90000 / 30;
-    PushPackets(ts, {18, 19}, 20);
+    PushPackets(ts, ToVector({18, 19}), 20);
     ASSERT_EQ(2, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(1, 7, false));
 
-    PushPackets(ts, {20}, 20);
+    PushPackets(ts, ToVector({20}), 20);
     ASSERT_EQ(3, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(2, 3, false));
 }
 
 TEST_F(FrameProcessorTest, NoMarker) {
     uint32_t ts = g_random.Int<uint32_t>();
-    PushPackets(ts, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 9999);
+    PushPackets(ts, ToVector({1, 2, 3, 4, 5, 6, 7, 8, 9, 10}), 9999);
     ASSERT_EQ(0, _frames.size());
 
     ts += 90000 / 15;
-    PushPackets(ts, {11, 12, 13, 14, 15, 16, 17, 18, 19}, 9999);
+    PushPackets(ts, ToVector({11, 12, 13, 14, 15, 16, 17, 18, 19}), 9999);
     ASSERT_EQ(1, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(0, 10, false));
 
     ts += 90000 / 15;
-    PushPackets(ts, {20}, 9999);
+    PushPackets(ts, ToVector({20}), 9999);
     ASSERT_EQ(2, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(1, 9, false));
 }
 
 TEST_F(FrameProcessorTest, DropOnSnGap) {
     uint32_t ts = g_random.Int<uint32_t>();
-    PushPackets(ts, {1,    3, 4, 5, 6, 7, 8, 9, 10}, 10);
+    PushPackets(ts, ToVector({1,    3, 4, 5, 6, 7, 8, 9, 10}), 10);
     ASSERT_EQ(1, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(0, 9, true));
 
     ts += 90000 / 15;
-    PushPackets(ts, {11, 12, 13, 14, 15, 16, 17, 18, 19}, 19);
+    PushPackets(ts, ToVector({11, 12, 13, 14, 15, 16, 17, 18, 19}), 19);
     ASSERT_NO_FATAL_FAILURE(AssertFrame(1, 9, false));
 
     ts += 90000 / 15;
-    PushPackets(ts, {20,     22, 23}, 23);
+    PushPackets(ts, ToVector({20,     22, 23}), 23);
     ASSERT_NO_FATAL_FAILURE(AssertFrame(2, 3, true));
 
     ts += 90000 / 15;
-    PushPackets(ts, {24, 25, 26, 27}, 27);
+    PushPackets(ts, ToVector({24, 25, 26, 27}), 27);
     ASSERT_NO_FATAL_FAILURE(AssertFrame(3, 4, false));
 }
 
 TEST_F(FrameProcessorTest, DropPacketWithMarker) {
     uint32_t ts = g_random.Int<uint32_t>();
-    PushPackets(ts, {1, 2, 3, 4, 5, 6, 7, 8, 9     }, 10);
+    PushPackets(ts, ToVector({1, 2, 3, 4, 5, 6, 7, 8, 9     }), 10);
     ASSERT_EQ(0, _frames.size());
 
     ts += 90000 / 15;
-    PushPackets(ts, {11, 12, 13, 14}, 14);
+    PushPackets(ts, ToVector({11, 12, 13, 14}), 14);
     ASSERT_EQ(2, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(0, 9, true));
     ASSERT_NO_FATAL_FAILURE(AssertFrame(1, 4, false));
@@ -106,23 +107,23 @@ TEST_F(FrameProcessorTest, DropPacketWithMarker) {
 
 TEST_F(FrameProcessorTest, DropFirstPacketAfterMarker) {
     uint32_t ts = g_random.Int<uint32_t>();
-    PushPackets(ts, {1, 2, 3, 4, 5, 6, 7, 8, 9, 10}, 10);
+    PushPackets(ts, ToVector({1, 2, 3, 4, 5, 6, 7, 8, 9, 10}), 10);
     ASSERT_EQ(1, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(0, 10, false));
 
     ts += 90000 / 15;
-    PushPackets(ts, {    12, 13, 14}, 14);
+    PushPackets(ts, ToVector({    12, 13, 14}), 14);
     ASSERT_EQ(2, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(1, 3, true));
 }
 
 TEST_F(FrameProcessorTest, DropPacketWithMarkerAndNextOne) {
     uint32_t ts = g_random.Int<uint32_t>();
-    PushPackets(ts, {1, 2, 3, 4, 5, 6, 7, 8, 9    }, 10);
+    PushPackets(ts, ToVector({1, 2, 3, 4, 5, 6, 7, 8, 9    }), 10);
     ASSERT_EQ(0, _frames.size());
 
     ts += 90000 / 15;
-    PushPackets(ts, {    12, 13, 14}, 14);
+    PushPackets(ts, ToVector({    12, 13, 14}), 14);
     ASSERT_EQ(2, _frames.size());
     ASSERT_NO_FATAL_FAILURE(AssertFrame(0, 9, true));
 

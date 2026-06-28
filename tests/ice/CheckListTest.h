@@ -1,6 +1,6 @@
 #pragma once
 
-#include "tests/ice/CheckListTestParams.h"
+#include "CheckListTestParams.h"
 #include "tau/ice/CheckList.h"
 #include "tau/ice/StunClient.h"
 #include "tau/stun/Writer.h"
@@ -10,36 +10,50 @@
 
 namespace tau::ice {
 
+using namespace tau::net;
+
 class CheckListTest : public ::testing::TestWithParam<CheckListTestParams> {
 public:
-    static inline Endpoint kHostEndpoint1a{asio_ip::make_address("1.2.3.4"), 55555};
-    static inline Endpoint kHostEndpoint1b{asio_ip::make_address("1.2.3.5"), 55000};
-    static inline Endpoint kHostEndpoint1c{asio_ip::make_address("1.2.3.6"), 55000};
-    static inline Endpoint kHostEndpoint2a{asio_ip::make_address("192.168.0.1"), 54321};
-    static inline Endpoint kHostEndpoint2b{asio_ip::make_address("192.168.0.2"), 54000};
-    static inline Endpoint kHostEndpoint3a{asio_ip::make_address("192.168.0.100"), 33300};
-    static inline Endpoint kHostEndpoint3b{asio_ip::make_address("192.168.0.101"), 44400};
-    static inline Endpoint kServerReflexiveEndpoint1{asio_ip::make_address("44.44.44.44"), 44444};
-    static inline Endpoint kServerReflexiveEndpoint2{asio_ip::make_address("55.55.55.55"), 55555};
-    static inline Endpoint kServerReflexiveEndpoint3{asio_ip::make_address("55.55.66.66"), 55777};
-    static inline Endpoint kStunServerEndpoint{asio_ip::make_address("88.77.66.55"), 43210};
+    static inline Endpoint kHostEndpoint1a{MakeIpAddressV4("1.2.3.4"), 55555};
+    static inline Endpoint kHostEndpoint1b{MakeIpAddressV4("1.2.3.5"), 55000};
+    static inline Endpoint kHostEndpoint1c{MakeIpAddressV4("1.2.3.6"), 55000};
+    static inline Endpoint kHostEndpoint2a{MakeIpAddressV4("192.168.0.1"), 54321};
+    static inline Endpoint kHostEndpoint2b{MakeIpAddressV4("192.168.0.2"), 54000};
+    static inline Endpoint kHostEndpoint3a{MakeIpAddressV4("192.168.0.100"), 33300};
+    static inline Endpoint kHostEndpoint3b{MakeIpAddressV4("192.168.0.101"), 44400};
+    static inline Endpoint kServerReflexiveEndpoint1{MakeIpAddressV4("44.44.44.44"), 44444};
+    static inline Endpoint kServerReflexiveEndpoint2{MakeIpAddressV4("55.55.55.55"), 55555};
+    static inline Endpoint kServerReflexiveEndpoint3{MakeIpAddressV4("55.55.66.66"), 55777};
+    static inline Endpoint kStunServerEndpoint{MakeIpAddressV4("88.77.66.55"), 43210};
 
 public:
-    CheckListTest()
-        : _credentials{
-            .local = {.ufrag = crypto::RandomBase64(4), .password = crypto::RandomBase64(22)},
-            .remote = {.ufrag = crypto::RandomBase64(4), .password = crypto::RandomBase64(22)},
-        }
-    {}
+    CheckListTest() {
+        crypto::RandomBase64(_local_ufrag, 4);
+        crypto::RandomBase64(_local_password, 22);
+        crypto::RandomBase64(_remote_ufrag, 4);
+        crypto::RandomBase64(_remote_password, 22);
+
+        _credentials = {
+            .local = {.ufrag = _local_ufrag, .password = _local_password},
+            .remote = {.ufrag = _remote_ufrag, .password = _remote_password},
+        };
+
+        _sockets1.push_back(kHostEndpoint1a);
+        _sockets1.push_back(kHostEndpoint1b);
+        _sockets1.push_back(kHostEndpoint1c);
+
+        _sockets2.push_back(kHostEndpoint2a);
+        _sockets2.push_back(kHostEndpoint2b);
+    }
 
     void Init(const CheckListTestParams& params) {
         _nat1.emplace(_clock, NatEmulator::Options{
             .type = params.peer1_nat_type,
-            .public_ip = kServerReflexiveEndpoint1.address()});
+            .public_ip = kServerReflexiveEndpoint1.address});
 
         _nat2.emplace(_clock, NatEmulator::Options{
             .type = params.peer2_nat_type,
-            .public_ip = kServerReflexiveEndpoint2.address()});
+            .public_ip = kServerReflexiveEndpoint2.address});
 
         _sockets1.resize(params.peer1_sockets_count);
         _sockets2.resize(params.peer2_sockets_count);
@@ -80,6 +94,7 @@ public:
                 _nat1->Send(std::move(message), socket, remote);
             });
         }
+
         for(size_t i = 0; i < _sockets2.size(); ++i) {
             _stun_clients2.emplace_back(
                 StunClient::Dependencies{_clock, g_udp_allocator}, kStunServerEndpoint
@@ -146,10 +161,10 @@ public:
             _nat2->Send(std::move(message), _sockets2[socket_idx], remote);
         });
 
-        _check_list1->SetCandidateCallback([this](std::string candidate) {
+        _check_list1->SetCandidateCallback([this](CandidateStr candidate) {
             _check_list2->RecvRemoteCandidate(std::move(candidate));
         });
-        _check_list2->SetCandidateCallback([this](std::string candidate) {
+        _check_list2->SetCandidateCallback([this](CandidateStr candidate) {
             _check_list1->RecvRemoteCandidate(std::move(candidate));
         });
     }
@@ -171,8 +186,8 @@ public:
         stun::Writer writer(message.GetViewWithCapacity(), stun::kBindingResponse);
         stun::attribute::XorMappedAddressWriter::Write(writer,
             stun::AttributeType::kXorMappedAddress,
-            src.address().to_v4().to_uint(),
-            src.port());
+            src.address.GetUint32(),
+            src.port);
         message.SetSize(writer.GetSize());
     }
 
@@ -181,15 +196,19 @@ protected:
     std::optional<NatEmulator> _nat1;
     std::optional<NatEmulator> _nat2;
 
-    std::vector<Endpoint> _sockets1 = {kHostEndpoint1a, kHostEndpoint1b, kHostEndpoint1c};
-    std::vector<Endpoint> _sockets2 = {kHostEndpoint2a, kHostEndpoint2b};
+    etl::vector<Endpoint, 3> _sockets1;
+    etl::vector<Endpoint, 3> _sockets2;
 
-    std::vector<StunClient> _stun_clients1;
-    std::vector<StunClient> _stun_clients2;
+    etl::vector<StunClient, 3> _stun_clients1;
+    etl::vector<StunClient, 3> _stun_clients2;
 
     std::optional<CheckList> _check_list1;
     std::optional<CheckList> _check_list2;
 
+    etl::string<4>  _local_ufrag;
+    etl::string<22> _local_password;
+    etl::string<4>  _remote_ufrag;
+    etl::string<22> _remote_password;
     Credentials _credentials;
 };
 

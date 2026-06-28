@@ -1,8 +1,8 @@
 #pragma once
 
-#include "tau/memory/Buffer.h"
+#include <tau/memory/Buffer.h>
+#include <etl/vector.h>
 #include <functional>
-#include <vector>
 #include <optional>
 
 namespace tau::rtp::session {
@@ -10,6 +10,7 @@ namespace tau::rtp::session {
 class SendBuffer {
 public:
     static constexpr size_t kDefaultSize = 256;
+    static constexpr size_t kBufferCapacity = 256;
 
     struct Stats {
         uint64_t packets = 0;
@@ -37,7 +38,7 @@ private:
 
     uint16_t _sn_begin;
     size_t _index = 0;
-    std::vector<Buffer> _packets;
+    etl::vector<Buffer, kBufferCapacity> _packets;
 
     Callback _callback;
     Stats _stats;

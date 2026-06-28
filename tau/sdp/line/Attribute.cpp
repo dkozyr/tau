@@ -6,26 +6,26 @@
 #include "tau/sdp/line/attribute/Candidate.h"
 
 namespace tau::sdp {
-    
-std::string_view AttributeReader::GetType(const std::string_view& value) {
+
+etl::string_view AttributeReader::GetType(const etl::string_view& value) {
     auto pos = value.find(':');
-    if(pos != std::string::npos) {
+    if(pos != etl::string_view::npos) {
         return value.substr(0, pos);
     } else {
         return value;
     }
 }
 
-std::string_view AttributeReader::GetValue(const std::string_view& value) {
+etl::string_view AttributeReader::GetValue(const etl::string_view& value) {
     auto pos = value.find(':');
-    if(pos != std::string::npos) {
+    if(pos != etl::string_view::npos) {
         return value.substr(pos + 1);
     } else {
         return {};
     }
 }
 
-bool AttributeReader::Validate(const std::string_view& value) {
+bool AttributeReader::Validate(const etl::string_view& value) {
     const auto type = GetType(value);
     if(type == "rtpmap")    { return attribute::RtpmapReader::Validate(GetValue(value)); }
     if(type == "fmtp")      { return attribute::FmtpReader::Validate(GetValue(value)); }
@@ -35,10 +35,9 @@ bool AttributeReader::Validate(const std::string_view& value) {
     return true;
 }
 
-std::string AttributeWriter::Write(std::string_view type, std::string_view value) {
-    std::stringstream ss;
+etl::string_stream& AttributeWriter::Write(etl::string_stream& ss, etl::string_view type, etl::string_view value) {
     ss << type << ":" << value;
-    return ss.str();
+    return ss;
 }
 
 }

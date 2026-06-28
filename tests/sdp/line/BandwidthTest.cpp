@@ -14,13 +14,15 @@ TEST(BandwidthReaderTest, Validate) {
 }
 
 TEST(BandwidthReaderTest, Basic) {
-    std::string_view value = "AS:1029";
+    etl::string_view value = "AS:1029";
     ASSERT_EQ("AS", BandwidthReader::GetType(value));
     ASSERT_EQ(1029, BandwidthReader::GetKbps(value));
 }
 
 TEST(BandwidthWriterTest, Basic) {
-    const auto value = BandwidthWriter::Write("AS", 9876);
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    BandwidthWriter::Write(ss, "AS", 9876);
     TAU_LOG_INFO("b=" << value);
     ASSERT_TRUE(BandwidthReader::Validate(value));
     ASSERT_EQ("AS", BandwidthReader::GetType(value));

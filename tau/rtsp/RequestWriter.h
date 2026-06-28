@@ -1,14 +1,15 @@
 #pragma once
 
 #include "tau/rtsp/Request.h"
-#include <sstream>
+#include <etl/string_stream.h>
 
 namespace tau::rtsp {
 
 class RequestWriter {
 public:
-    static std::string Write(const Request& request) {
-        std::stringstream ss;
+    static etl::istring& Write(const Request& request, etl::istring& buffer) {
+        buffer.clear();
+        etl::string_stream ss(buffer);
         switch(request.method) {
             case Method::kOptions:  ss << "OPTIONS "; break;
             case Method::kDescribe: ss << "DESCRIBE "; break;
@@ -30,7 +31,7 @@ public:
         }
         ss << "User-Agent: " << kUserAgent << kClRf
            << kClRf;
-        return ss.str();
+        return buffer;
     }
 };
 

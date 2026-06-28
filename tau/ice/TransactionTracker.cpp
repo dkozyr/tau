@@ -13,6 +13,9 @@ TransactionTracker::TransactionTracker(Clock& clock, Timepoint timeout)
 
 void TransactionTracker::SetTransactionId(BufferView& stun_message_view, size_t tag) {
     RemoveOldHashs();
+    if(_hash_storage.full() || (_tag_to_tp.full() && !Contains(_tag_to_tp, tag))) {
+        return;
+    }
 
     auto transaction_id_ptr = stun_message_view.ptr + 2 * sizeof(uint32_t);
     while(true) {
@@ -52,11 +55,19 @@ size_t TransactionTracker::GetCount() const {
 }
 
 void TransactionTracker::RemoveOldHashs() {
-    auto now = _clock.Now();
+    auto tp_threshold = _clock.Now() - _timeout;
     for(auto it = _hash_storage.begin(); it != _hash_storage.end(); ) {
         const auto& result = it->second;
-        if(now >= result.tp + _timeout) {
+        if(tp_threshold >= result.tp) {
             it = _hash_storage.erase(it);
+        } else {
+            it++;
+        }
+    }
+    for(auto it = _tag_to_tp.begin(); it != _tag_to_tp.end(); ) {
+        const auto& tp = it->second;
+        if(tp_threshold >= tp) {
+            it = _tag_to_tp.erase(it);
         } else {
             it++;
         }

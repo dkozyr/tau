@@ -13,10 +13,11 @@ Client::Client(Dependencies&& deps)
     : _deps(std::move(deps))
 {}
 
-std::string Client::CreateName(IpAddressV4 address) {
+Name Client::CreateName(IpAddress address) {
     UpdateContexts();
 
-    const auto name = GenerateUuid() + ".local";
+    Name name = GenerateUuid();
+    name.append(".local");
     _name_to_ctx.insert({name, Context{
         .address = address,
         .tp_eol = _deps.clock.Now() + kNameTimeout,
@@ -26,11 +27,13 @@ std::string Client::CreateName(IpAddressV4 address) {
 }
 
 //TODO: keep list of active names to avoid sending question
-void Client::FindIpAddressByName(const std::string& name, OnFoundIpAddressCallback callback) {
-    _on_found_ip_address_callbacks.insert({name, QuestionContext{
-        .callback = std::move(callback),
-        .tp_eol = _deps.clock.Now() + 4 * kSec
-    }});
+void Client::FindIpAddressByName(const etl::string_view& name, OnFoundIpAddressCallback callback) {
+    _on_found_ip_address_callbacks.insert(std::pair<Name, QuestionContext>{
+        name,
+        QuestionContext{
+            .callback = std::move(callback),
+            .tp_eol = _deps.clock.Now() + 4 * kSec
+        }});
 
     auto packet = Buffer::Create(_deps.udp_allocator);
     Writer writer(packet.GetViewWithCapacity());
@@ -93,9 +96,9 @@ void Client::OnAnswer(const Answer& answer) {
     if(it != _on_found_ip_address_callbacks.end()) {
         if(answer.data.size == sizeof(uint32_t)) {
             const auto value = Read32(answer.data.ptr);
-            TAU_LOG_DEBUG("Found name: " << answer.name << ", ip: " << IpAddressV4(value));
+            TAU_LOG_DEBUG("Found name: " << answer.name << ", ip: " << IpAddress{value});
             auto& ctx = it->second;
-            ctx.callback(IpAddressV4(value));
+            ctx.callback(IpAddress{value});
         }
         _on_found_ip_address_callbacks.erase(it);
     }
@@ -123,13 +126,13 @@ void Client::UpdateContexts() {
     }
 }
 
-void Client::SendAnnouncement(uint16_t id, std::string_view name, IpAddressV4 address, uint32_t ttl) {
+void Client::SendAnnouncement(uint16_t id, const etl::string_view& name, IpAddress address, uint32_t ttl) {
     auto packet = Buffer::Create(_deps.udp_allocator);
     Writer writer(packet.GetViewWithCapacity());
     if(!HeaderWriter::Write(writer, id, kAnnouncement, 0, 1)) {
         return;
     }
-    if(!AnswerWriter::Write(writer, name, Type::kIpV4, kInClass, ttl, address.to_uint())) {
+    if(!AnswerWriter::Write(writer, name, Type::kIpV4, kInClass, ttl, address.GetUint32())) {
         return;
     }
     packet.SetSize(writer.GetSize());

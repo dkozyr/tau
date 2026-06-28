@@ -1,6 +1,5 @@
 #include "tau/rtp/Sn.h"
-#include "tau/common/Log.h"
-#include <gtest/gtest.h>
+#include "tests/lib/Common.h"
 
 namespace tau::rtp {
 

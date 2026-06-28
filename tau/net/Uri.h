@@ -1,7 +1,7 @@
 #pragma once
 
-#include <string>
-#include <string_view>
+#include <etl/string.h>
+#include <etl/string_view.h>
 #include <optional>
 #include <cstdint>
 
@@ -22,13 +22,16 @@ enum Transport {
 };
 
 struct Uri {
+    using Host = etl::string<32>;
+    using Path = etl::string<256>;
+
     Protocol protocol;
-    std::string host;
+    Host host;
     uint16_t port;
-    std::string path;
+    Path path;
     std::optional<Transport> transport = std::nullopt;
 };
 
-std::optional<Uri> GetUriFromString(std::string_view str);
+std::optional<Uri> GetUriFromString(etl::string_view str);
 
 }

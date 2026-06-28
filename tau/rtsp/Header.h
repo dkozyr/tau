@@ -1,20 +1,20 @@
 #pragma once
 
-#include <string>
-#include <string_view>
-#include <vector>
+#include <etl/string.h>
+#include <etl/string_view.h>
+#include <etl/vector.h>
 #include <cstdint>
 #include <cstddef>
 
 namespace tau::rtsp {
 
-inline constexpr std::string_view kRtspVersion = "RTSP/1.0";
-inline constexpr std::string_view kUserAgent = "tau";
-inline constexpr std::string_view kClRf = "\r\n";
-inline constexpr std::string_view kClRfClRf = "\r\n\r\n";
+inline constexpr etl::string_view kRtspVersion = "RTSP/1.0";
+inline constexpr etl::string_view kUserAgent = "tau";
+inline constexpr etl::string_view kClRf = "\r\n";
+inline constexpr etl::string_view kClRfClRf = "\r\n\r\n";
 
-enum HeaderName {
-    kCSeq,
+enum HeaderName : uint8_t {
+    kCSeq = 0,
     kAccept,
     kTransport,
     kSession,
@@ -23,16 +23,17 @@ enum HeaderName {
     kContentBase,
     kContentType,
     kContentLength,
+    kMaxIndex
 };
 
 struct Header {
     HeaderName name;
-    std::string value;
+    etl::string_view value;
 };
-using Headers = std::vector<Header>;
+using Headers = etl::vector<Header, HeaderName::kMaxIndex>;
 
-Headers GetHeaders(const std::vector<std::string_view>& lines);
-std::string_view GetHeaderValue(std::string_view line, std::string_view prefix);
-std::string_view GetHeaderValue(HeaderName name, const Headers& headers);
+Headers GetHeaders(const etl::string_view& str);
+etl::string_view GetHeaderValue(etl::string_view line, etl::string_view prefix);
+etl::string_view GetHeaderValue(HeaderName name, const Headers& headers);
 
 }

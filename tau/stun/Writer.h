@@ -18,7 +18,7 @@ public:
     void Write(uint16_t value);
     void Write(uint32_t value);
     void Write(uint64_t value);
-    void Write(std::string_view view);
+    void Write(etl::string_view view);
 
     size_t GetSize() const;
     size_t GetAvailableSize() const;

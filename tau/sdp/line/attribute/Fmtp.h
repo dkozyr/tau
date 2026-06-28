@@ -1,22 +1,23 @@
 #pragma once
 
-#include <string>
-#include <string_view>
+#include <etl/string.h>
+#include <etl/string_view.h>
+#include <etl/string_stream.h>
 #include <cstdint>
 
 namespace tau::sdp::attribute {
     
 class FmtpReader {
 public:
-    static uint8_t GetPt(const std::string_view& value);
-    static std::string_view GetParameters(const std::string_view& value);
+    static uint8_t GetPt(const etl::string_view& value);
+    static etl::string_view GetParameters(const etl::string_view& value);
 
-    static bool Validate(const std::string_view& value);
+    static bool Validate(const etl::string_view& value);
 };
 
 class FmtpWriter {
 public:
-    static std::string Write(uint8_t pt, std::string_view parameters);
+    static etl::string_stream& Write(etl::string_stream& ss, uint8_t pt, etl::string_view parameters);
 };
 
 }

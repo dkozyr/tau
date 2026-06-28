@@ -1,13 +1,14 @@
 #include "tau/rtp-session/RecvBuffer.h"
 #include "tau/rtp/Sn.h"
-#include "tau/common/Container.h"
 #include <algorithm>
 
 namespace tau::rtp::session {
 
 RecvBuffer::RecvBuffer(size_t size)
-    : _size(std::clamp<size_t>(size, 4, 4096))
-    , _packets(_size) {
+    : _size(std::clamp<size_t>(size, 4, 4096)) {
+    for(size_t i = 0; i < _size; ++i) {
+        _packets.push_back(std::nullopt);
+    }
 }
 
 RecvBuffer::PacketType RecvBuffer::Push(Buffer&& packet, uint16_t sn) {
@@ -30,7 +31,6 @@ void RecvBuffer::Flush() {
 RecvBuffer::PacketType RecvBuffer::InsertPacket(Buffer&& packet, uint16_t sn) {
     _stats.packets++;
     _stats.bytes += packet.GetSize();
-
     if(_first_packet) {
         _first_packet = false;
         DoReset(std::move(packet), sn);
@@ -77,6 +77,9 @@ RecvBuffer::PacketType RecvBuffer::OnOrderedPacket(Buffer&& packet, uint16_t sn)
 
     const auto sn_begin_to_recover = _sn_end ? SnForward(*_sn_end, 1) : _sn_next;
     for(uint16_t sn_to_recover = sn_begin_to_recover; sn_to_recover != sn; ++sn_to_recover) {
+        if(_sns_to_recover.size() == _sns_to_recover.capacity()) {
+            break;
+        }
         _sns_to_recover.insert(sn_to_recover);
     }
 

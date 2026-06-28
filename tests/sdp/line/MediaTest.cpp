@@ -30,7 +30,7 @@ TEST(MediaReaderTest, MediaType) {
 }
 
 TEST(MediaReaderTest, Basic) {
-    std::string_view value = "video 12345 RTP/SAVPF 96 100 97 99 98";
+    etl::string_view value = "video 12345 RTP/SAVPF 96 100 97 99 98";
     ASSERT_EQ(MediaType::kVideo, MediaReader::GetType(value));
     ASSERT_EQ(12345, MediaReader::GetPort(value));
     ASSERT_EQ("RTP/SAVPF", MediaReader::GetProtocol(value));
@@ -44,8 +44,15 @@ TEST(MediaReaderTest, Basic) {
 }
 
 TEST(MediaWriterTest, Basic) {
-    const auto value = MediaWriter::Write(MediaType::kVideo, 7777, "RTP/AVPF", {100, 96});
-    TAU_LOG_INFO("m=" << value);
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    {
+        etl::vector<uint8_t, kMaxCodecs> fmts;
+        fmts.push_back(100);
+        fmts.push_back(96);
+        MediaWriter::Write(ss, MediaType::kVideo, 7777, "RTP/AVPF", fmts);
+        TAU_LOG_INFO("m=" << value);
+    }
     ASSERT_TRUE(MediaReader::Validate(value));
     ASSERT_EQ(MediaType::kVideo, MediaReader::GetType(value));
     ASSERT_EQ(7777, MediaReader::GetPort(value));

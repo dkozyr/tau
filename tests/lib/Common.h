@@ -16,6 +16,12 @@
 
 #include <gtest/gtest.h>
 
+#include <etl/array.h>
+#include <etl/vector.h>
+#include <etl/queue.h>
+#include <etl/string.h>
+#include <etl/string_view.h>
+
 #include <vector>
 #include <array>
 #include <unordered_map>
@@ -33,6 +39,8 @@ namespace tau {
 using namespace std::chrono_literals;
 
 inline Random g_random;
-inline PoolAllocator g_udp_allocator(kUdpMtuSize);
+inline std::array<uint8_t, 32 * 1024 * 1024> g_allocated_memory;
+inline PoolAllocator g_udp_allocator(g_allocated_memory.data(), g_allocated_memory.size(), kUdpMtuSize);
+// inline PoolAllocator g_udp_allocator(kUdpMtuSize);
 
 }

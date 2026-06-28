@@ -15,6 +15,10 @@ public:
     using MdnsEndpointCallback = CheckList::MdnsEndpointCallback;
     using NominatingStrategy = CheckList::NominatingStrategy;
 
+    static constexpr size_t kInterfaceMaxCount = 3;
+    static constexpr size_t kStunMaxCount = 2;
+    static constexpr size_t kTurnMaxCount = 3;
+
     struct Dependencies {
         Clock& clock;
         Allocator& udp_allocator;
@@ -23,11 +27,11 @@ public:
     struct Options {
         Role role;
         Credentials credentials;
-        std::vector<Endpoint> interfaces; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
-        std::vector<Endpoint> stun_servers;
-        std::unordered_map<Endpoint, PeerCredentials> turn_servers;
+        etl::vector<Endpoint, kInterfaceMaxCount> interfaces; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
+        etl::vector<Endpoint, kStunMaxCount> stun_servers;
+        etl::unordered_map<Endpoint, PeerCredentials, kTurnMaxCount> turn_servers;
         NominatingStrategy nominating_strategy = NominatingStrategy::kBestValid;
-        std::string log_ctx = {};
+        etl::string_view log_ctx = {};
     };
 
 public:
@@ -42,23 +46,23 @@ public:
     void Start();
     void Process();
 
-    void RecvRemoteCandidate(std::string candidate);
+    void RecvRemoteCandidate(CandidateStr candidate);
     void Recv(size_t socket_idx, Endpoint remote, Buffer&& message);
 
     const CandidatePair& GetBestCandidatePair() const;
 
 private:
-    void InitStunClients(const std::vector<Endpoint>& stun_servers);
-    void InitTurnClients(const std::unordered_map<Endpoint, PeerCredentials>& turn_servers);
+    void InitStunClients(const etl::ivector<Endpoint>& stun_servers);
+    void InitTurnClients(const etl::iunordered_map<Endpoint, PeerCredentials>& turn_servers);
 
 private:
     Dependencies _deps;
-    std::vector<Endpoint> _interfaces;
-    const std::string _log_ctx;
+    etl::vector<Endpoint, kInterfaceMaxCount> _interfaces;
+    const etl::string_view _log_ctx;
 
     CheckList _check_list;
-    std::vector<StunClient> _stun_clients;
-    std::vector<TurnClient> _turn_clients;
+    etl::vector<StunClient, kStunMaxCount * kInterfaceMaxCount> _stun_clients;
+    etl::vector<TurnClient, kTurnMaxCount * kInterfaceMaxCount> _turn_clients;
 
     State _state = State::kWaiting;
 

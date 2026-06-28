@@ -4,9 +4,11 @@
 #include "tau/ice/CandidatePair.h"
 #include "tau/ice/Credentials.h"
 #include "tau/ice/State.h"
+#include "tau/crypto/Hmac.h"
 #include "tau/memory/Buffer.h"
+#include <etl/vector.h>
+#include <etl/unordered_map.h>
 #include <functional>
-#include <unordered_map>
 
 namespace tau::ice {
 
@@ -26,14 +28,14 @@ public:
         Role role;
         Credentials credentials;
         //TODO: rename to local_endpoints?
-        std::vector<Endpoint> sockets; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
+        etl::vector<Endpoint, 3> sockets; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
         NominatingStrategy nominating_strategy = NominatingStrategy::kBestValid;
-        std::string log_ctx = {};
+        etl::string_view log_ctx = {};
     };
 
-    using CandidateCallback = std::function<void(std::string candidate)>;
+    using CandidateCallback = std::function<void(CandidateStr candidate)>;
     using SendCallback = std::function<void(size_t socket_idx, Endpoint remote, Buffer&& message)>;
-    using MdnsEndpointCallback = std::function<std::string(Endpoint local_endpoint)>;
+    using MdnsEndpointCallback = std::function<etl::string<36 + 1 + 5>(Endpoint local_endpoint)>;
 
 public:
     CheckList(Dependencies&& deps, Options&& options);
@@ -47,7 +49,7 @@ public:
     void Process();
 
     void AddLocalCandidate(CandidateType type, size_t socket_idx, Endpoint remote);
-    void RecvRemoteCandidate(std::string candidate);
+    void RecvRemoteCandidate(CandidateStr candidate);
     void Recv(size_t socket_idx, Endpoint remote, Buffer&& message);
 
     State GetState() const;
@@ -72,13 +74,15 @@ private:
     const Role _role; // NOTE: role switching isn't supported
     const Credentials _credentials;
     const NominatingStrategy _nominating_strategy;
-    const std::string _log_ctx;
+    const etl::string_view _log_ctx;
 
-    std::vector<Endpoint> _sockets; //TODO: local_endpoints?
-    std::unordered_map<size_t, TransactionTracker> _transcation_trackers;
+    etl::vector<Endpoint, 3> _sockets; //TODO: local_endpoints?
+    etl::unordered_map<size_t, TransactionTracker, 4> _transcation_trackers;
 
     Candidates _local_candidates;
     Candidates _remote_candidates;
+    crypto::HmacHasher _hmac_hasher_local;
+    crypto::HmacHasher _hmac_hasher_remote;
 
     CandidatePairs _pairs;
     size_t _next_pair_id = 1;

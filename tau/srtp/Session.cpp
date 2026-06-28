@@ -1,37 +1,48 @@
-#include "tau/srtp/Session.h"
-#include "tau/common/Exception.h"
-#include "tau/common/Log.h"
-#include <cstring>
+#include <tau/srtp/Session.h>
+#include <tau/common/Exception.h>
+#include <tau/common/Log.h>
 
 namespace tau::srtp {
 
 Session::Session(Options&& options)
     : _log_ctx(options.log_ctx) {
     srtp_policy_t policy;
-    std::memset(&policy, 0, sizeof(srtp_policy_t));
-
-    if(auto error = srtp_crypto_policy_set_from_profile_for_rtp(&policy.rtp, options.profile)) {
-        TAU_EXCEPTION(std::runtime_error, _log_ctx << "srtp_crypto_policy_set_from_profile_for_rtp failed, error: " << error);
+    if(auto error = srtp_policy_create(&policy)) {
+        TAU_LOG_ERROR(_log_ctx << "srtp_policy_create failed, error: " << error);
+        return;
     }
-    if(auto error = srtp_crypto_policy_set_from_profile_for_rtcp(&policy.rtcp, options.profile)) {
-        TAU_EXCEPTION(std::runtime_error, _log_ctx << "srtp_crypto_policy_set_from_profile_for_rtcp failed, error: " << error);
-    }
-    policy.ssrc.type = (options.type == Type::kEncryptor)
-        ? srtp_ssrc_type_t::ssrc_any_outbound
-        : srtp_ssrc_type_t::ssrc_any_inbound;
-    policy.key = options.key.data();
-    policy.ssrc.value = 0;
-    policy.window_size = kRtxWindowSize;
-    policy.allow_repeat_tx = true;
 
-    if(auto error = srtp_create(&_session, &policy)) {
+    srtp_policy_set_profile(policy, options.profile);
+    srtp_policy_set_allow_repeat_tx(policy, true);
+    srtp_policy_set_window_size(policy, kRtxWindowSize);
+    srtp_policy_set_ssrc(policy, srtp_ssrc_t{
+        (options.type == Type::kEncryptor)
+            ? srtp_ssrc_type_t::ssrc_any_outbound
+            : srtp_ssrc_type_t::ssrc_any_inbound,
+        0
+    });
+
+    srtp_policy_add_key(policy,
+        options.key_material.key.data(), options.key_material.key.size(),
+        options.key_material.salt.data(), options.key_material.salt.size(),
+        nullptr, 0);
+
+    if(auto error = srtp_create(&_session, policy)) {
         // on srtp_err_status_init_fail try to init srtp first
-        TAU_EXCEPTION(std::runtime_error, _log_ctx << "srtp_create failed, error: " << error);
+        TAU_LOG_ERROR(_log_ctx << "srtp_create failed, error: " << error);
     }
+
+    srtp_policy_destroy(policy);
 }
 
 Session::~Session() {
-    srtp_dealloc(_session);
+    if(_session) {
+        srtp_dealloc(_session);
+    }
+}
+
+bool Session::IsValid() const {
+    return (_session != nullptr);
 }
 
 bool Session::Encrypt(Buffer&& packet, bool is_rtp) {

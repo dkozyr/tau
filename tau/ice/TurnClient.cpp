@@ -10,6 +10,7 @@
 #include "tau/crypto/Md5.h"
 #include "tau/common/Container.h"
 #include "tau/common/Log.h"
+#include <etl/algorithm.h>
 #include <cassert>
 
 namespace tau::ice {
@@ -65,22 +66,30 @@ void TurnClient::Recv(Buffer&& message) {
 }
 
 void TurnClient::Send(Buffer&& packet, Endpoint remote) {
-    auto it = _permissions.find(remote.address());
+    auto it = _permissions.find(remote.address);
     if(it != _permissions.end()) {
         if(it->second.done) {
             SendDataIndication(std::move(packet), remote);
             return;
         }
     } else {
-        CreatePermission({remote.address()});
+        etl::vector<IpAddress, 1> remote_address;
+        remote_address.push_back(remote.address);
+        CreatePermission(remote_address);
     }
-    _queue[remote].emplace_back(std::move(packet));
+    auto& queue = _queue[remote];
+    if(!queue.full()) {
+        queue.emplace_back(std::move(packet));
+    }
 }
 
-void TurnClient::CreatePermission(const std::vector<IpAddress>& remote_ips) {
+void TurnClient::CreatePermission(const etl::ivector<IpAddress>& remote_ips) {
+    if(_permissions.full()) {
+        return;
+    }
     for(auto& remote : remote_ips) {
         if(!Contains(_permissions, remote)) {
-            _permissions.insert(std::make_pair(remote, Permission{
+            _permissions.insert(etl::make_pair(remote, Permission{
                 .done = false,
                 .rto_tp = _deps.clock.Now() + kRtoDefault
             }));
@@ -133,10 +142,9 @@ void TurnClient::SendAllocationRequest(bool authenticated) {
     auto view = request.GetViewWithCapacity();
     stun::Writer writer(view, kAllocateRequest);
     if(!authenticated) {
-        _transaction_id.resize(kTransactionIdSize);
         _transaction_hash = GenerateTransactionId(_transaction_id.data());
     }
-    std::memcpy(view.ptr + 2 * sizeof(uint32_t), _transaction_id.data(), _transaction_id.size());
+    memcpy(view.ptr + 2 * sizeof(uint32_t), _transaction_id.data(), _transaction_id.size());
 
     if(authenticated) {
         DataUint32Writer::Write(writer, AttributeType::kRequestedTransport, 0x11 << 24);
@@ -144,11 +152,13 @@ void TurnClient::SendAllocationRequest(bool authenticated) {
         ByteStringWriter::Write(writer, AttributeType::kRealm, _realm);
         ByteStringWriter::Write(writer, AttributeType::kNonce, _nonce);
 
-        std::array<uint8_t, crypto::kMd5DigestLength> hash;
+        etl::array<uint8_t, crypto::kMd5DigestLength> hash;
         if(!CalcLongTermPassword(_options.credentials, _realm, hash.data())) {
             return;
         }
-        MessageIntegrityWriter::Write(writer, std::string_view{reinterpret_cast<char*>(hash.data()), hash.size()});
+        const etl::string_view password{reinterpret_cast<char*>(hash.data()), hash.size()};
+        crypto::HmacHasher hasher(crypto::HmacHasher::Type::Sha1, password);
+        MessageIntegrityWriter::Write(writer, hasher);
         FingerprintWriter::Write(writer);
     }
     request.SetSize(writer.GetSize());
@@ -167,7 +177,7 @@ void TurnClient::SendRefreshRequest(size_t refresh_sec) {
     ByteStringWriter::Write(writer, AttributeType::kUserName, _options.credentials.ufrag);
     ByteStringWriter::Write(writer, AttributeType::kRealm, _realm);
     ByteStringWriter::Write(writer, AttributeType::kNonce, _nonce);
-    MessageIntegrityWriter::Write(writer, _message_integrity_password);
+    MessageIntegrityWriter::Write(writer, *_message_integrity_hasher);
     FingerprintWriter::Write(writer);
 
     request.SetSize(writer.GetSize());
@@ -181,14 +191,14 @@ void TurnClient::SendCreatePermissionRequest(IpAddress remote) {
     auto view = request.GetViewWithCapacity();
     stun::Writer writer(view, kCreatePermissionRequest);
 
-    uint32_t ip4_addr = remote.to_v4().to_uint();
+    auto ip4_addr = remote.GetUint32();
     _transaction_tracker.SetTransactionId(view, ip4_addr);
 
     XorMappedAddressWriter::Write(writer, AttributeType::kXorPeerAddress, ip4_addr, 0);
     ByteStringWriter::Write(writer, AttributeType::kUserName, _options.credentials.ufrag);
     ByteStringWriter::Write(writer, AttributeType::kRealm, _realm);
     ByteStringWriter::Write(writer, AttributeType::kNonce, _nonce);
-    MessageIntegrityWriter::Write(writer, _message_integrity_password);
+    MessageIntegrityWriter::Write(writer, *_message_integrity_hasher);
     FingerprintWriter::Write(writer);
 
     request.SetSize(writer.GetSize());
@@ -204,8 +214,7 @@ void TurnClient::SendDataIndication(Buffer&& packet, Endpoint remote) {
     auto transaction_id_ptr = view.ptr + 2 * sizeof(uint32_t);
     stun::GenerateTransactionId(transaction_id_ptr);
 
-    XorMappedAddressWriter::Write(writer, AttributeType::kXorPeerAddress,
-        remote.address().to_v4().to_uint(), remote.port());
+    XorMappedAddressWriter::Write(writer, AttributeType::kXorPeerAddress, remote.address.GetUint32(), remote.port);
     //TODO: DONT-FRAGMENT attribute
     DataWriter::Write(writer, ToConst(packet.GetView()));
     indication.SetSize(writer.GetSize());
@@ -220,7 +229,7 @@ void TurnClient::OnStunResponse(const BufferViewConst& view) {
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    _relayed.emplace(Endpoint{IpAddressV4(address), port});
+                    _relayed.emplace(Endpoint{IpAddress{address}, port});
                 }
                 break;
             case AttributeType::kRealm:
@@ -235,7 +244,7 @@ void TurnClient::OnStunResponse(const BufferViewConst& view) {
                 _allocation_eol = _deps.clock.Now() + kSec * DataUint32Reader::GetValue(attr);
                 break;
             case AttributeType::kMessageIntegrity:
-                return MessageIntegrityReader::Validate(attr, view, _message_integrity_password);
+                return MessageIntegrityReader::Validate(attr, view, *_message_integrity_hasher);
             default:
                 break;
         }
@@ -244,7 +253,7 @@ void TurnClient::OnStunResponse(const BufferViewConst& view) {
     if(ok) {
         const auto now = _deps.clock.Now();
         if(_relayed && (now < _allocation_eol)) {
-            _next_request_tp = std::min(now + kMin, _allocation_eol - 10 * kSec);
+            _next_request_tp = etl::min(now + kMin, _allocation_eol - 10 * kSec);
             _candidate_callback(*_relayed);
         } else {
             _next_request_tp = now + kTaDefault;
@@ -261,14 +270,14 @@ void TurnClient::OnCreatePermissionResponse(uint32_t hash) {
         return;
     }
 
-    for(auto& [remote, permission] : _permissions) {
-        auto ip4_addr = remote.to_v4().to_uint();
+    for(auto& [remote_address, permission] : _permissions) {
+        auto ip4_addr = remote_address.GetUint32();
         if(ip4_addr == result->tag) {
             permission.done = true;
 
             for(auto it = _queue.begin(); it != _queue.end();) {
                 auto& [remote, packets] = *it;
-                if(remote.address() == IpAddressV4(ip4_addr)) {
+                if(remote.address == remote_address) {
                     for(auto& packet : packets) {
                         SendDataIndication(std::move(packet), remote);
                     }
@@ -293,7 +302,7 @@ void TurnClient::OnDataIndication(Buffer&& message) {
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    remote_peer.emplace(Endpoint{IpAddressV4(address), port});
+                    remote_peer.emplace(Endpoint{IpAddress{address}, port});
                 }
                 break;
             case AttributeType::kData:
@@ -309,16 +318,18 @@ void TurnClient::OnDataIndication(Buffer&& message) {
         return;
     }
 
-    std::memmove(view.ptr, data->ptr, data->size);
+    memmove(view.ptr, data->ptr, data->size);
     message.SetSize(data->size);
 
     _recv_callback(*remote_peer, std::move(message));
 }
 
 void TurnClient::UpdateMessageIntegrityPassword() {
-    _message_integrity_password.resize(kLongTermPassword);
-    auto password_ptr = reinterpret_cast<uint8_t*>(_message_integrity_password.data());
-    if(!CalcLongTermPassword(_options.credentials, _realm, password_ptr)) {
+    etl::string<kLongTermPassword> password(kLongTermPassword, 0);
+    auto password_ptr = reinterpret_cast<uint8_t*>(password.data());
+    if(CalcLongTermPassword(_options.credentials, _realm, password_ptr)) {
+        _message_integrity_hasher.emplace(crypto::HmacHasher::Type::Sha1, password);
+    } else {
         TAU_LOG_WARNING(_options.log_ctx << "CalcLongTermPassword failed");
     }
 }

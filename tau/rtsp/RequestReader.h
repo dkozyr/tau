@@ -8,12 +8,14 @@ namespace tau::rtsp {
 
 class RequestReader {
 public:
-    static std::optional<Request> Read(std::string_view str) {
-        auto lines = Split(str, kClRf);
+    static std::optional<Request> Read(etl::string_view str) {
+        SplitTokens<2> lines;
+        Split(lines, str, kClRf);
         if(lines.size() < 2) {
             return std::nullopt;
         }
-        auto tokens = Split(lines[0], " ");
+        SplitTokens<3> tokens;
+        Split(tokens, lines[0], " ");
         if((tokens.size() != 3) || (tokens[2] != kRtspVersion)) {
             return std::nullopt;
         }
@@ -21,19 +23,19 @@ public:
         if(!method) {
             return std::nullopt;
         }
-        auto headers = GetHeaders(lines);
+        auto headers = GetHeaders(str);
         if(GetHeaderValue(HeaderName::kCSeq, headers).empty()) {
             return std::nullopt;
         }
         return Request{
-            .uri = std::string{tokens[1]},
+            .uri = tokens[1],
             .method = *method,
             .headers = std::move(headers)
         };
     }
 
 private:
-    static std::optional<Method> GetMethod(std::string_view token) {
+    static std::optional<Method> GetMethod(etl::string_view token) {
         if(token == "OPTIONS")  { return Method::kOptions; }
         if(token == "DESCRIBE") { return Method::kDescribe; }
         if(token == "SETUP")    { return Method::kSetup; }

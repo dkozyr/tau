@@ -1,9 +1,9 @@
-#include "tau/dtls/Session.h"
+#include "tau/dtls/host/Session.h"
 #include "tau/common/String.h"
 #include "tau/common/Exception.h"
 #include "tau/common/Log.h"
 #include <openssl/err.h>
-#include <unordered_map>
+#include <etl/unordered_map.h>
 
 namespace tau::dtls {
 
@@ -11,7 +11,7 @@ struct KeyingMaterialSize {
     size_t key;
     size_t salt;
 };
-const std::unordered_map<Session::SrtpProfile, KeyingMaterialSize> kProfileKeyingMaterialSize = {
+const etl::unordered_map<Session::SrtpProfile, KeyingMaterialSize, 2> kProfileKeyingMaterialSize = {
     {Session::SrtpProfile::kAes128CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
     {Session::SrtpProfile::kAes128CmSha1_32, KeyingMaterialSize{.key = 16, .salt = 14}},
     // {Session::SrtpProfile::kAes256CmSha1_80, KeyingMaterialSize{.key = 16, .salt = 14}},
@@ -41,7 +41,9 @@ Session::Session(Dependencies&& deps, Options&& options)
     }
 
     if(!_options.srtp_profiles.empty()) {
-        if(auto error = SSL_CTX_set_tlsext_use_srtp(_ctx, _options.srtp_profiles.c_str())) {
+        etl::string<32 * kSrtpProfilesCount> strp_profiles;
+        SrtpProfilesToString(strp_profiles, _options);
+        if(auto error = SSL_CTX_set_tlsext_use_srtp(_ctx, strp_profiles.c_str())) {
             TAU_EXCEPTION(std::runtime_error, "SSL_CTX_set_tlsext_use_srtp failed, error: " << error
                 << ", message: " << ERR_error_string(ERR_get_error(), NULL));
         }
@@ -84,41 +86,19 @@ void Session::Process() {
             break;
         case State::kConnecting:
             break;
-        case State::kConnected: return;
+        case State::kConnected:
+            ProcessPending();
+            return;
         case State::kFailed: return;
     }
 
     const auto code = (_options.type == Type::kServer) ? SSL_accept(_ssl) : SSL_connect(_ssl);
     if(code <= 0) {
         const auto error = SSL_get_error(_ssl, code);
-        TAU_LOG_DEBUG(_options.log_ctx << "code: " << code << ", error: " << error << ", state: " << SSL_state_string(_ssl));
+        TAU_LOG_TRACE(_options.log_ctx << "code: " << code << ", error: " << error << ", state: " << SSL_state_string(_ssl));
         switch(error) {
             case SSL_ERROR_WANT_READ:
-                while((SSL_pending(_ssl) > 0) || (BIO_ctrl_pending(_bio_read))) {
-                    TAU_LOG_INFO("SSL_pending(_ssl): " << SSL_pending(_ssl) << ", BIO_ctrl_pending(_bio_read): " << BIO_ctrl_pending(_bio_read));
-                    auto packet = Buffer::Create(_deps.udp_allocator);
-                    auto view = packet.GetViewWithCapacity();
-                    auto recv_read = SSL_read(_ssl, view.ptr, view.size);
-                    if(recv_read > 0) {
-                        packet.SetSize(recv_read);
-                        _recv_callback(std::move(packet));
-                    } else {
-                        break;
-                    }
-                }
-                break;
             case SSL_ERROR_WANT_WRITE:
-                if(auto pending_size = BIO_ctrl_pending(_bio_write)) {
-                    auto packet = Buffer::Create(_deps.udp_allocator);
-                    auto view = packet.GetViewWithCapacity();
-                    auto size = BIO_read(_bio_write, view.ptr, pending_size);
-                    if(size > 0) {
-                        packet.SetSize(size);
-                        _send_callback(std::move(packet));
-                    } else {
-                        TAU_LOG_WARNING(_options.log_ctx << "BIO_read size: " << size);
-                    }
-                }
                 break;
             case SSL_ERROR_SSL:
                 _state = State::kFailed;
@@ -136,17 +116,7 @@ void Session::Process() {
         }
     }
 
-    if(auto pending_size = BIO_ctrl_pending(_bio_write)) {
-        auto packet = Buffer::Create(_deps.udp_allocator);
-        auto view = packet.GetViewWithCapacity();
-        auto size = BIO_read(_bio_write, view.ptr, pending_size);
-        if(size > 0) {
-            packet.SetSize(size);
-            _send_callback(std::move(packet));
-        } else {
-            TAU_LOG_WARNING(_options.log_ctx << "BIO_read size: " << size);
-        }
-    }
+    ProcessPending();
 }
 
 void Session::Stop() {
@@ -217,28 +187,59 @@ std::optional<Session::SrtpProfile> Session::GetSrtpProfile() const {
     return std::nullopt;
 }
 
-std::vector<uint8_t> Session::GetKeyingMaterial(bool encryption) const {
+srtp::KeyMaterial Session::GetKeyingMaterial(bool encryption) const {
     auto profile = GetSrtpProfile();
     if(!profile) {
         return {};
     }
 
-    constexpr std::string_view kLabel = "EXTRACTOR-dtls_srtp";
+    constexpr etl::string_view kLabel = "EXTRACTOR-dtls_srtp";
     const auto& [key_size, salt_size] = kProfileKeyingMaterialSize.at(*profile);
-    std::vector<uint8_t> keying_material(2 * (key_size + salt_size));
+
+    etl::vector<uint8_t, 64> keying_material(2 * (key_size + salt_size));
     if(!SSL_export_keying_material(_ssl, keying_material.data(), keying_material.size(), kLabel.data(), kLabel.size(), NULL, 0, 0)) {
         return {};
     }
 
     // https://www.rfc-editor.org/rfc/rfc5764.html#section-4.2
+    srtp::KeyMaterial key_material;
+    key_material.key.resize(key_size);
+    key_material.salt.resize(salt_size);
     if((encryption && (_options.type == Type::kClient)) || (!encryption && (_options.type == Type::kServer))) {
-        std::memcpy(keying_material.data() + key_size, keying_material.data() + 2 * key_size, salt_size);
+        memcpy(key_material.key.data(), keying_material.data(), key_size);
+        memcpy(key_material.salt.data(), keying_material.data() + 2 * key_size, salt_size);
     } else {
-        std::memcpy(keying_material.data(), keying_material.data() + key_size, key_size);
-        std::memcpy(keying_material.data() + key_size, keying_material.data() + 2 * key_size + salt_size, salt_size);
+        memcpy(key_material.key.data(), keying_material.data() + key_size, key_size);
+        memcpy(key_material.salt.data(), keying_material.data() + 2 * key_size + salt_size, salt_size);
     }
-    keying_material.resize(key_size + salt_size);
-    return keying_material;
+    return key_material;
+}
+
+void Session::ProcessPending() {
+    while(auto pending_size = BIO_ctrl_pending(_bio_write)) {
+        auto packet = Buffer::Create(_deps.udp_allocator);
+        auto view = packet.GetViewWithCapacity();
+        auto size = BIO_read(_bio_write, view.ptr, pending_size);
+        if(size > 0) {
+            packet.SetSize(size);
+            _send_callback(std::move(packet));
+        } else {
+            TAU_LOG_WARNING(_options.log_ctx << "BIO_read size: " << size);
+        }
+    }
+
+    while((SSL_pending(_ssl) > 0) || (BIO_ctrl_pending(_bio_read))) {
+        TAU_LOG_DEBUG("SSL_pending(_ssl): " << SSL_pending(_ssl) << ", BIO_ctrl_pending(_bio_read): " << BIO_ctrl_pending(_bio_read));
+        auto packet = Buffer::Create(_deps.udp_allocator);
+        auto view = packet.GetViewWithCapacity();
+        auto recv_read = SSL_read(_ssl, view.ptr, view.size);
+        if(recv_read > 0) {
+            packet.SetSize(recv_read);
+            _recv_callback(std::move(packet));
+        } else {
+            break;
+        }
+    }
 }
 
 int Session::OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx) {
@@ -252,13 +253,41 @@ int Session::OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx) {
 
 int Session::OnVerifyPeer(int, X509_STORE_CTX* x509_ctx) {
     if(auto cert = X509_STORE_CTX_get_current_cert(x509_ctx)) {
-        std::vector<uint8_t> digest(EVP_MAX_MD_SIZE);
+        etl::vector<uint8_t, EVP_MAX_MD_SIZE> digest(EVP_MAX_MD_SIZE);
         uint32_t size = 0;
         if(X509_digest(cert, EVP_sha256(), digest.data(), &size)) {
-            return (_options.remote_peer_cert_digest == ToHexDump(digest.data(), size, ":"));
+            etl::string<3 * EVP_MAX_MD_SIZE> dump;
+            return (_options.remote_peer_cert_digest == ToHexDump(digest.data(), size, dump, ":"));
         }
     }
     return 0;
+}
+
+void Session::SrtpProfilesToString(etl::istring& output, const Options& options) {
+    etl::string_stream ss(output);
+    for(auto& profile : options.srtp_profiles) {
+        if(!ss.str().empty()) {
+            ss << ":";
+        }
+        switch(profile) {
+            case SrtpProfile::kAes128CmSha1_80: ss << "SRTP_AES128_CM_SHA1_80"; break;
+            case SrtpProfile::kAes128CmSha1_32: ss << "SRTP_AES128_CM_SHA1_32"; break;
+            // case SrtpProfile::kAes256CmSha1_80: ss << "SRTP_AES256_CM_SHA1_80"; break;
+            // case SrtpProfile::kAes256CmSha1_32: ss << "SRTP_AES256_CM_SHA1_32"; break;
+            // case SrtpProfile::kAeadAes128Gcm:   ss << "SRTP_AEAD_AES_128_GCM"; break;
+            // case SrtpProfile::kAeadAes256Gcm:   ss << "SRTP_AEAD_AES_256_GCM"; break;
+        }
+    }
+}
+
+etl::string_stream& operator<<(etl::string_stream& ss, const Session::State& x) {
+    switch(x) {
+        case Session::State::kWaiting:    return ss << "waiting";
+        case Session::State::kConnecting: return ss << "connecting";
+        case Session::State::kConnected:  return ss << "connected";
+        case Session::State::kFailed:     return ss << "failed";
+    }
+    return ss << "unknown";
 }
 
 }

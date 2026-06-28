@@ -1,10 +1,10 @@
 #pragma once
 
-#include <string>
+#include <tau/mdns/Name.h>
 #include <cstdint>
 
 namespace tau::mdns {
 
-std::string ParseName(const uint8_t*& ptr, const uint8_t* end);
+Name ParseName(const uint8_t*& ptr, const uint8_t* end);
 
 }

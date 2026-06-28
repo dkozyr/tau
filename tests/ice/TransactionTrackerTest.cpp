@@ -42,7 +42,7 @@ TEST_F(TransactionTrackerTest, Basic) {
 }
 
 TEST_F(TransactionTrackerTest, RemoveOldHashs) {
-    constexpr auto kMaxHistorySize = 10;
+    constexpr auto kMaxHistorySize = TransactionTracker::kStorageCapacity;
     std::vector<uint32_t> hashs;
     for(size_t i = 0; i < 100; ++i) {
         _tracker.SetTransactionId(_message_view, i);

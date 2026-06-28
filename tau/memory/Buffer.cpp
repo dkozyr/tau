@@ -1,6 +1,7 @@
 #include "tau/memory/Buffer.h"
 #include "tau/common/Base64.h"
-#include <cstring>
+#include "tau/common/Math.h"
+#include "tau/common/Exception.h"
 
 namespace tau {
 
@@ -22,6 +23,15 @@ Buffer::Buffer(Allocator& allocator, Info info)
     , _info(info)
 {}
 
+Buffer::Buffer(Allocator& allocator)
+    : _allocator(allocator)
+    , _block(nullptr)
+    , _capacity(0)
+    , _size(0)
+    , _offset(0)
+    , _info({})
+{}
+
 Buffer::Buffer(Buffer&& other)
     : _allocator(other._allocator)
     , _block(other._block)
@@ -34,7 +44,7 @@ Buffer::Buffer(Buffer&& other)
 
 Buffer& Buffer::operator=(Buffer&& other) {
     if(&_allocator != &other._allocator) {
-        throw -1;
+        TAU_EXCEPTION(std::runtime_error, "Cannot move-assign with different Allocator");
     }
     _block = other._block;
     _capacity = other._capacity;
@@ -54,7 +64,7 @@ Buffer::~Buffer() {
 
 Buffer Buffer::Create(Allocator& allocator, const BufferViewConst& view, Info info) {
     Buffer buffer(allocator, view.size, info);
-    std::memcpy(buffer.GetView().ptr, view.ptr, view.size);
+    memcpy(buffer.GetView().ptr, view.ptr, view.size);
     buffer.SetSize(view.size);
     return buffer;
 }
@@ -62,7 +72,7 @@ Buffer Buffer::Create(Allocator& allocator, const BufferViewConst& view, Info in
 Buffer Buffer::MakeCopy() const {
     Buffer buffer_copy(_allocator, _capacity, _info);
     buffer_copy.SetSize(_size);
-    std::memcpy(buffer_copy.GetView().ptr, _block, _size);
+    memcpy(buffer_copy.GetView().ptr, _block, _size);
     return buffer_copy;
 }
 
@@ -94,6 +104,10 @@ BufferViewConst Buffer::GetViewWithCapacity() const {
     };
 }
 
+const etl::string_view Buffer::GetStringView() const {
+    return etl::string_view{reinterpret_cast<const char*>(_block), _size};
+}
+
 void Buffer::SetSize(size_t size) {
     if(size > _capacity) {
         //TODO: do exception?
@@ -102,12 +116,18 @@ void Buffer::SetSize(size_t size) {
     _size = size;
 }
 
-Buffer CreateBufferFromBase64(Allocator& allocator, std::string_view str, Buffer::Info info) {
+Buffer CreateBufferFromBase64(Allocator& allocator, etl::string_view str, Buffer::Info info) {
+    constexpr size_t kMaxOutputCapacity = 1024;
     const auto expected_size = DivCeil(str.size() * 6, 8);
+    if(expected_size > kMaxOutputCapacity) {
+        return Buffer::Create(allocator, 0, {});
+    }
+
+    etl::string<kMaxOutputCapacity> decoded;
+    Base64Decode(str, decoded);
     auto buffer = Buffer::Create(allocator, expected_size, info);
-    auto data = Base64Decode(str);
-    std::memcpy(buffer.GetView().ptr, data.data(), data.size());
-    buffer.SetSize(data.size());
+    memcpy(buffer.GetView().ptr, decoded.data(), decoded.size());
+    buffer.SetSize(decoded.size());
     return buffer;
 }
 

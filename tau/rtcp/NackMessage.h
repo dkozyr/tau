@@ -1,7 +1,7 @@
 #pragma once
 
+#include <etl/set.h>
 #include <cstdint>
-#include <set>
 
 namespace tau::rtcp {
 
@@ -17,6 +17,6 @@ struct NackMessage {
 
 #pragma pack(pop)
 
-using NackSns = std::set<uint16_t>;
+using NackSns = etl::set<uint16_t, 32>;
 
 }

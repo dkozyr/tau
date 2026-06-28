@@ -1,4 +1,5 @@
 #include "tau/http/Client.h"
+#include "tau/asio/ToString.h"
 #include "tau/common/Exception.h"
 #include "tau/common/Log.h"
 #include <openssl/ssl.h>
@@ -15,7 +16,7 @@ Client::Client(Executor executor, Options&& options, ResponseCallback&& callback
     if(_options.ssl_ctx) {
         // Set SNI Hostname (many hosts need this to handshake successfully)
         auto& socket = std::get<SslSocket>(_socket);
-        if(!SSL_set_tlsext_host_name(socket.native_handle(), _options.host.c_str())) {
+        if(!SSL_set_tlsext_host_name(socket.native_handle(), _options.host.data())) {
             TAU_EXCEPTION(std::runtime_error, "SSL_set_tlsext_host_name failed");
         }
     }
@@ -27,15 +28,19 @@ void Client::Start() {
             self->OnTimeout(ec);
         });
 
-    _resolver.async_resolve(_options.host, std::to_string(_options.port),
-        [self = shared_from_this()](boost_ec ec, asio_tcp::resolver::results_type results) {
+    etl::string<8> port;
+    etl::string_stream ss(port);
+    ss << _options.port;
+
+    _resolver.async_resolve(_options.host.data(), port.data(),
+        [self = shared_from_this()](boost_ec ec, Resolver::results_type results) {
             self->OnResolve(ec, std::move(results));
         });
 }
 
-void Client::OnResolve(boost_ec ec, asio_tcp::resolver::results_type results) {
+void Client::OnResolve(boost_ec ec, Resolver::results_type results) {
     if(ec) {
-        TAU_LOG_WARNING("ec: " << ec << ", " << ec.message());
+        TAU_LOG_WARNING("ec: " << ec);
         _timeout.cancel();
         return;
     }
@@ -43,13 +48,13 @@ void Client::OnResolve(boost_ec ec, asio_tcp::resolver::results_type results) {
     std::visit(overloaded{
         [this, &results](SslSocket& socket) {
             asio::async_connect(socket.lowest_layer(), results.begin(), results.end(),
-            [self = shared_from_this()](boost_ec ec, asio_tcp::resolver::results_type::iterator) mutable {
+            [self = shared_from_this()](boost_ec ec, Resolver::results_type::iterator) mutable {
                 self->OnConnect(ec);
             });
         },
-        [this, &results](asio_tcp::socket& socket) {
+        [this, &results](Socket& socket) {
             asio::async_connect(socket.lowest_layer(), results.begin(), results.end(),
-            [self = shared_from_this()](boost_ec ec, asio_tcp::resolver::results_type::iterator) mutable {
+            [self = shared_from_this()](boost_ec ec, Resolver::results_type::iterator) mutable {
                 self->OnHandshake(ec);
             });
         }
@@ -58,7 +63,7 @@ void Client::OnResolve(boost_ec ec, asio_tcp::resolver::results_type results) {
 
 void Client::OnConnect(boost_ec ec) {
     if(ec) {
-        TAU_LOG_WARNING("ec: " << ec << ", " << ec.message());
+        TAU_LOG_WARNING("ec: " << ec);
         _timeout.cancel();
         return;
     }
@@ -73,23 +78,26 @@ void Client::OnConnect(boost_ec ec) {
 
 void Client::OnHandshake(boost_ec ec) {
     if(ec) {
-        TAU_LOG_WARNING("ec: " << ec << ", " << ec.message());
+        TAU_LOG_WARNING("ec: " << ec);
         Shutdown();
         return;
     }
 
     _request.version(11); // 1.1 version => 11
     _request.method(_options.method);
-    _request.target(_options.target);
-    _request.set(beast_http::field::host, _options.host + ":" + std::to_string(_options.port));
+    _request.target(_options.target.data());
+    _request.set(beast_http::field::host, _options.host.data());
     for(auto& field : _options.fields) {
-        std::visit([&](const auto& key) { _request.set(key, field.value); }, field.type);
+        std::visit(overloaded{
+            [&](beast_http::field name) { _request.set(name, field.value.data()); },
+            [&](etl::string_view name) { _request.set(name.data(), field.value.data()); }
+        }, field.name);
     }
 
     // We specify the "Connection: close" header so that the server will close the socket after transmitting the response
     _request.set(beast_http::field::connection, "close");
 
-    beast::ostream(_request.body()) << _options.body;
+    beast::ostream(_request.body()) << _options.body.data();
     _request.prepare_payload();
     TAU_LOG_TRACE("Request: " << _request);
 
@@ -106,7 +114,7 @@ void Client::OnHandshake(boost_ec ec) {
 
 void Client::OnWrite(boost_ec ec, size_t bytes) {
     if(ec) {
-        TAU_LOG_WARNING("ec: " << ec << ", " << ec.message() << ", bytes: " << bytes);
+        TAU_LOG_WARNING("ec: " << ec << ", bytes: " << bytes);
         Shutdown();
         return;
     }
@@ -123,7 +131,7 @@ void Client::OnRead(boost_ec ec, size_t bytes) {
     _response_callback(ec, _response);
 
     if(ec) {
-        TAU_LOG_WARNING("ec: " << ec << ", " << ec.message() << ", bytes: " << bytes);
+        TAU_LOG_WARNING("ec: " << ec << ", bytes: " << bytes);
     }
 
     Shutdown();
@@ -140,8 +148,8 @@ void Client::Shutdown() {
                     self->OnShutdown(ec);
                 });
         },
-        [this, &ec](asio_tcp::socket& socket) {
-            socket.shutdown(asio_tcp::socket::shutdown_both, ec);
+        [this, &ec](Socket& socket) {
+            socket.shutdown(Socket::shutdown_both, ec);
             OnShutdown(ec);
         }
     }, _socket);
@@ -149,26 +157,26 @@ void Client::Shutdown() {
 
 void Client::OnShutdown(beast_ec ec) {
     if(ec) {
-        TAU_LOG_DEBUG("ec: " << ec << ", " << ec.message());
+        TAU_LOG_DEBUG("ec: " << ec);
     }
 }
 
 void Client::OnTimeout(beast_ec ec) {
     if(!ec) {
         std::visit(overloaded{
-            [&ec](SslSocket& socket)        { socket.lowest_layer().close(ec); },
-            [&ec](asio_tcp::socket& socket) { socket.close(ec); }
+            [&ec](SslSocket& socket) { socket.lowest_layer().close(ec); },
+            [&ec](Socket& socket) { socket.close(ec); }
         }, _socket);
 
         _timeout.cancel();
     }
 }
 
-Client::Socket Client::CreateSocket(Executor executor, const SslContextPtr& ssl_ctx) {
+Client::SocketVar Client::CreateSocket(Executor executor, const SslContextPtr& ssl_ctx) {
     if(ssl_ctx) {
         return SslSocket(executor, *ssl_ctx);
     } else {
-        return asio_tcp::socket(executor);
+        return Socket(executor);
     }
 }
 

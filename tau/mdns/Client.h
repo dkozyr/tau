@@ -3,9 +3,9 @@
 #include "tau/mdns/Question.h"
 #include "tau/mdns/Answer.h"
 #include "tau/memory/Buffer.h"
-#include "tau/asio/Common.h"
+#include "tau/net/IpAddress.h"
 #include "tau/common/Clock.h"
-#include <unordered_map>
+#include <etl/unordered_map.h>
 
 namespace tau::mdns {
 
@@ -20,15 +20,15 @@ public:
     };
 
     using SendCallback = std::function<void(Buffer&& packet)>;
-    using OnFoundIpAddressCallback = std::function<void(IpAddressV4 address)>;
+    using OnFoundIpAddressCallback = std::function<void(IpAddress address)>;
 
 public:
     Client(Dependencies&& deps);
 
     void SetSendCallback(SendCallback callback) { _send_callback = std::move(callback); }
 
-    std::string CreateName(IpAddressV4 address);
-    void FindIpAddressByName(const std::string& name, OnFoundIpAddressCallback callback);
+    Name CreateName(IpAddress address);
+    void FindIpAddressByName(const etl::string_view& name, OnFoundIpAddressCallback callback);
     void Recv(Buffer&& packet);
 
 private:
@@ -36,23 +36,23 @@ private:
     void OnAnswer(const Answer& answer);
     void UpdateContexts();
 
-    void SendAnnouncement(uint16_t id, std::string_view name, IpAddressV4 address, uint32_t ttl);
+    void SendAnnouncement(uint16_t id, const etl::string_view& name, IpAddress address, uint32_t ttl);
 
 private:
     Dependencies _deps;
     SendCallback _send_callback;
 
     struct Context {
-        IpAddressV4 address;
+        IpAddress address;
         Timepoint tp_eol;
     };
-    std::unordered_map<std::string, Context> _name_to_ctx;
+    etl::unordered_map<Name, Context, 16> _name_to_ctx;
 
     struct QuestionContext {
         OnFoundIpAddressCallback callback;
         Timepoint tp_eol;
     };
-    std::unordered_map<std::string, QuestionContext> _on_found_ip_address_callbacks;
+    etl::unordered_map<Name, QuestionContext, 16> _on_found_ip_address_callbacks;
 };
 
 }

@@ -13,13 +13,15 @@ TEST(OriginatorReaderTest, Validate) {
 }
 
 TEST(OriginatorReaderTest, Basic) {
-    std::string_view value = "- 1742222222222222 1 IN IP4 192.168.0.1";
+    etl::string_view value = "- 1742222222222222 1 IN IP4 192.168.0.1";
     ASSERT_EQ("IP4", OriginatorReader::GetAddressType(value));
     ASSERT_EQ("192.168.0.1", OriginatorReader::GetAddress(value));
 }
 
 TEST(OriginatorWriterTest, Basic) {
-    const auto value = OriginatorWriter::Write("IP4", "123.45.67.89");
+    etl::string<256> value;
+    etl::string_stream ss(value);
+    OriginatorWriter::Write(ss, "IP4", "123.45.67.89");
     TAU_LOG_INFO("o=" << value);
     ASSERT_TRUE(OriginatorReader::Validate(value));
     ASSERT_EQ("IP4", OriginatorReader::GetAddressType(value));
