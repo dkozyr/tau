@@ -32,7 +32,7 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     if(vm.count("help")) {
-        TAU_LOG_INFO(ToStdString(desc).c_str());
+        TAU_LOG_INFO(ToStdString(desc).data());
         return 1;
     }
 

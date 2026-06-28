@@ -178,9 +178,9 @@ Session::Options Client::CreateSessionOptions() const {
     const auto& video = _sdp->medias[0];
     const auto& [_, codec] = *video.codecs.begin();
     if(!codec.format.empty()) {
-        SplitTokens<16> tokens;
-        Split(tokens, codec.format, ";");
-        for(auto& token : tokens) {
+        size_t pos = 0;
+        while(pos != etl::string_view::npos) {
+            auto token = SplitNext(codec.format, pos, ";");
             const etl::string_view kPrefix = "sprop-parameter-sets="; //TODO: name and move to h264 or sdp namespace?
             if(IsPrefix(token, kPrefix)) {
                 SplitTokens<2> params;
@@ -200,8 +200,8 @@ Session::Options Client::CreateSessionOptions() const {
     };
 }
 
-etl::string<64> Client::CreateUriString(const Options& options) {
-    etl::string<64> uri;
+Client::UriStr Client::CreateUriString(const Options& options) {
+    UriStr uri;
     uri.append("rtsp://");
     uri.append(options.uri.host);
     uri.append("/");

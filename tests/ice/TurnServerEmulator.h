@@ -62,8 +62,8 @@ private:
         etl::unordered_set<IpAddress, 16> permissions = {};
     };
 
-    etl::unordered_map<uint32_t, etl::string<32>, 256> _hash_to_nonce; //TODO: check capacity
-    etl::unordered_map<Endpoint, Allocation, 256> _client_to_allocation; //TODO: check capacity
+    etl::unordered_map<uint32_t, etl::string<32>, 1024> _hash_to_nonce;
+    etl::unordered_map<Endpoint, Allocation, 1024> _client_to_allocation;
     size_t _dropped_packets_count = 0;
 
     Callback _on_send_callback;

@@ -10,6 +10,8 @@ namespace tau::rtsp {
 
 //https://datatracker.ietf.org/doc/html/rfc2326#appendix-D.1
 class Client {
+    using UriStr = etl::string<256>;
+
 public:
     struct Options {
         net::Uri uri;
@@ -31,11 +33,11 @@ private:
     void ParseAndValidateSdp(const etl::string_view& sdp_str);
     Session::Options CreateSessionOptions() const;
 
-    static etl::string<64> CreateUriString(const Options& options);
+    static UriStr CreateUriString(const Options& options);
 
 private:
     Executor _executor;
-    const etl::string<64> _uri;
+    const UriStr _uri;
     asio::ip::tcp::resolver::results_type _endpoints;
     size_t _cseq = 0;
     etl::string<2048> _text;
