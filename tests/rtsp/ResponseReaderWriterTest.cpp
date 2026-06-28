@@ -30,7 +30,7 @@ TEST_F(ResponseReaderWriterTest, Options) {
         .reason_phrase = "OK",
         .headers = {}
     };
-    etl::string<4> cseq;
+    etl::string<8> cseq;
     etl::to_string(g_random.Int<size_t>(1, 1234), cseq);
     response.headers.push_back({.name = HeaderName::kCSeq, .value = cseq});
     response.headers.push_back({.name = HeaderName::kPublic, .value = "OPTIONS, DESCRIBE, SETUP, TEARDOWN, PLAY, PAUSE, GET_PARAMETER, SET_PARAMETER"});
@@ -46,7 +46,7 @@ TEST_F(ResponseReaderWriterTest, Describe) {
         .reason_phrase = "OK",
         .headers = {}
     };
-    etl::string<4> cseq;
+    etl::string<8> cseq;
     etl::to_string(g_random.Int<size_t>(1, 1234), cseq);
     response.headers.push_back({.name = HeaderName::kCSeq, .value = cseq});
     response.headers.push_back({.name = HeaderName::kContentBase, .value = "rtsp://192.168.0.1/stream.h264/"});
@@ -64,7 +64,7 @@ TEST_F(ResponseReaderWriterTest, Setup) {
         .status_code = 200,
         .reason_phrase = "OK"
     };
-    etl::string<4> cseq;
+    etl::string<8> cseq;
     etl::to_string(g_random.Int<size_t>(1, 1234), cseq);
     response.headers.push_back({.name = HeaderName::kCSeq, .value = cseq});
     response.headers.push_back({.name = HeaderName::kTransport, .value = "RTP/AVP;unicast;destination=192.168.0.1;source=192.168.0.1;client_port=59882-59883;server_port=12345-12346"});
@@ -80,7 +80,7 @@ TEST_F(ResponseReaderWriterTest, Play) {
         .status_code = 200,
         .reason_phrase = "OK"
     };
-    etl::string<4> cseq;
+    etl::string<8> cseq;
     etl::to_string(g_random.Int<size_t>(1, 1234), cseq);
     response.headers.push_back({.name = HeaderName::kCSeq, .value = cseq});
     response.headers.push_back({.name = HeaderName::kSession, .value = "E0E094D0;timeout=65"});
@@ -96,7 +96,7 @@ TEST_F(ResponseReaderWriterTest, Teardown) {
         .status_code = 200,
         .reason_phrase = "OK"
     };
-    etl::string<4> cseq;
+    etl::string<8> cseq;
     etl::to_string(g_random.Int<size_t>(1, 1234), cseq);
     response.headers.push_back({.name = HeaderName::kCSeq, .value = cseq});
 

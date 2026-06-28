@@ -31,7 +31,6 @@ public:
         if(!response.body.empty()) {
             ss << response.body;
         }
-        buffer.resize(ss.str().size());
         return buffer;
     }
 };

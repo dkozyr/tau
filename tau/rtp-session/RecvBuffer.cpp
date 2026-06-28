@@ -6,7 +6,7 @@ namespace tau::rtp::session {
 
 RecvBuffer::RecvBuffer(size_t size)
     : _size(std::clamp<size_t>(size, 4, 4096)) {
-    for(size_t i = 0; i < _size; ++i) { //TODO: can we use etl::vector constructor?
+    for(size_t i = 0; i < _size; ++i) {
         _packets.push_back(std::nullopt);
     }
 }

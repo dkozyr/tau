@@ -5,6 +5,7 @@
 #include "tau/rtp/Writer.h"
 #include "tau/rtp/TsConverter.h"
 #include "tau/rtp/Constants.h"
+#include "tau/common/Log.h"
 
 namespace tau::rtp {
 
@@ -32,10 +33,11 @@ public:
         _options.header.ts = _ts_producer.FromTp(tp);
         _options.header.marker = marker;
         auto result = Writer::Write(packet.GetViewWithCapacity(), _options.header);
-        //TODO: fix it
-        // if(result.size == 0) {
-        //     throw -1;
-        // }
+        if(result.size == 0) {
+            TAU_LOG_ERROR_THR(128, "Wrong packet buffer");
+            packet.SetSize(0);
+            return packet;
+        }
         _options.header.sn++;
         packet.SetSize(result.size);
         return packet;

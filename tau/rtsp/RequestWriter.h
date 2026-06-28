@@ -31,7 +31,6 @@ public:
         }
         ss << "User-Agent: " << kUserAgent << kClRf
            << kClRf;
-        buffer.resize(ss.str().size());
         return buffer;
     }
 };

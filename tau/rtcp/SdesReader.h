@@ -17,6 +17,9 @@ public:
         chunks.reserve(chunks_count);
         auto ptr = view.ptr + kHeaderSize;
         for(size_t i = 0; i < chunks_count; ++i) {
+            if(chunks.full()) {
+                break;
+            }
             chunks.push_back(SdesChunk{
                 .ssrc = Read32(ptr),
                 .items = ParseItems(ptr + sizeof(uint32_t))
@@ -45,7 +48,7 @@ public:
 private:
     static SdesItems ParseItems(const uint8_t* ptr) {
         SdesItems items;
-        while(true) {
+        while(!items.full()) {
             const auto type = static_cast<SdesType>(ptr[0]);
             if(type == SdesType::kEnd) {
                 break;

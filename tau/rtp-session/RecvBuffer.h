@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tau/memory/Buffer.h>
+#include <tau/rtcp/NackMessage.h>
 #include <etl/vector.h>
 #include <etl/set.h>
 #include <functional>
@@ -26,7 +27,7 @@ public:
         kReset
     };
 
-    using Sns = etl::set<uint16_t, 32>;
+    using Sns = rtcp::NackSns;
 
     using Callback = std::function<void(Buffer&&)>;
 
