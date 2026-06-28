@@ -199,8 +199,8 @@ protected:
     etl::vector<Endpoint, 3> _sockets1;
     etl::vector<Endpoint, 3> _sockets2;
 
-    etl::vector<StunClient, 3> _stun_clients1; // TODO: check capacity
-    etl::vector<StunClient, 3> _stun_clients2; // TODO: check capacity
+    etl::vector<StunClient, 3> _stun_clients1;
+    etl::vector<StunClient, 3> _stun_clients2;
 
     std::optional<CheckList> _check_list1;
     std::optional<CheckList> _check_list2;

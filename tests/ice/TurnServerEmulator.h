@@ -51,13 +51,13 @@ private:
     const Options _options;
     const Endpoint _public_endpoint;
 
-    etl::string<32> _realm = "some_realm";
+    etl::string<256> _realm = "some_realm";
 
     uint16_t _latest_port = 33333;
 
     struct Allocation {
-        etl::string<32> user_name;
-        etl::string<32> nonce;
+        etl::string<256> user_name;
+        etl::string<256> nonce;
         uint16_t port;
         Timepoint expire_time;
         etl::unordered_set<IpAddress, 16> permissions = {};

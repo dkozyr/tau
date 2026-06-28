@@ -55,9 +55,9 @@ size_t TurnServerEmulator::GetDroppedPacketsCount() const { return _dropped_pack
 
 void TurnServerEmulator::OnAllocateRequest(Buffer&& message, Endpoint src, uint32_t hash) {
     TAU_LOG_INFO("src: " << ToString(src) << ", hash: " << hash);
-    etl::string<32> user_name; //TODO: check capacity
-    etl::string<32> realm;
-    etl::string<32> nonce;
+    etl::string<256> user_name;
+    etl::string<256> realm;
+    etl::string<256> nonce;
     bool requested_transport = false;
     bool message_integrity = false;
     auto view = ToConst(message.GetView());

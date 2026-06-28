@@ -2,6 +2,7 @@
 #include "tau/common/String.h"
 #include "tau/common/Ntp.h"
 #include "tau/common/SystemClock.h"
+#include <limits>
 
 namespace tau::sdp {
 
@@ -27,7 +28,7 @@ bool OriginatorReader::Validate(const etl::string_view& value) {
 }
 
 etl::string_stream& OriginatorWriter::Write(etl::string_stream& ss, etl::string_view addr_type, etl::string_view ip_addr) {
-    constexpr uint64_t kMaxSigned64bit = 0x7FFF'FFFF'FFFF'FFFFull;
+    constexpr auto kMaxSigned64bit = static_cast<uint64_t>(std::numeric_limits<int64_t>::max());
     const auto ntp = ToNtp(SystemClock{}.Now());
     ss << "- " << (ntp & kMaxSigned64bit) << " 1 IN " << addr_type << " " << ip_addr;
     return ss;

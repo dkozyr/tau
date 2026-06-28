@@ -22,7 +22,10 @@ struct Ice {
 
 inline Candidates MakeCandidates(std::initializer_list<Candidate> list) {
     Candidates candidates;
-    for (auto&& candidate : list) {
+    for(auto&& candidate : list) {
+        if(candidates.full()) {
+            break;
+        }
         candidates.push_back(std::move(candidate));
     }
     return candidates;

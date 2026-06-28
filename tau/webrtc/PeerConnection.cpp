@@ -25,37 +25,32 @@ PeerConnection::~PeerConnection() {
 
 void PeerConnection::Stop() {
     TAU_LOG_DEBUG("");
-    // asio::post(_deps.executor, [this]() {
-        _mdns_ctx.reset();
-        _udp_sockets.clear();
-        _ice_agent.reset();
-        if(_dtls_session) {
-            _dtls_session->Stop();
-            _dtls_session.reset();
-        }
-        _rtp_sessions.clear();
-    // });
-    // asio::post(_deps.executor, asio::use_future).wait_for(std::chrono::seconds(1));
+    _mdns_ctx.reset();
+    _udp_sockets.clear();
+    _ice_agent.reset();
+    if(_dtls_session) {
+        _dtls_session->Stop();
+        _dtls_session.reset();
+    }
+    _rtp_sessions.clear();
 }
 
 void PeerConnection::Process() {
-//     asio::post(_deps.executor, [this]() {
-        for(auto& udp_socket : _udp_sockets) {
-            udp_socket->Receive();
-        }
-        if(_mdns_ctx) {
-            _mdns_ctx->socket->Receive();
-        }
-        if(_ice_agent) {
-            _ice_agent->Process();
-        }
-        if(_dtls_session) {
-            _dtls_session->Process();
-        }
-        for(auto& session : _rtp_sessions) {
-            session.Process();
-        }
-//     });
+    for(auto& udp_socket : _udp_sockets) {
+        udp_socket->Receive();
+    }
+    if(_mdns_ctx) {
+        _mdns_ctx->socket->Receive();
+    }
+    if(_ice_agent) {
+        _ice_agent->Process();
+    }
+    if(_dtls_session) {
+        _dtls_session->Process();
+    }
+    for(auto& session : _rtp_sessions) {
+        session.Process();
+    }
 }
 
 void PeerConnection::CreateSdpOffer() {
@@ -181,30 +176,24 @@ bool PeerConnection::ProcessSdpAnswer(const etl::string_view& answer) {
 }
 
 void PeerConnection::SetRemoteIceCandidate(ice::CandidateStr candidate) {
-    // asio::dispatch(_deps.executor, [this, candidate = std::move(candidate)]() mutable {
-        SetRemoteIceCandidateInternal(std::move(candidate));
-    // });
+    SetRemoteIceCandidateInternal(std::move(candidate));
 }
 
 void PeerConnection::SendRtp(size_t media_idx, Buffer&& packet) {
-//     asio::post(_deps.executor, [this, media_idx, packet = std::move(packet)]() mutable {
-        auto& rtp_session = _rtp_sessions.at(media_idx);
-        rtp_session.SendRtp(std::move(packet));
-//     });
+    auto& rtp_session = _rtp_sessions.at(media_idx);
+    rtp_session.SendRtp(std::move(packet));
 }
 
 void PeerConnection::SendEvent(size_t media_idx, Event&& event) {
-//     asio::post(_deps.executor, [this, media_idx, event = std::move(event)]() mutable {
-        auto& rtp_session = _rtp_sessions.at(media_idx);
-        std::visit(overloaded{
-            [&rtp_session, media_idx](EventPli&) {
-                rtp_session.PushEvent(rtp::session::Event::kPli);
-            },
-            [&rtp_session, media_idx](EventFir&) {
-                rtp_session.PushEvent(rtp::session::Event::kFir);
-            }
-        }, event);
-//     });
+    auto& rtp_session = _rtp_sessions.at(media_idx);
+    std::visit(overloaded{
+        [&rtp_session, media_idx](EventPli&) {
+            rtp_session.PushEvent(rtp::session::Event::kPli);
+        },
+        [&rtp_session, media_idx](EventFir&) {
+            rtp_session.PushEvent(rtp::session::Event::kFir);
+        }
+    }, event);
 }
 
 const sdp::Sdp& PeerConnection::GetLocalSdp() const {
@@ -365,7 +354,7 @@ void PeerConnection::StartDtlsSession() {
                 }
             }
 
-            // try {
+            try {
                 _srtp_decryptor.emplace(srtp::Session::Options{
                     .type = srtp::Session::Type::kDecryptor,
                     .profile = srtp_profile,
@@ -392,14 +381,13 @@ void PeerConnection::StartDtlsSession() {
 
                 _state = State::kConnected;
                 _state_callback(_state);
-            //TODO: can we fix it?
-            // } catch(const std::exception& e) {
-            //     TAU_LOG_WARNING(_options.log_ctx << "Srtp session creating failed, exception: " << e.what());
-            // }
+            } catch(const std::exception& e) {
+                TAU_LOG_WARNING(_options.log_ctx << "Srtp session creating failed, exception: " << e.what());
+            }
         }
     });
     _dtls_session->SetRecvCallback([this](Buffer&& packet) {
-        TAU_LOG_DEBUG(_options.log_ctx << "[DTLS] recv packet: " << packet.GetSize()); //TODO: trace
+        TAU_LOG_TRACE(_options.log_ctx << "[DTLS] recv packet: " << packet.GetSize());
     });
     _dtls_session->SetSendCallback([this](Buffer&& packet) {
         TAU_LOG_TRACE(_options.log_ctx << "[DTLS] socket_idx: " << _ice_pair->socket_idx << ", remote: " << _ice_pair->remote_endpoint);
