@@ -132,7 +132,6 @@ bool Session::Send(Buffer&& packet) {
 
 bool Session::Send(const BufferViewConst& packet_view) {
     auto size = SSL_write(_ssl, packet_view.ptr, packet_view.size);
-    TAU_LOG_INFO("packet_view.size: " << packet_view.size << ", size: " << size);
     if(size <= 0) {
         TAU_LOG_WARNING(_options.log_ctx << "size: " << size << ", error: " << ERR_error_string(ERR_get_error(), NULL));
         return false;
