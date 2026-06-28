@@ -1,25 +1,22 @@
 #include "apps/webrtc-echo-server/Config.h"
-#include "tau/common/File.h"
 #include <tau/common/Json.h>
 #include <tau/common/Log.h>
 
 using namespace tau;
 
-std::optional<Config> ParseAndValidateConfig(const std::string& config_path) {
+std::optional<Config> ParseAndValidateConfig(const etl::string_view& config_str) {
     try {
-        auto config_str = ReadFile(config_path);
-        // TAU_LOG_DEBUG("config: " << config_str);
-        auto config_json = Json::parse(config_str);
-
         Config config = {};
+
+        auto config_json = Json::parse(config_str.data());
 
         auto config_ip = config_json.at("ip");
         if(auto private_ip = config_ip.try_at("private")) {
-            config.ip.private_ip = Json::value_to<std::string>(*private_ip);
+            config.ip.private_ip.append(json::GetStringView(*private_ip));
         }
         if(auto public_ip = config_ip.try_at("public")) {
             if(public_ip->is_string()) {
-                config.ip.public_ip = Json::value_to<std::string>(*public_ip);
+                config.ip.public_ip.append(json::GetStringView(*public_ip));
             }
         }
 
@@ -30,17 +27,19 @@ std::optional<Config> ParseAndValidateConfig(const std::string& config_path) {
             if(auto http_fields = wss.try_at("http_fields")) {
                 if(auto server = http_fields->try_at("server")) {
                     if(server->is_string()) {
+                        const auto value = json::GetStringView(*server);
                         config.wss.http_fields.push_back(http::Field{
                             beast_http::field::server,
-                            Json::value_to<std::string>(*server)
+                            config_str.substr(config_str.find(value), value.size())
                         });
                     }
                 }
                 if(auto allow_origin = http_fields->try_at("access_control_allow_origin")) {
                     if(allow_origin->is_string()) {
+                        const auto value = json::GetStringView(*allow_origin);
                         config.wss.http_fields.push_back(http::Field{
                             beast_http::field::access_control_allow_origin,
-                            Json::value_to<std::string>(*allow_origin)
+                            config_str.substr(config_str.find(value), value.size())
                         });
                     }
                 }
@@ -49,7 +48,7 @@ std::optional<Config> ParseAndValidateConfig(const std::string& config_path) {
             if(auto validation = wss.try_at("validation")) {
                 if(auto origin_host = validation->try_at("origin_host")) {
                     if(origin_host->is_string()) {
-                        config.wss.validation.origin_host = Json::value_to<std::string>(*origin_host);
+                        config.wss.validation.origin_host.append(json::GetStringView(*origin_host));
                     }
                 }
             }
@@ -61,18 +60,18 @@ std::optional<Config> ParseAndValidateConfig(const std::string& config_path) {
         }
         if(auto ssl_ca = ssl.try_at("ca")) {
             if(auto certificate = ssl_ca->try_at("certificate")) {
-                config.ssl.ca.certificate = Json::value_to<std::string>(*certificate);
+                config.ssl.ca.certificate = json::GetStringView(*certificate);
             }
             if(auto key = ssl_ca->try_at("key")) {
-                config.ssl.ca.key = Json::value_to<std::string>(*key);
+                config.ssl.ca.key = json::GetStringView(*key);
             }
         }
         if(auto ssl_server = ssl.try_at("server")) {
             if(auto certificate = ssl_server->try_at("certificate")) {
-                config.ssl.server.certificate = Json::value_to<std::string>(*certificate);
+                config.ssl.server.certificate = json::GetStringView(*certificate);
             }
             if(auto key = ssl_server->try_at("key")) {
-                config.ssl.server.key = Json::value_to<std::string>(*key);
+                config.ssl.server.key = json::GetStringView(*key);
             }
         }
 

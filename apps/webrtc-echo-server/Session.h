@@ -9,7 +9,11 @@ namespace tau {
 
 class Session {
 public:
-    using Dependencies = webrtc::PeerConnection::Dependencies;
+    struct Dependencies {
+        Executor executor;
+        Clock& clock;
+        Allocator& udp_allocator;
+    };
 
 public:
     Session(Dependencies&& deps, ws::ConnectionPtr connection);
@@ -20,25 +24,27 @@ public:
 private:
     void PcInitCallbacks();
 
-    std::string OnRequest(std::string request);
-    std::string OnSdpOffer(const Json::value& request);
+    ws::String OnRequest(ws::String request);
+    ws::String OnSdpOffer(const Json::value& request);
     void OnRemoteIceCandidates(const Json::value& request);
 
     void SendLocalIceCandidates();
     void CloseConnection();
 
-    static webrtc::PeerConnection::Options CreateOptions(const std::string& log_ctx);
+    static webrtc::PeerConnection::Options CreateOptions(const etl::string_view& log_ctx);
+    static etl::string<12> CreateRandomId();
+    static etl::string<16> CreateLogCtx(const etl::string_view& id);
 
 private:
     ws::ConnectionWeakPtr _ws_connection;
     Clock& _clock;
     const Timepoint _timeout_tp;
-    const std::string _id;
-    const std::string _log_ctx;
+    etl::string<12> _id;
+    etl::string<16> _log_ctx;
 
     PeriodicTimer _timer;
     webrtc::PeerConnection _pc;
-    std::vector<std::string> _local_ice_candidates;
+    std::vector<ice::CandidateStr> _local_ice_candidates;
     std::optional<uint32_t> _video_ssrc; // also used as SDP negotiation flag
 };
 

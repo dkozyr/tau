@@ -6,8 +6,11 @@
 #include "tau/asio/ThreadPool.h"
 #include "tau/memory/PoolAllocator.h"
 #include "tau/net/Uri.h"
+#include "tau/asio/ToString.h"
+#include "tau/common/File.h"
 #include "tau/common/Clock.h"
 #include "tau/common/Ntp.h"
+#include "tau/common/StdString.h"
 #include "tau/common/Log.h"
 #include <boost/program_options.hpp>
 #include <atomic>
@@ -32,20 +35,22 @@ int main(int argc, char** argv) {
     po::notify(vm);
 
     if(vm.count("help")) {
-        TAU_LOG_INFO(desc);
+        TAU_LOG_INFO(ToStdString(desc).data());
         return 1;
     }
 
-    auto config = ParseAndValidateConfig(config_path);
+    auto config_str = ReadFile(config_path);
+    auto config = ParseAndValidateConfig(etl::string_view{config_str.data(), config_str.size()});
     if(!config) {
         return -1;
     }
 
-    InitLogging(std::to_string(ToNtp(SystemClock{}.Now())), config->logging.console, config->logging.severity);
+    // InitLogging(std::to_string(ToNtp(SystemClock{}.Now())), config->logging.console, config->logging.severity);
     srtp::Init();
 
     SteadyClock clock;
-    PoolAllocator udp_allocator(1500);
+    std::array<uint8_t, 4 * 1024 * 1024> allocated_memory;
+    PoolAllocator udp_allocator(allocated_memory.data(), allocated_memory.size(), 1500);
     ThreadPool io(std::thread::hardware_concurrency());
 
     SslContextPtr ssl_ctx = CreateSslContextInternal(config->ssl);
@@ -63,9 +68,10 @@ int main(int argc, char** argv) {
                     TAU_LOG_WARNING("No Origin header");
                     return false;
                 }
-                auto uri = net::GetUriFromString(it_origin->value());
+                const auto& origin_value = it_origin->value();
+                auto uri = net::GetUriFromString(etl::string_view{origin_value.data(), origin_value.size()});
                 if(!uri || (uri->host != expected_origin_host)) {
-                    TAU_LOG_WARNING("Wrong Origin header: " << it_origin->value());
+                    TAU_LOG_WARNING("Wrong Origin header: " << origin_value.data());
                     return false;
                 }
                 return true;
@@ -81,8 +87,8 @@ int main(int argc, char** argv) {
         std::lock_guard lock{mutex};
         sessions.push_back(std::make_unique<Session>(
             Session::Dependencies{
-                .clock = clock,
                 .executor = io.GetStrand(),
+                .clock = clock,
                 .udp_allocator = udp_allocator
             }, std::move(connection)));
     });
@@ -91,9 +97,9 @@ int main(int argc, char** argv) {
     PeriodicTimer timer(io.GetExecutor());
     constexpr auto kPrintStatsPeriodMs = 10 * 1000;
     auto print_stats_tp = clock.Now();
-    timer.Start(kPrintStatsPeriodMs, [&](beast_ec ec) {
+    timer.Start(kPrintStatsPeriodMs, [&](boost_ec ec) {
         if(ec) {
-            TAU_LOG_WARNING("Error: " << ec.value() << ", " << ec.message());
+            TAU_LOG_WARNING("Error: " << ec);
             return false;
         }
         std::lock_guard lock{mutex};
@@ -110,7 +116,7 @@ int main(int argc, char** argv) {
         const auto now = clock.Now();
         if(print_stats || (print_stats_tp + 10 * kMin < now)) {
             print_stats_tp = now;
-            TAU_LOG_INFO("Connections: " << connections << ", active sessions: " << sessions.size());
+            TAU_LOG_INFO("Connections: " << connections.load() << ", active sessions: " << sessions.size());
         }
         return true;
     });
