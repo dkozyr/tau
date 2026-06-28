@@ -10,8 +10,8 @@
 namespace tau::http {
 
 class Client : public std::enable_shared_from_this<Client> {
-    using Resolver = asio::ip::tcp::resolver;
-    using Socket = asio::ip::tcp::socket;
+    using Resolver  = asio::ip::tcp::resolver;
+    using Socket    = asio::ip::tcp::socket;
     using SocketVar = std::variant<SslSocket, Socket>;
 
 public:

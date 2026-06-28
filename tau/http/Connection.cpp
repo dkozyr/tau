@@ -21,7 +21,7 @@ Connection::~Connection() {
     _timeout.cancel();
 
     std::visit(overloaded{
-        [&ec](SslSocketPtr& socket)                           { socket->lowest_layer().close(ec); },
+        [&ec](SslSocketPtr& socket) { socket->lowest_layer().close(ec); },
         [&ec](std::shared_ptr<asio::ip::tcp::socket>& socket) { socket->close(ec); }
     }, _socket);
 }
@@ -128,7 +128,7 @@ void Connection::OnShutdown(beast_ec ec) {
 void Connection::OnTimeout(beast_ec ec) {
     if(!ec) {
         std::visit(overloaded{
-            [&ec](SslSocketPtr& socket)                           { socket->lowest_layer().close(ec); },
+            [&ec](SslSocketPtr& socket) { socket->lowest_layer().close(ec); },
             [&ec](std::shared_ptr<asio::ip::tcp::socket>& socket) { socket->close(ec); }
         }, _socket);
 
@@ -136,8 +136,8 @@ void Connection::OnTimeout(beast_ec ec) {
     }
 }
 
-etl::string<64> Connection::CreateLogContext(const Socket& socket) {
-    etl::string<64> text;
+Connection::LogCtx Connection::CreateLogContext(const Socket& socket) {
+    LogCtx text;
     etl::string_stream ss(text);
     std::visit(overloaded{
         [&ss](const SslSocketPtr& socket) {

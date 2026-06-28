@@ -11,6 +11,8 @@
 namespace tau::http {
 
 class Connection : public std::enable_shared_from_this<Connection> {
+    using LogCtx = etl::string<64>;
+
 public:
     static constexpr auto kTimeoutDefault = std::chrono::seconds(10);
 
@@ -41,7 +43,7 @@ private:
     void OnShutdown(beast_ec ec);
     void OnTimeout(beast_ec ec);
 
-    static etl::string<64> CreateLogContext(const Socket& socket);
+    static LogCtx CreateLogContext(const Socket& socket);
 
 private:
     Socket _socket;
@@ -50,7 +52,7 @@ private:
     beast_request _request;
     std::optional<beast_response> _response;
     beast::flat_buffer _buffer;
-    const etl::string<64> _log_ctx;
+    const LogCtx _log_ctx;
 };
 
 }

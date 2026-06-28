@@ -28,7 +28,7 @@ void Client::Start() {
             self->OnTimeout(ec);
         });
 
-    etl::string<6> port;
+    etl::string<8> port;
     etl::string_stream ss(port);
     ss << _options.port;
 
@@ -89,7 +89,7 @@ void Client::OnHandshake(boost_ec ec) {
     _request.set(beast_http::field::host, _options.host.data());
     for(auto& field : _options.fields) {
         std::visit(overloaded{
-            [&](beast_http::field name)  { _request.set(name, field.value.data()); },
+            [&](beast_http::field name) { _request.set(name, field.value.data()); },
             [&](etl::string_view name) { _request.set(name.data(), field.value.data()); }
         }, field.name);
     }
@@ -165,7 +165,7 @@ void Client::OnTimeout(beast_ec ec) {
     if(!ec) {
         std::visit(overloaded{
             [&ec](SslSocket& socket) { socket.lowest_layer().close(ec); },
-            [&ec](Socket& socket)    { socket.close(ec); }
+            [&ec](Socket& socket) { socket.close(ec); }
         }, _socket);
 
         _timeout.cancel();
