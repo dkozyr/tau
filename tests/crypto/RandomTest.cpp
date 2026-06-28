@@ -28,4 +28,10 @@ TEST(RandomTest, RandomBase64) {
     ASSERT_EQ(0, RandomBase64(output, 0).size());
 }
 
+TEST(RandomTest, RandomBase64_SmallCapacity) {
+    etl::string<41> output;
+    ASSERT_EQ(0, RandomBase64(output, 42).size());
+    ASSERT_EQ(41, RandomBase64(output, 41).size());
+}
+
 }

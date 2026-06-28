@@ -23,14 +23,18 @@ etl::istring& Base64Decode(etl::string_view input, etl::istring& decoded) {
 
 etl::istring& Base64Encode(etl::string_view input, etl::istring& encoded) {
     const size_t target_size = Align(Align(input.size() * 8, 6) / 6, 4);
-    encoded.resize(target_size);
-    memset(encoded.data(), 0, encoded.size());
+    if(target_size <= encoded.capacity()) {
+        encoded.resize(target_size);
+        memset(encoded.data(), 0, encoded.size());
 
-    size_t output_len;
-    const auto ret = mbedtls_base64_encode(
-        reinterpret_cast<uint8_t*>(encoded.data()), encoded.size() + 1, &output_len,
-        reinterpret_cast<const uint8_t*>(input.data()), input.size());
-    if(0 != ret) {
+        size_t output_len;
+        const auto ret = mbedtls_base64_encode(
+            reinterpret_cast<uint8_t*>(encoded.data()), encoded.size() + 1, &output_len,
+            reinterpret_cast<const uint8_t*>(input.data()), input.size());
+        if(0 != ret) {
+            encoded.clear();
+        }
+    } else {
         encoded.clear();
     }
     return encoded;

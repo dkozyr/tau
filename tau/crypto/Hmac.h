@@ -30,7 +30,7 @@ private:
 
 private:
     const Type _type;
-    const etl::string<32> _password; //TODO: check capacity
+    const etl::string<32> _password;
     void* _ctx = nullptr;
     void* _pkey = nullptr;
 };

@@ -137,8 +137,11 @@ Certificate::DataBuffer Certificate::GetDataFromBio(BIO* bio) {
     BUF_MEM* buffer;
     BIO_get_mem_ptr(bio, &buffer);
 
-    DataBuffer data(buffer->length);
-    memcpy(data.data(), buffer->data, buffer->length);
+    DataBuffer data;
+    if(buffer->length <= data.capacity()) {
+        data.resize(buffer->length);
+        memcpy(data.data(), buffer->data, buffer->length);
+    }
 
     BIO_free(bio);
     return data;

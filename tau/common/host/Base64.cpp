@@ -29,13 +29,17 @@ etl::istring& Base64Decode(etl::string_view input, etl::istring& decoded) {
 
 etl::istring& Base64Encode(etl::string_view input, etl::istring& encoded) {
     const auto encoded_size = 4 * DivCeil<int>(input.size(), 3);
-    encoded.resize(encoded_size, '=');
-    const auto result = EVP_EncodeBlock(
-        reinterpret_cast<uint8_t*>(encoded.data()),
-        reinterpret_cast<const uint8_t*>(input.data()),
-        input.size()
-    );
-    if(encoded_size != result) {
+    if(static_cast<size_t>(encoded_size) <= encoded.capacity()) {
+        encoded.resize(encoded_size, '=');
+        const auto result = EVP_EncodeBlock(
+            reinterpret_cast<uint8_t*>(encoded.data()),
+            reinterpret_cast<const uint8_t*>(input.data()),
+            input.size()
+        );
+        if(encoded_size != result) {
+            encoded.clear();
+        }
+    } else {
         encoded.clear();
     }
     return encoded;
