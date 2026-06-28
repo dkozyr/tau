@@ -8,14 +8,13 @@
 #include "tau/asio/PeriodicTimer.h"
 #include "tau/asio/ToString.h"
 #include "tau/memory/PoolAllocator.h"
-#include "tau/common/SteadyClock.h"
+#include "tau/net/Port.h"
 #include "tau/common/Log.h"
 #include <atomic>
 
 using namespace tau;
 
 int main(int /*argc*/, char** /*argv*/) {
-    SteadyClock clock;
     ThreadPool io(std::thread::hardware_concurrency());
 
     std::atomic<size_t> requests{0};
@@ -28,7 +27,7 @@ int main(int /*argc*/, char** /*argv*/) {
             .allocator = udp_allocator,
             .executor = io.GetExecutor(),
             .local_address = IpAddress{0, 0, 0, 0},
-            .local_port = 3478
+            .local_port = net::kStunPort
         });
     udp_socket->SetRecvCallback([&](Buffer&& message, Endpoint remote_endpoint) {
         requests.fetch_add(1);

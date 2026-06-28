@@ -1,5 +1,6 @@
 #include "tau/stun/Writer.h"
 #include "tau/net/Endpoint.h"
+#include "tau/net/Port.h"
 #include "tests/lib/Common.h"
 #include <etl/unordered_map.h>
 #include <etl/unordered_set.h>
@@ -11,7 +12,7 @@ using namespace tau::net;
 // TURN Server emulator for tests only
 class TurnServerEmulator {
 public:
-    static inline const auto kPortDefault = 3478;
+    static inline const auto kPortDefault = kTurnUdpPort;
     static inline const auto kPublicIpDefault = MakeIpAddressV4("222.222.222.222");
     static inline const Endpoint kEndpointDefault = Endpoint{kPublicIpDefault, kPortDefault};
 

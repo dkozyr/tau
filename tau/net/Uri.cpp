@@ -1,4 +1,5 @@
 #include "tau/net/Uri.h"
+#include "tau/net/Port.h"
 #include "tau/common/String.h"
 #include "tau/common/Log.h"
 
@@ -23,16 +24,16 @@ std::optional<Uri> GetUriFromString(etl::string_view str) {
     uint16_t port;
     if(tokens[0] == "http") {
         protocol = Protocol::kHttp;
-        port = 80;
+        port = kHttpPort;
     } else if(tokens[0] == "https") {
         protocol = Protocol::kHttps;
-        port = 443;
+        port = kHttpsPort;
     } else if(tokens[0] == "rtsp") {
         protocol = Protocol::kRtsp;
-        port = 554;
+        port = kRtspPort;
     } else if(tokens[0] == "rtsps") {
         protocol = Protocol::kRtsps;
-        port = 554;
+        port = kRtspPort;
     } else {
         return std::nullopt;
     }
@@ -74,7 +75,7 @@ std::optional<Uri> GetUriFromString(etl::string_view str) {
 }
 
 std::optional<Uri> GetStunUriFromString(etl::string_view str) {
-    uint16_t port = 3478;
+    uint16_t port = kStunPort;
     SplitTokens<3> tokens;
     Split(tokens, str, ":");
     if(tokens.size() == 3) {
@@ -99,7 +100,7 @@ std::optional<Uri> GetStunUriFromString(etl::string_view str) {
 }
 
 std::optional<Uri> GetTurnUriFromString(etl::string_view str) {
-    uint16_t port = 3478;
+    uint16_t port = kStunPort;
     std::optional<Transport> transport;
     SplitTokens<2> transport_tokens;
     Split(transport_tokens, str, "?transport=");
