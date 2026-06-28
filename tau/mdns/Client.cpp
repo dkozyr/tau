@@ -96,9 +96,9 @@ void Client::OnAnswer(const Answer& answer) {
     if(it != _on_found_ip_address_callbacks.end()) {
         if(answer.data.size == sizeof(uint32_t)) {
             const auto value = Read32(answer.data.ptr);
-            TAU_LOG_DEBUG("Found name: " << answer.name << ", ip: " << net::IpAddress{value});
+            TAU_LOG_DEBUG("Found name: " << answer.name << ", ip: " << IpAddress{value});
             auto& ctx = it->second;
-            ctx.callback(net::IpAddress{value});
+            ctx.callback(IpAddress{value});
         }
         _on_found_ip_address_callbacks.erase(it);
     }

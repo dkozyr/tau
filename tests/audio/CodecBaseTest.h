@@ -27,7 +27,7 @@ protected:
         if(samples_offset + samples_per_channel >= _pcm_samples_count) {
             samples_offset %= (_pcm_samples_count - samples_per_channel);
         }
-        std::memcpy(view.ptr, _pcm_samples + samples_offset, view.size);
+        memcpy(view.ptr, _pcm_samples + samples_offset, view.size);
         frame.SetSize(view.size);
         return frame;
     }

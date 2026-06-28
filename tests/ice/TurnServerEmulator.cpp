@@ -191,7 +191,7 @@ void TurnServerEmulator::OnCreatePermissionRequest(Buffer&& message, Endpoint sr
             case AttributeType::kXorPeerAddress:
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
-                    allocation.permissions.insert(net::IpAddress{address});
+                    allocation.permissions.insert(IpAddress{address});
                     peer_address = true;
                 }
                 break;
@@ -257,7 +257,7 @@ void TurnServerEmulator::OnSendIndication(Buffer&& message, Endpoint src) {
         return DropPacket("No permission for peer");
     }
 
-    std::memmove(view.ptr, data->ptr, data->size);
+    memmove(view.ptr, data->ptr, data->size);
     message.SetSize(data->size);
 
     _on_send_callback(std::move(message), Endpoint{_options.public_ip, allocation.port}, *remote_peer);

@@ -240,8 +240,8 @@ void CheckList::SendStunRequest(size_t socket_idx, size_t pair_id, Endpoint remo
     uint64_t tiebreaker = _deps.clock.Now(); //TODO: fix tiebreaker
     IceRoleWriter::Write(writer, (_role == Role::kControlling), tiebreaker);
     DataUint32Writer::Write(writer, AttributeType::kPriority, Priority(CandidateType::kPeerRefl, socket_idx));
-    //TODO: check capacity
-    etl::string<64> user_name{_credentials.remote.ufrag};
+    etl::string<128> user_name;
+    user_name += _credentials.remote.ufrag;
     user_name += ":";
     user_name += _credentials.local.ufrag;
     ByteStringWriter::Write(writer, AttributeType::kUserName, user_name);
@@ -283,7 +283,7 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
                 if(XorMappedAddressReader::GetFamily(attr) == IpFamily::kIpv4) {
                     auto address = XorMappedAddressReader::GetAddressV4(attr);
                     auto port = XorMappedAddressReader::GetPort(attr);
-                    reflexive.emplace(Endpoint{net::IpAddress{address}, port});
+                    reflexive.emplace(Endpoint{IpAddress{address}, port});
                 }
                 break;
             default:

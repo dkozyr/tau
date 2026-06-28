@@ -27,7 +27,7 @@ public:
     struct Options {
         Role role;
         Credentials credentials;
-        //TODO: rename to local_endpoints? //TODO: fix capacity
+        //TODO: rename to local_endpoints?
         etl::vector<Endpoint, 3> sockets; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
         NominatingStrategy nominating_strategy = NominatingStrategy::kBestValid;
         etl::string_view log_ctx = {};
@@ -35,7 +35,7 @@ public:
 
     using CandidateCallback = std::function<void(CandidateStr candidate)>;
     using SendCallback = std::function<void(size_t socket_idx, Endpoint remote, Buffer&& message)>;
-    using MdnsEndpointCallback = std::function<etl::string<36 + 1 + 5>(Endpoint local_endpoint)>; //TODO: name string type, uuid size = 36, "uuid.local"
+    using MdnsEndpointCallback = std::function<etl::string<36 + 1 + 5>(Endpoint local_endpoint)>;
 
 public:
     CheckList(Dependencies&& deps, Options&& options);
@@ -76,7 +76,7 @@ private:
     const NominatingStrategy _nominating_strategy;
     const etl::string_view _log_ctx;
 
-    etl::vector<Endpoint, 3> _sockets; //TODO: local_endpoints? //TODO: fix capacity
+    etl::vector<Endpoint, 3> _sockets; //TODO: local_endpoints?
     etl::unordered_map<size_t, TransactionTracker, 4> _transcation_trackers;
 
     Candidates _local_candidates;

@@ -25,7 +25,7 @@ protected:
 };
 
 TEST_F(ClientTest, Basic) {
-    const net::IpAddress address1{g_random.Int<uint32_t>()};
+    const IpAddress address1{g_random.Int<uint32_t>()};
     const auto name1 = _client1.CreateName(address1);
     TAU_LOG_INFO("Ip: " << address1 << ", name: " << name1);
     ASSERT_FALSE(etl::string_view::npos == name1.find(".local"));

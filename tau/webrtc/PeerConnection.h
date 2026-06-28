@@ -31,8 +31,8 @@ public:
         struct Ice {
             etl::vector<etl::string_view, 2> uri_stun_servers = {};
             struct Mdns {
-                IpAddress address = net::IpAddress{224, 0, 0, 251}; // mDns default IP
-                uint16_t port = 5353;                               // mDns default port
+                IpAddress address = IpAddress{224, 0, 0, 251}; // mDns default IP
+                uint16_t port = 5353;                          // mDns default port
             };
             std::optional<Mdns> mdns = std::nullopt;
         };

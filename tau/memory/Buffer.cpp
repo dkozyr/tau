@@ -2,7 +2,6 @@
 #include "tau/common/Base64.h"
 #include "tau/common/Math.h"
 #include "tau/common/Exception.h"
-#include <cstring>
 
 namespace tau {
 
@@ -65,7 +64,7 @@ Buffer::~Buffer() {
 
 Buffer Buffer::Create(Allocator& allocator, const BufferViewConst& view, Info info) {
     Buffer buffer(allocator, view.size, info);
-    std::memcpy(buffer.GetView().ptr, view.ptr, view.size);
+    memcpy(buffer.GetView().ptr, view.ptr, view.size);
     buffer.SetSize(view.size);
     return buffer;
 }
@@ -73,7 +72,7 @@ Buffer Buffer::Create(Allocator& allocator, const BufferViewConst& view, Info in
 Buffer Buffer::MakeCopy() const {
     Buffer buffer_copy(_allocator, _capacity, _info);
     buffer_copy.SetSize(_size);
-    std::memcpy(buffer_copy.GetView().ptr, _block, _size);
+    memcpy(buffer_copy.GetView().ptr, _block, _size);
     return buffer_copy;
 }
 
@@ -127,7 +126,7 @@ Buffer CreateBufferFromBase64(Allocator& allocator, etl::string_view str, Buffer
     etl::string<kMaxOutputCapacity> decoded;
     Base64Decode(str, decoded);
     auto buffer = Buffer::Create(allocator, expected_size, info);
-    std::memcpy(buffer.GetView().ptr, decoded.data(), decoded.size());
+    memcpy(buffer.GetView().ptr, decoded.data(), decoded.size());
     buffer.SetSize(decoded.size());
     return buffer;
 }

@@ -20,7 +20,7 @@ TEST_F(StunHeaderReaderWriterTest, Basic) {
 
     Writer writer(packet.GetViewWithCapacity(), kBindingRequest);
     auto transcation_id_ptr = packet.GetView().ptr + 2 * sizeof(uint32_t);
-    std::memcpy(transcation_id_ptr, _transaction_id.data(), _transaction_id.size());
+    memcpy(transcation_id_ptr, _transaction_id.data(), _transaction_id.size());
     packet.SetSize(writer.GetSize());
     ASSERT_EQ(kMessageHeaderSize, packet.GetSize());
 

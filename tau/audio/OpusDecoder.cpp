@@ -2,7 +2,6 @@
 #include "tau/common/Exception.h"
 #include "tau/common/Log.h"
 #include <algorithm>
-#include <cstring>
 
 namespace tau::audio {
 
@@ -55,7 +54,7 @@ bool OpusDecoder::Decode(const BufferViewConst& view, Timepoint tp) {
 
         auto decoded_frame = Buffer::Create(_allocator, frame_size, Buffer::Info{.tp = _tp});
         auto decoded_view = decoded_frame.GetViewWithCapacity();
-        std::memcpy(decoded_view.ptr, _decode_buffer.data() + offset, frame_size);
+        memcpy(decoded_view.ptr, _decode_buffer.data() + offset, frame_size);
         decoded_frame.SetSize(frame_size);
         _callback(std::move(decoded_frame));
 
@@ -85,7 +84,7 @@ bool OpusDecoder::DecodePlc(Timepoint tp) {
         auto frame_size = SamplesToBytes(frame_samples_per_channel);
         auto decoded_frame = Buffer::Create(_allocator, frame_size, Buffer::Info{.tp = _tp});
         auto decoded_view = decoded_frame.GetViewWithCapacity();
-        std::memcpy(decoded_view.ptr, _decode_buffer.data(), frame_size);
+        memcpy(decoded_view.ptr, _decode_buffer.data(), frame_size);
         decoded_frame.SetSize(frame_size);
         _callback(std::move(decoded_frame));
 

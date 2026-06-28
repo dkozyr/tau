@@ -3,7 +3,6 @@
 #include <tau/rtp/Reader.h>
 #include <tau/video/h265/Nalu.h>
 #include <tau/common/NetToHost.h>
-#include <cstring>
 #include <numeric>
 
 namespace tau::rtp {
@@ -74,7 +73,7 @@ bool H265Depacketizer::ProcessFu(BufferViewConst rtp_payload_view, Timepoint tp,
 
     auto nalu_view = _fu_nal_unit->GetView();
     nalu_view.ForwardPtrUnsafe(nalu_view.size);
-    std::memcpy(nalu_view.ptr, rtp_payload_view.ptr, rtp_payload_view.size);
+    memcpy(nalu_view.ptr, rtp_payload_view.ptr, rtp_payload_view.size);
     _fu_nal_unit->SetSize(_fu_nal_unit->GetSize() + rtp_payload_view.size);
 
     if(fu_header->end) {

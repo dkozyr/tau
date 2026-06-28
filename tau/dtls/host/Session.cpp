@@ -206,11 +206,11 @@ srtp::KeyMaterial Session::GetKeyingMaterial(bool encryption) const {
     key_material.key.resize(key_size);
     key_material.salt.resize(salt_size);
     if((encryption && (_options.type == Type::kClient)) || (!encryption && (_options.type == Type::kServer))) {
-        std::memcpy(key_material.key.data(), keying_material.data(), key_size);
-        std::memcpy(key_material.salt.data(), keying_material.data() + 2 * key_size, salt_size);
+        memcpy(key_material.key.data(), keying_material.data(), key_size);
+        memcpy(key_material.salt.data(), keying_material.data() + 2 * key_size, salt_size);
     } else {
-        std::memcpy(key_material.key.data(), keying_material.data() + key_size, key_size);
-        std::memcpy(key_material.salt.data(), keying_material.data() + 2 * key_size + salt_size, salt_size);
+        memcpy(key_material.key.data(), keying_material.data() + key_size, key_size);
+        memcpy(key_material.salt.data(), keying_material.data() + 2 * key_size + salt_size, salt_size);
     }
     return key_material;
 }

@@ -15,6 +15,10 @@ public:
     using MdnsEndpointCallback = CheckList::MdnsEndpointCallback;
     using NominatingStrategy = CheckList::NominatingStrategy;
 
+    static constexpr size_t kInterfaceMaxCount = 3;
+    static constexpr size_t kStunMaxCount = 2;
+    static constexpr size_t kTurnMaxCount = 3;
+
     struct Dependencies {
         Clock& clock;
         Allocator& udp_allocator;
@@ -23,10 +27,9 @@ public:
     struct Options {
         Role role;
         Credentials credentials;
-        //TODO: fix capacity
-        etl::vector<Endpoint, 3> interfaces; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
-        etl::vector<Endpoint, 2> stun_servers;
-        etl::unordered_map<Endpoint, PeerCredentials, 3> turn_servers;
+        etl::vector<Endpoint, kInterfaceMaxCount> interfaces; // UDP only, only 1 endpoint (port) per IP, ordering is used as user preferences
+        etl::vector<Endpoint, kStunMaxCount> stun_servers;
+        etl::unordered_map<Endpoint, PeerCredentials, kTurnMaxCount> turn_servers;
         NominatingStrategy nominating_strategy = NominatingStrategy::kBestValid;
         etl::string_view log_ctx = {};
     };
@@ -54,12 +57,12 @@ private:
 
 private:
     Dependencies _deps;
-    etl::vector<Endpoint, 3> _interfaces;
+    etl::vector<Endpoint, kInterfaceMaxCount> _interfaces;
     const etl::string_view _log_ctx;
 
     CheckList _check_list;
-    etl::vector<StunClient, 2 * 3> _stun_clients;
-    etl::vector<TurnClient, 3 * 3> _turn_clients;
+    etl::vector<StunClient, kStunMaxCount * kInterfaceMaxCount> _stun_clients;
+    etl::vector<TurnClient, kTurnMaxCount * kInterfaceMaxCount> _turn_clients;
 
     State _state = State::kWaiting;
 

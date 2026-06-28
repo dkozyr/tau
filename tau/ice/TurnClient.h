@@ -84,8 +84,8 @@ private:
     etl::unordered_map<IpAddress, Permission, 4> _permissions;
     etl::unordered_map<Endpoint, etl::vector<Buffer, 16>, 4> _queue;
 
-    etl::string<32> _realm; //TODO: check capacity
-    etl::string<32> _nonce; //TODO: check capacity
+    etl::string<256> _realm;
+    etl::string<256> _nonce;
     Timepoint _allocation_eol;
     std::optional<crypto::HmacHasher> _message_integrity_hasher;
 
