@@ -54,6 +54,7 @@ public:
 
     State GetState() const;
     const CandidatePair& GetBestCandidatePair() const;
+    void GetRemoteIps(etl::ivector<IpAddress>& remote_ips);
 
 private:
     void Nominating();

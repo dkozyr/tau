@@ -7,7 +7,7 @@ namespace tau {
 
 class PeriodicTimer {
 public:
-    using Callback = std::function<bool(beast_ec ec)>;
+    using Callback = std::function<bool(boost_ec ec)>;
 
 public:
     PeriodicTimer(Executor executor)

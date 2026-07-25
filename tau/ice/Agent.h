@@ -55,6 +55,8 @@ private:
     void InitStunClients(const etl::ivector<Endpoint>& stun_servers);
     void InitTurnClients(const etl::iunordered_map<Endpoint, PeerCredentials>& turn_servers);
 
+    void UpdateTurnPermissions();
+
 private:
     Dependencies _deps;
     etl::vector<Endpoint, kInterfaceMaxCount> _interfaces;
@@ -65,6 +67,8 @@ private:
     etl::vector<TurnClient, kTurnMaxCount * kInterfaceMaxCount> _turn_clients;
 
     State _state = State::kWaiting;
+
+    bool _update_turn_permissions = false;
 
     StateCallback _state_callback;
     SendCallback _send_callback;

@@ -6,7 +6,7 @@
 namespace tau::ice {
 
 struct CandidatePair {
-    enum State {
+    enum State : size_t {
         kFrozen     = 1,
         kWaiting    = 2,
         kInProgress = 3,

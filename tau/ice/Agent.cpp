@@ -57,6 +57,7 @@ void Agent::Start() {
 }
 
 void Agent::Process() {
+    UpdateTurnPermissions();
     for(auto& stun_client : _stun_clients) { stun_client.Process(); }
     for(auto& turn_client : _turn_clients) { turn_client.Process(); }
     _check_list.Process();
@@ -78,6 +79,7 @@ void Agent::Process() {
 
 void Agent::RecvRemoteCandidate(CandidateStr candidate) {
     _check_list.RecvRemoteCandidate(std::move(candidate));
+    _update_turn_permissions = true;
 }
 
 void Agent::Recv(size_t socket_idx, Endpoint remote, Buffer&& message) {
@@ -140,7 +142,6 @@ void Agent::InitTurnClients(const etl::iunordered_map<Endpoint, PeerCredentials>
             );
             auto& turn_client = _turn_clients.back();
             turn_client.SetCandidateCallback([this, socket_idx = idx](Endpoint relayed) {
-                //TODO: can we add permissions for all outgoing endpoints
                 _check_list.AddLocalCandidate(CandidateType::kRelayed, socket_idx, relayed);
             });
             turn_client.SetSendCallback([this, socket_idx = i](Endpoint remote, Buffer&& message) {
@@ -149,6 +150,22 @@ void Agent::InitTurnClients(const etl::iunordered_map<Endpoint, PeerCredentials>
             turn_client.SetRecvCallback([this, socket_idx = idx](Endpoint remote, Buffer&& message) {
                 _check_list.Recv(socket_idx, remote, std::move(message));
             });
+        }
+    }
+}
+
+void Agent::UpdateTurnPermissions() {
+    if(_update_turn_permissions) {
+        etl::vector<IpAddress, 8> remote_ips;
+        _check_list.GetRemoteIps(remote_ips);
+
+        _update_turn_permissions = false;
+        for(auto& turn_client : _turn_clients) {
+            if(turn_client.IsActive()) {
+                turn_client.CreatePermission(remote_ips);
+            } else {
+                _update_turn_permissions = true;
+            }
         }
     }
 }

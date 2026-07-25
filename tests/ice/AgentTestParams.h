@@ -2,6 +2,7 @@
 
 #include "NatEmulator.h"
 #include <etl/string_stream.h>
+#include <ostream>
 
 namespace tau::ice {
 
@@ -25,6 +26,13 @@ inline etl::string_stream& operator<<(etl::string_stream& ss, const AgentTestPar
         << "peer2: {nat: " << x.peer2_nat_type << ", sockets: " << x.peer2_sockets_count << ", turn: " << x.peer2_has_turn << "}, "
         << "nominating_strategy_best: " << x.nominating_strategy_best << ", "
         << "success: " << x.success;
+}
+
+inline std::ostream& operator<<(std::ostream& os, const AgentTestParams& x) {
+    etl::string<256> log;
+    etl::string_stream ss(log);
+    ss << x;
+    return os << log;
 }
 
 }

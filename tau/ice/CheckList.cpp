@@ -37,11 +37,13 @@ CheckList::CheckList(Dependencies&& deps, Options&& options)
 }
 
 CheckList::~CheckList() {
-    TAU_LOG_DEBUG(_log_ctx << "Candidate pairs:");
-    for(auto& pair : _pairs) {
-        TAU_LOG_DEBUG(_log_ctx << "id: " << pair.id << ", local: " << (size_t)pair.local.type << ", remote: " << (size_t)pair.remote.type
-            << ", priority: " << pair.priority << ", socket: " << pair.local.socket_idx.value()
-            << ", remote: " << pair.remote.endpoint << ", state: " << pair.state << ", attempts: " << pair.attempts_count);
+    if(GetState() == State::kFailed) {
+        TAU_LOG_INFO(_log_ctx << "Candidate pairs:");
+        for(auto& pair : _pairs) {
+            TAU_LOG_INFO(_log_ctx << "id: " << pair.id << ", local: " << (size_t)pair.local.type << ", remote: " << (size_t)pair.remote.type
+                << ", priority: " << pair.priority << ", socket: " << pair.local.socket_idx.value()
+                << ", remote: " << pair.remote.endpoint << ", state: " << (size_t)pair.state << ", attempts: " << pair.attempts_count);
+        }
     }
 }
 
@@ -174,6 +176,15 @@ const CandidatePair& CheckList::GetBestCandidatePair() const {
     return _pairs.front();
 }
 
+void CheckList::GetRemoteIps(etl::ivector<IpAddress>& remote_ips) {
+    for(auto& remote_candidate : _remote_candidates) {
+        if(remote_ips.full()) {
+            break;
+        }
+        remote_ips.push_back(remote_candidate.endpoint.address);
+    }
+}
+
 void CheckList::Nominating() {
     if(_pairs.empty()) {
         return;
@@ -294,6 +305,14 @@ void CheckList::OnStunResponse(const BufferViewConst& view, size_t socket_idx, E
     if(ok && reflexive) {
         if(FindCandidateByEndpoint(_local_candidates, *reflexive)) {
             SetPairState(transaction->tag, CandidatePair::State::kSucceeded);
+
+            // Firefox doesn't replay with UseCandidate attribute
+            if(_role == Role::kControlling) {
+                const auto& pair = GetPairById(transaction->tag);
+                if((pair.state == CandidatePair::State::kNominating) && (pair.attempts_count >= 3)) {
+                    nominating = true;
+                }
+            }
         } else {
             TAU_LOG_INFO(_log_ctx << "Add local peer-reflexive: " << net::ToString(*reflexive) << ", socket: " << socket_idx << ", remote: " << net::ToString(remote) << ", pair_id: " << transaction->tag);
             AddLocalCandidate(CandidateType::kPeerRefl, socket_idx, *reflexive);
