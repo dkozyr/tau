@@ -82,6 +82,21 @@ TEST(BufferTest, Move) {
     ASSERT_EQ(nullptr, buffer.GetView().ptr);
 }
 
+TEST(BufferTest, MoveAssignmentReleasesPreviousBlock) {
+    const auto allocator_free_blocks = g_udp_allocator.GetFreeBlockCount();
+
+    auto destination = Buffer::Create(g_udp_allocator, 256);
+    auto source = Buffer::Create(g_udp_allocator, 64);
+    ASSERT_EQ(allocator_free_blocks - 2, g_udp_allocator.GetFreeBlockCount());
+
+    destination = std::move(source);
+    ASSERT_EQ(allocator_free_blocks - 1, g_udp_allocator.GetFreeBlockCount());
+
+    ASSERT_EQ(64u, destination.GetCapacity());
+    ASSERT_NE(nullptr, destination.GetView().ptr);
+    ASSERT_EQ(nullptr, source.GetView().ptr);
+}
+
 TEST(BufferTest, MakeCopy) {
     const Buffer::Info info{.tp = 1234567890, .flags = kFlagsLast};
     auto buffer = Buffer::Create(g_system_allocator, 256, info);

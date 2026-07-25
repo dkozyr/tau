@@ -43,16 +43,21 @@ Buffer::Buffer(Buffer&& other)
 }
 
 Buffer& Buffer::operator=(Buffer&& other) {
-    if(&_allocator != &other._allocator) {
-        TAU_EXCEPTION(std::runtime_error, "Cannot move-assign with different Allocator");
-    }
-    _block = other._block;
-    _capacity = other._capacity;
-    _size = other._size;
-    _offset = other._offset;
-    _info = std::move(other._info);
+    if(this != &other) {
+        if(&_allocator != &other._allocator) {
+            TAU_EXCEPTION(std::runtime_error, "Cannot move-assign with different Allocator");
+        }
+        if(_block) {
+            _allocator.Deallocate(_block);
+        }
+        _block    = other._block;
+        _capacity = other._capacity;
+        _size     = other._size;
+        _offset   = other._offset;
+        _info     = std::move(other._info);
 
-    other._block = nullptr;
+        other._block = nullptr;
+    }
     return *this;
 }
 
