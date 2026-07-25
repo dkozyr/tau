@@ -26,6 +26,8 @@ public:
     void Close();
     void PostMessage(String message);
 
+    etl::string_view GetRequestTarget() const;
+
 private:
     using SocketType = beast_ws::stream<beast::ssl_stream<beast::tcp_stream>>;
 

@@ -42,6 +42,11 @@ void Connection::PostMessage(String message) {
         });
 }
 
+etl::string_view Connection::GetRequestTarget() const {
+    const auto& target = _request.target();
+    return etl::string_view{target.data(), target.size()};
+}
+
 void Connection::OnStart() {
     beast::get_lowest_layer(_socket).expires_after(std::chrono::seconds(30));
     _socket.next_layer().async_handshake(asio_ssl::stream_base::server,
