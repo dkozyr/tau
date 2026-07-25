@@ -50,12 +50,19 @@ etl::string_view GetStringView(const Json::value& value) {
 
 double GetDouble(const Json::value& json, const etl::string_view& key) {
     if(json.as_object().contains(key.data())) {
-        if(json.at(key.data()).is_double()) {
-            return json.at(key.data()).get_double();
-        }
-        if(json.at(key.data()).is_int64()) {
-            return json.at(key.data()).get_int64();
-        }
+        const auto& value = json.at(key.data());
+        if(value.is_double()) { return value.get_double(); }
+        if(value.is_uint64()) { return value.get_uint64(); }
+        if(value.is_int64()) { return value.get_int64(); }
+    }
+    return 0;
+}
+
+uint64_t GetUint64(const Json::value& json, const etl::string_view& key) {
+    if(json.as_object().contains(key.data())) {
+        const auto& value = json.at(key.data());
+        if(value.is_uint64()) { return value.get_uint64(); }
+        if(value.is_int64()) { return value.get_int64(); }
     }
     return 0;
 }
@@ -66,6 +73,24 @@ double GetDoubleFromString(const Json::value& json, const etl::string_view& key)
         return std::stod(value.data());
     }
     return 0;
+}
+
+etl::string_stream& SerializeString(etl::string_stream& ss, const etl::string_view& value) {
+    ss << "\"";
+    for(size_t i = 0; i < value.size(); ++i) {
+        switch(value[i]) {
+            case '"': ss << R"(\")"; break;
+            case '\\': ss << R"(\\)"; break;
+            case '\b': ss << R"(\b)"; break;
+            case '\f': ss << R"(\f)"; break;
+            case '\n': ss << R"(\n)"; break;
+            case '\r': ss << R"(\r)"; break;
+            case '\t': ss << R"(\t)"; break;
+            default: ss << value.substr(i, 1); break;
+        }
+    }
+    ss << "\"";
+    return ss;
 }
 
 etl::string_stream& Serialize(etl::string_stream& ss, const Json::object& object) {
@@ -91,10 +116,11 @@ etl::string_stream& Serialize(etl::string_stream& ss, const Json::object& object
 etl::string_stream& Serialize(etl::string_stream& ss, const Json::value& value) {
     if(value.is_double()) {
         ss << etl::setprecision(6) << value.get_double();
-    } else if(value.is_int64()) {
-        ss << value.get_int64();
+    } else if(value.is_uint64()) { ss << value.get_uint64();
+    } else if(value.is_int64()) { ss << value.get_int64();
     } else if(value.is_string()) {
-        ss << "\"" << value.get_string().data() << "\"";
+        const auto& string_value = value.get_string();
+        SerializeString(ss, etl::string_view{string_value.data(), string_value.size()});
     } else if(value.is_null()) {
         ss << "null";
     } else if(value.is_array()) {

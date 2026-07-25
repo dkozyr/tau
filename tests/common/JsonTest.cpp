@@ -82,4 +82,23 @@ TEST(JsonTest, GetDoubleFromString) {
     ASSERT_NEAR(2.71828, GetDoubleFromString(object, "e"), kEps);
 }
 
+TEST(JsonTest, StringEndOfLineEscaped) {
+    const Json::object object = {
+        {"data", "hello\r\nworld"},
+        {"more", "\"escaped\t\"symbols\\"},
+    };
+
+    etl::string<256> serialized;
+    json::Serialize(object, serialized);
+    TAU_LOG_INFO("Serialized: " << serialized);
+    ASSERT_STREQ(serialized.data(), R"({"data":"hello\r\nworld","more":"\"escaped\t\"symbols\\"})");
+
+    boost_ec ec;
+    auto parsed = Json::parse(serialized.data(), ec);
+    ASSERT_EQ(0, ec.value());
+
+    ASSERT_EQ("hello\r\nworld", GetStringView(parsed.at("data")));
+    ASSERT_EQ("\"escaped\t\"symbols\\", GetStringView(parsed.at("more")));
+}
+
 }
