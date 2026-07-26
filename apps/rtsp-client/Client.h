@@ -17,8 +17,12 @@ public:
         net::Uri uri;
     };
 
+    using VideoCallback = std::function<void(Buffer&& nal_unit)>;
+
 public:
     Client(Executor executor, Options&& options);
+
+    void SetVideoCallback(VideoCallback callback);
 
     void SendRequestOptions();
     void SendRequestDescribe();
@@ -46,6 +50,8 @@ private:
     std::optional<uint16_t> _server_rtp_port;
     etl::string<16> _session_id;
     sdp::SdpPtr _sdp;
+
+    VideoCallback _video_callback;
 };
 
 }

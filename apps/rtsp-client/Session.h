@@ -8,7 +8,6 @@
 #include "tau/memory/PoolAllocator.h"
 #include "tau/common/SystemClock.h"
 #include "tau/common/SteadyClock.h"
-#include "tau/common/File.h"
 
 namespace tau::rtsp {
 
@@ -20,9 +19,12 @@ public:
         std::optional<Buffer> pps = std::nullopt;
     };
 
+    using VideoCallback = std::function<void(Buffer&& nal_unit)>;
+
 public:
     Session(Executor executor, Options&& options);
-    ~Session();
+
+    void SetVideoCallback(VideoCallback callback);
 
     uint16_t GetRtpPort() const;
 
@@ -41,7 +43,8 @@ private:
     rtp::session::FrameProcessor _frame_processor;
     rtp::H264Depacketizer _h264_depacketizer;
     h264::AvcNaluProcessor _avc1_nalu_processor;
-    std::filesystem::path _output_path;
+
+    VideoCallback _video_callback;
 
     net::UdpSocketWithExecutorPtr _socket_rtp;
     net::UdpSocketWithExecutorPtr _socket_rtcp;

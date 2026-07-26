@@ -32,14 +32,13 @@ Session::Session(Executor executor, Options&& options)
         .sps = std::move(options.sps),
         .pps = std::move(options.pps)
     })
-    , _output_path(std::to_string(ToNtp(_system_clock.Now())) + ".h264")
 {
     InitSockets();
     InitPipeline();
 }
 
-Session::~Session() {
-    TAU_LOG_INFO("Output path: " << _output_path.string().c_str());
+void Session::SetVideoCallback(VideoCallback callback) {
+    _video_callback = std::move(callback);
 }
 
 uint16_t Session::GetRtpPort() const {
@@ -66,12 +65,11 @@ void Session::InitPipeline() {
         _avc1_nalu_processor.Push(std::move(nal_unit));
     });
     _avc1_nalu_processor.SetCallback([this](Buffer&& nal_unit) {
-        const auto header = reinterpret_cast<const h264::NaluHeader*>(&nal_unit.GetView().ptr[0]);
-        TAU_LOG_INFO("[H264] [avc1] nal unit type: " << (size_t)header->type << ", tp: " << DurationSec(nal_unit.GetInfo().tp) << ", size: " << nal_unit.GetSize());
-        auto view = nal_unit.GetView();
-        //TODO: ToStringView
-        WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(kAnnexB.data()), kAnnexB.size()}, true);
-        WriteFile(_output_path, std::string_view{reinterpret_cast<const char*>(view.ptr), view.size}, true);
+        if(_video_callback) {
+            _video_callback(std::move(nal_unit));
+        } else {
+            _avc1_nalu_processor.DropUntilKeyFrame();
+        }
     });
 }
 

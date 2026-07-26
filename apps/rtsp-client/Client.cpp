@@ -19,6 +19,14 @@ Client::Client(Executor executor, Options&& options)
     }
 }
 
+void Client::SetVideoCallback(VideoCallback callback) {
+    if(_session) {
+        _session->SetVideoCallback(std::move(callback));
+    } else {
+        _video_callback = std::move(callback);
+    }
+}
+
 void Client::SendRequestOptions() {
     _cseq++;
     const auto cseq = ToString<8>(_cseq);
@@ -51,6 +59,11 @@ void Client::SendRequestDescribe() {
 
 void Client::SendRequestSetup() {
     _session.emplace(_executor, CreateSessionOptions());
+    if(_video_callback) {
+        _session->SetVideoCallback([this](Buffer&& nal_unit) {
+            _video_callback(std::move(nal_unit));
+        });
+    }
     const auto rtp_port = _session->GetRtpPort();
     const auto rtcp_port = rtp_port + 1;
     TAU_LOG_INFO("Rtp port: " << rtp_port << ", rtcp port: " << rtcp_port);
