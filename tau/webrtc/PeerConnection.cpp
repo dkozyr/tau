@@ -23,6 +23,14 @@ PeerConnection::~PeerConnection() {
     Stop();
 }
 
+void PeerConnection::Start() {
+    InitMediaDemuxer();
+    StartIceAgent();
+    if(GetLocalSdp().dtls->setup != sdp::Setup::kActive) {
+        StartDtlsSession();
+    }
+}
+
 void PeerConnection::Stop() {
     TAU_LOG_DEBUG("");
     _mdns_ctx.reset();
@@ -126,12 +134,6 @@ bool PeerConnection::ProcessSdpOffer(const etl::string_view& offer) {
         local_media->ssrc = _random.Int<uint32_t>();
         _sdp_answer->medias.push_back(*local_media);
     }
-
-    InitMediaDemuxer();
-    StartIceAgent();
-    if(GetLocalSdp().dtls->setup != sdp::Setup::kActive) {
-        StartDtlsSession();
-    }
     return true;
 }
 
@@ -169,9 +171,6 @@ bool PeerConnection::ProcessSdpAnswer(const etl::string_view& answer) {
         _sdp_offer->medias[i] = *negotiated_media;
     }
     _sdp_answer = std::move(sdp_answer);
-
-    InitMediaDemuxer();
-    StartIceAgent();
     return true;
 }
 

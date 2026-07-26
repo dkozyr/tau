@@ -31,8 +31,11 @@ public:
         auto sdp_offer_str = _pc1.Pc().GetLocalSdpStr();
         // auto sdp_offer_str = std::string{sdp::kWebrtcSafariSdpExample};
         ASSERT_TRUE(_pc2.Pc().ProcessSdpOffer(sdp_offer_str));
+        _pc2.Pc().Start();
+
         auto sdp_answer_str = _pc2.Pc().GetLocalSdpStr();
         ASSERT_TRUE(_pc1.Pc().ProcessSdpAnswer(sdp_answer_str));
+        _pc1.Pc().Start();
 
         _pc1.InitMediaSources();
         _pc2.InitMediaSources();

@@ -60,6 +60,7 @@ public:
     void SetRecvRtpCallback(Callback callback) { _recv_rtp_callback = std::move(callback); }
     void SetEventCallback(EventCallback callback) { _event_callback = std::move(callback); }
 
+    void Start(); // ICE/DTLS start
     void Stop();
     void Process();
 
