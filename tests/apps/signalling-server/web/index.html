@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Signalling web-client example</title>
+</head>
+<body>
+<input id="stream_id_input" type="number">
+<button id="connect" onclick="start()">Start</button>
+<button id="connect" onclick="stopCall()">Stop</button>
+
+<br>
+<video id="localVideo" playsinline autoplay style="width: 400px;"></video>
+<video id="remoteVideo" playsinline autoplay style="width: 400px;"></video>
+
+<script>
+  const localVideo = document.getElementById("localVideo");
+  const remoteVideo = document.getElementById("remoteVideo");
+  let localStream;
+  let remoteStream;
+  let pc;
+  let client_id = 4242424242424;
+  let stream_id;
+  let session_id;
+  let sdp_negotiated = false;
+
+  localVideo.addEventListener('loadedmetadata', function() {
+    console.log(`Local video resolution: ${this.videoWidth}x${this.videoHeight}`);
+  });
+  remoteVideo.addEventListener('loadedmetadata', function() {
+    console.log(`Remote video resolution: ${this.videoWidth}x${this.videoHeight}`);
+  });
+  remoteVideo.addEventListener('resize', () => {
+    console.log(`Remote video size changed to ${remoteVideo.videoWidth}x${remoteVideo.videoHeight}`);
+  });
+
+  const offerOptions = {
+      offerToReceiveAudio: 0,
+      offerToReceiveVideo: 1,
+  };
+  const configuration = {
+      iceServers: [{
+          'url': 'stun:stun.l.google.com:19302',
+      }],
+      bundlePolicy: "max-bundle",
+      rtcpMuxPolicy: "require",
+  };
+  var pc_local_ice_candidates = [];
+
+  var signalling = null;
+
+  async function start() {
+    stopCall();
+
+    const value = document.getElementById("stream_id_input").value;
+    if (!/^\d+$/.test(value)) {
+      alert("Please enter numbers only");
+      return;
+    }
+    stream_id = Number(value);
+    console.log("stream_id set to:", stream_id);
+
+    startCall();
+  }
+
+  async function startCall() {
+    signalling = new WebSocket("wss://127.0.0.1:12345");
+    signalling.onopen = (event) => {
+      OnSignallingOpen();
+    };
+    signalling.onmessage = (event) => {
+      OnSignallingMessage(event.data)
+    };
+    signalling.onclose = function(event) {
+      console.log("signalling closed:", event.code, event.reason);
+      stopCall();
+    };
+    signalling.onerror = (event) => {
+      console.log("signalling error:", event.code, event.reason);
+    }
+
+    pc = new RTCPeerConnection(configuration);
+    pc.addEventListener("icecandidate", e => onIceCandidate(pc, e));
+    pc.addEventListener("track", e => onAddRemoteTrack(e));
+    pc.addEventListener("iceconnectionstatechange", e => onIceStateChange(pc, e));
+    pc.addEventListener("connectionstatechange", e => onConnectionStateChange(pc, e));
+
+    // pc.createDataChannel("data");
+    // pc.getTransceivers().forEach(transceiver => transceiver.direction = "sendonly");
+
+    // const videoTracks = localStream.getVideoTracks();
+    // const audioTracks = localStream.getAudioTracks();
+    // if(audioTracks.length > 0) {
+    //   console.log(`Using stream from audio device: ${audioTracks[0].label}`);
+    //   pc.addTrack(audioTracks[0], localStream);
+    // }
+    // if(videoTracks.length > 0) {
+    //   console.log(`Using stream from video device: ${videoTracks[0].label}`);
+    //   pc.addTrack(videoTracks[0], localStream);
+    // }
+  }
+
+  async function OnSignallingOpen() {
+    try {
+      signalling.send(JSON.stringify({
+        type:"init",
+        client_id:client_id,
+        stream_id:stream_id
+      }));
+    } catch(e) {
+      console.log("Failed to create session description:", e.toString());
+    }
+  };
+
+  async function OnSignallingMessage(message) {
+    const message_json = JSON.parse(message);
+    console.log(message_json);
+    if("error" in message_json) {
+      return;
+    }
+
+    session_id = message_json["session_id"]
+
+    const payload_type = message_json["payload"]["type"];
+    if(payload_type == "sdp") {
+      const remote_sdp = message_json["payload"]["data"];
+      console.log(remote_sdp);
+
+      try {
+        await pc.setRemoteDescription({
+          type: "offer",
+          sdp: remote_sdp
+        });
+      } catch(e) {
+        console.log("Failed to set remote description:", e.toString());
+        return;
+      }
+
+      const answer = await pc.createAnswer(offerOptions);
+      await pc.setLocalDescription(answer);
+
+      signalling.send(JSON.stringify({
+        type: "sdp",
+        stream_id: stream_id,
+        client_id: client_id,
+        session_id: session_id,
+        payload: {
+          type: "sdp",
+          data: answer.sdp
+        }
+      }));
+
+      console.log("SDP answer:");
+      console.log(answer.sdp);
+
+      sdp_negotiated = true;
+      sendIceCandidates();
+
+    } else if(payload_type == "ice_candidates") {
+      const ice_candidate = message_json["payload"]["payload_data"];
+      console.log(ice_candidate);
+
+      pc.addIceCandidate({
+        candidate: "candidate:"+ice_candidate,
+        sdpMid: "0",
+        sdpMLineIndex: 0
+      });
+    }
+  }
+
+  async function onIceCandidate(pc, event) {
+    if(event && event.candidate && event.candidate.candidate) {
+      console.log("Local ICE candidate:", event.candidate.candidate, event.candidate.sdpMid, event.candidate.sdpMLineIndex);
+      if(event.candidate.sdpMLineIndex == 0) {
+        if(sdp_negotiated) {
+          sendIceCandidate(event.candidate.candidate);
+        } else {
+          pc_local_ice_candidates.push(event.candidate.candidate);
+        }
+      }
+    }
+  }
+
+  async function sendIceCandidate(ice_candidate) {
+    signalling.send(JSON.stringify({
+      type: "ice_candidates",
+      stream_id: stream_id,
+      client_id: client_id,
+      session_id: session_id,
+      payload: {
+        type: "ice_candidates",
+        data: ice_candidate
+      }
+    }));
+  }
+
+  async function sendIceCandidates() {
+    if(sdp_negotiated) {
+      try {
+        for(let index = 0; index < pc_local_ice_candidates.length; ++index) {
+          const ice_candidate = pc_local_ice_candidates[index];
+          sendIceCandidate(ice_candidate);
+        }
+      } catch(e) {
+        console.log("Failed to set ICE candidates:", e.toString());
+      }
+    }
+  }
+
+  async function onIceStateChange(pc, event) {
+    console.log("ICE event: ", event);
+    if(pc) {
+      if(pc.iceConnectionState === "connected" || pc.iceConnectionState === "completed") {
+        console.log("ICE connected");
+      } else if(pc.iceConnectionState === "failed" || pc.iceConnectionState === "disconnected") {
+        console.log("ICE failed/disconnected");
+      }
+    }
+  }
+
+  async function onConnectionStateChange(pc, event) {
+    if(pc) {
+      console.log("PC:", pc.connectionState);
+    }
+  }
+
+  function onAddRemoteTrack(event) {
+    console.log("onAddRemoteTrack", event);
+    console.log("track.kind", event.track?.kind, "readyState", event.track?.readyState, "enabled", event.track?.enabled);
+    console.log("event.streams", event.streams);
+    console.log("remoteVideo.srcObject", remoteVideo.srcObject);
+
+    const kind = event.track ? event.track.kind : "unknown";
+    console.log("remote track kind:", kind);
+
+    if(event.streams && event.streams.length > 0) {
+      remoteStream = event.streams[0];
+    } else if(event.track) {
+      if(!remoteStream) {
+        remoteStream = new MediaStream();
+      }
+      remoteStream.addTrack(event.track);
+    }
+
+    if(remoteStream) {
+      if(remoteVideo.srcObject !== remoteStream) {
+        remoteVideo.srcObject = remoteStream;
+      }
+      remoteVideo.muted = true;
+      remoteVideo.playsInline = true;
+      remoteVideo.autoplay = true;
+      remoteVideo.play().catch(e => console.log("remoteVideo.play() failed:", e.toString()));
+    } else {
+      console.log("No remote stream available from track event");
+    }
+  }
+
+  async function stopCall() {
+    if(signalling && session_id) {
+      signalling.send(JSON.stringify({
+        type:"close",
+        stream_id:stream_id,
+        client_id:client_id,
+        session_id:session_id
+      }));
+    }
+    signalling = null;
+
+    pc.getReceivers().forEach(async receiver => {
+      const stats = await receiver.getStats();
+      stats.forEach(report => {
+        if (report.type === "inbound-rtp") {
+          console.log("inbound-rtp", report);
+        }
+        if (report.type === "track") {
+          console.log("track", report);
+        }
+      });
+    });
+
+    pc.close();
+    pc = null;
+    session_id = 0;
+    sdp_negotiated = false;
+  };
+
+</script>
+</body>
+</html>

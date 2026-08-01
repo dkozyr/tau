@@ -20,3 +20,5 @@ add_subdirectory("rtsp")
 add_subdirectory("webrtc")
 add_subdirectory("audio")
 add_subdirectory("video")
+
+add_subdirectory("apps")
