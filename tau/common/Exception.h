@@ -19,11 +19,11 @@ namespace tau {
 
 #else
 
-#define TAU_EXCEPTION(exception, message) {               \
-        tau::g_log_text.clear();                          \
-        etl::string_stream exception_ss(tau::g_log_text); \
-        exception_ss << (DETAIL_LOG_CONTEXT) << message;  \
-        throw exception(exception_ss.str().c_str());      \
+#define TAU_EXCEPTION(exception, message) {                     \
+        tau::g_log_text.clear();                                \
+        etl::string_stream exception_ss(tau::g_log_text);       \
+        exception_ss << (DETAIL_LOG_CONTEXT) << " " << message; \
+        throw exception(exception_ss.str().c_str());            \
     }
 
 #endif
