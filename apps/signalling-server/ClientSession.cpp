@@ -102,6 +102,27 @@ void ClientSession::SetIceCandidates(message::Payload&& payload) {
     }
 }
 
+void ClientSession::SetInfo(message::Payload&& payload) {
+    if(!_session_id) {
+        TAU_LOG_WARNING("No session id");
+        return;
+    }
+
+    if(auto connection = _connection.lock()) {
+        message::ClientNotification notification{
+            .session_id = *_session_id,
+            .session_state = SessionState::kStreaming,
+            .payload = std::move(payload)
+        };
+        ws::String message;
+        etl::string_stream ss(message);
+        message::ClientNotificationToJson(ss, notification);
+        connection->PostMessage(std::move(message));
+    } else {
+        TAU_LOG_WARNING("No connection");
+    }
+}
+
 bool ClientSession::IsActive() const {
     return (_connection.lock() != nullptr);
 }

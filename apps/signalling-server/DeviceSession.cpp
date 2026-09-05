@@ -48,7 +48,7 @@ ws::String DeviceSession::Process(ws::String&& request) {
     }
 
     const auto notification = _storage.ProcessMessage(std::move(*device));
-    TAU_LOG_INFO("Device notification: " << notification);
+    TAU_LOG_DEBUG("Device notification: " << notification);
 
     if(!notification.stream_id) {
         return R"({"error":"Failed to process device message"})";

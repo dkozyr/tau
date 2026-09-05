@@ -61,7 +61,9 @@ void Server::InitStorage() {
                 case message::PayloadType::kIceCandidates:
                     device_ptr->SetIceCandidates(std::move(payload));
                     break;
-                default:
+                case message::PayloadType::kInfo:
+                    break;
+                case message::PayloadType::kError:
                     break;
             }
         } else {
@@ -70,14 +72,26 @@ void Server::InitStorage() {
     });
 
     _storage.SetClientMessageCallback([this](DeviceId device_id, SessionId session_id, SessionState session_state, message::Payload&& payload) {
-        TAU_LOG_INFO("[client] Device_id: " << device_id << ", session_id: " << session_id << ", session_state: " << session_state << ", payload: " << payload);
+        TAU_LOG_DEBUG("[client] Device_id: " << device_id << ", session_id: " << session_id << ", session_state: " << session_state << ", payload: " << payload);
 
         //TODO: process closed state?
 
         auto client_ptr = GetClientBySessionId(session_id);
         if(client_ptr) {
-            if(payload.type == message::PayloadType::kSdp) {
-                client_ptr->SetSdpOffer(std::move(payload));
+            switch(payload.type) {
+                case message::PayloadType::kEmpty:
+                    break;
+                case message::PayloadType::kSdp:
+                    client_ptr->SetSdpOffer(std::move(payload));
+                    break;
+                case message::PayloadType::kIceCandidates:
+                    client_ptr->SetIceCandidates(std::move(payload));
+                    break;
+                case message::PayloadType::kInfo:
+                    client_ptr->SetInfo(std::move(payload));
+                    break;
+                case message::PayloadType::kError:
+                    break;
             }
         } else {
             TAU_LOG_WARNING("Client not found");

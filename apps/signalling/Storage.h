@@ -36,6 +36,7 @@ private:
     message::DeviceNotification OnDeviceInit(message::Device&& message);
     message::DeviceNotification OnDeviceSdp(message::Device&& message);
     message::DeviceNotification OnDeviceIce(message::Device&& message);
+    message::DeviceNotification OnDeviceInfo(message::Device&& message);
     message::DeviceNotification OnDeviceClose(message::Device&& message);
     // message::DeviceNotification OnDeviceCloseSession(message::Device&& message); //TODO:
     message::DeviceNotification DeviceError(String error);

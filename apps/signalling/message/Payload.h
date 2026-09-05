@@ -11,6 +11,7 @@ enum class PayloadType {
     kEmpty,
     kSdp,
     kIceCandidates,
+    kInfo,
     kError
 };
 

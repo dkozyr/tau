@@ -6,6 +6,7 @@ PayloadType PayloadTypeFromString(const etl::string_view& str) {
     if(str == "empty")          { return PayloadType::kEmpty; }
     if(str == "sdp")            { return PayloadType::kSdp; }
     if(str == "ice_candidates") { return PayloadType::kIceCandidates; }
+    if(str == "info")           { return PayloadType::kInfo; }
     return PayloadType::kError;
 }
 
@@ -14,6 +15,7 @@ etl::string_stream& operator<<(etl::string_stream& ss, const PayloadType& type) 
         case PayloadType::kEmpty:         ss << "empty"; break;
         case PayloadType::kSdp:           ss << "sdp"; break;
         case PayloadType::kIceCandidates: ss << "ice_candidates"; break;
+        case PayloadType::kInfo:          ss << "info"; break;
         case PayloadType::kError:         ss << "error"; break;
     }
     return ss;

@@ -16,6 +16,7 @@ public:
 
     void SetSdpOffer(message::Payload&& payload);
     void SetIceCandidates(message::Payload&& payload);
+    void SetInfo(message::Payload&& payload);
 
     bool IsActive() const;
     std::optional<SessionId> GetStreamId() const { return _stream_id; }

@@ -9,11 +9,12 @@ using namespace message;
 DeviceNotification Storage::ProcessMessage(Device&& message) {
     std::lock_guard lock{_mutex};
 
-    TAU_LOG_INFO("Message: " << message);
+    TAU_LOG_DEBUG("Message: " << message);
     switch(message.type) {
         case Type::kInit:          return OnDeviceInit(std::move(message));
         case Type::kSdp:           return OnDeviceSdp(std::move(message));
         case Type::kIceCandidates: return OnDeviceIce(std::move(message));
+        case Type::kInfo:          return OnDeviceInfo(std::move(message));
         case Type::kClose:         return OnDeviceClose(std::move(message));
         case Type::kError:         break;
     }
@@ -23,11 +24,12 @@ DeviceNotification Storage::ProcessMessage(Device&& message) {
 ClientNotification Storage::ProcessMessage(Client&& message) {
     std::lock_guard lock{_mutex};
 
-    TAU_LOG_INFO("Message: " << message);
+    TAU_LOG_DEBUG("Message: " << message);
     switch(message.type) {
         case Type::kInit:          return OnClientInit(std::move(message));
         case Type::kSdp:           return OnClientSdp(std::move(message));
         case Type::kIceCandidates: return OnClientIce(std::move(message));
+        case Type::kInfo:          break; // not supported
         case Type::kClose:         return OnClientClose(std::move(message));
         case Type::kError:         break;
     }
@@ -148,6 +150,29 @@ DeviceNotification Storage::OnDeviceIce(Device&& device) {
     return DeviceNotification{.stream_id = stream_info.stream_id, .session_state = SessionState::kStreaming};
 }
 
+DeviceNotification Storage::OnDeviceInfo(Device&& device) {
+    const auto& device_id = device.device_id;
+    auto it = _streams.find(device_id);
+    if(it == _streams.end()) {
+        return DeviceError("Wrong device_id");
+    }
+    const auto& stream_info = it->second;
+
+    const auto session_id = device.session_id.value_or(0);
+    auto it_session = stream_info.sessions.find(session_id);
+    if(it_session == stream_info.sessions.end()) {
+        return DeviceError("Wrong session_id");
+    }
+    auto& session_info = it_session->second;
+    if(session_info.state != SessionState::kStreaming) {
+        return DeviceError("Wrong session state");
+    }
+
+    _on_client_message_callback(device_id, session_id, session_info.state, std::move(device.payload));
+
+    return DeviceNotification{.stream_id = stream_info.stream_id, .session_state = SessionState::kStreaming};
+}
+
 DeviceNotification Storage::OnDeviceClose(Device&& message) {
     const auto& device_id = message.device_id;
     auto it = _streams.find(device_id);
@@ -160,9 +185,9 @@ DeviceNotification Storage::OnDeviceClose(Device&& message) {
     const auto& stream_info = it->second;
     const auto stream_id = stream_info.stream_id;
 
-    for(auto& [session_id, session_info] : stream_info.sessions) {
-        //TODO: _on_session_close_callback();
-    }
+    // for(auto& [session_id, session_info] : stream_info.sessions) {
+    //     //TODO: _on_session_close_callback();
+    // }
 
     _streams.erase(it);
 
