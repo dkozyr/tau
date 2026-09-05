@@ -39,6 +39,7 @@ struct Media {
     MediaType type;
     Mid mid = {};
     Direction direction = Direction::kSendRecv;
+    etl::string<32> control = {};
     CodecsMap codecs = {};
     std::optional<uint32_t> ssrc = std::nullopt; //NOTE: should be revised for the case of several streams: video and rtx
 };

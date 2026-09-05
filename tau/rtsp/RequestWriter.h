@@ -17,7 +17,7 @@ public:
             case Method::kPlay:     ss << "PLAY "; break;
             case Method::kTeardown: ss << "TEARDOWN "; break;
         }
-        ss << (request.method == Method::kOptions ? "*" : request.uri) << " " << kRtspVersion << kClRf;
+        ss << request.uri << " " << kRtspVersion << kClRf;
         for(auto& header : request.headers) {
             switch(header.name) {
                 case HeaderName::kCSeq:      ss << "CSeq"; break;

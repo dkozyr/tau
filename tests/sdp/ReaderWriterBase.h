@@ -26,6 +26,7 @@ protected:
         ASSERT_EQ(target.type,      actual.type);
         ASSERT_EQ(target.mid,       actual.mid);
         ASSERT_EQ(target.direction, actual.direction);
+        ASSERT_EQ(target.control,   actual.control);
         ASSERT_EQ(target.codecs.size(), actual.codecs.size());
         for(auto& [pt, codec] : target.codecs) {
             ASSERT_NO_FATAL_FAILURE(AssertCodec(codec, actual.codecs.at(pt)));

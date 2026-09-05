@@ -52,6 +52,11 @@ SdpPtr ParseSdp(etl::string_view sdp_str) {
                 else if(attr_type == "ice-options") { return OnAttributeIceOptions(*sdp, attr_value); }
                 else if(attr_type == "setup")       { return OnAttributeSetup(*sdp, attr_value); }
                 else if(attr_type == "fingerprint") { return OnAttributeFingerprint(*sdp, attr_value); }
+                else if(attr_type == "control")     {
+                    if(!sdp->medias.empty()) {
+                        sdp->medias.back().control = attr_value;
+                    }
+                }
             }
             return true;
         });
@@ -98,6 +103,9 @@ etl::istring& WriteSdp(etl::istring& output, const Sdp& sdp, etl::string_view en
             case Direction::kSend:     ss << "a=sendonly" << end_of_line; break;
             case Direction::kRecv:     ss << "a=recvonly" << end_of_line; break;
             case Direction::kInactive: ss << "a=inactive" << end_of_line; break;
+        }
+        if(!media.control.empty()) {
+            ss << "a=control:" << media.control << end_of_line;
         }
         ss << "a=rtcp-mux" << end_of_line;
         ss << "a=rtcp-rsize" << end_of_line;

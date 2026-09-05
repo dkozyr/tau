@@ -20,6 +20,7 @@ TEST_F(ReaderTest, Rtsp) {
         .type = MediaType::kVideo,
         .mid = {},
         .direction = Direction::kSendRecv,
+        .control = "track1",
         .codecs = MakeCodecsMap({
             {96, Codec{.index = 0, .name = "H264", .clock_rate = 90000, .rtcp_fb = 0, .format = "packetization-mode=1;profile-level-id=640020;sprop-parameter-sets=Z2QAIKwsqAeAIl5ZuAgICgAAAwPoAACcQQg=,aO48sA=="}},
         }),
@@ -279,9 +280,9 @@ TEST_F(ReaderTest, WebrtcFirefox) {
 }
 
 TEST_F(ReaderTest, SizeOf) {
-    ASSERT_EQ(20832, sizeof(Sdp));
-    ASSERT_EQ(20064, sizeof(Medias));
-    ASSERT_EQ(6608, sizeof(CodecsMap));
+    EXPECT_EQ(21'048, sizeof(Sdp));
+    EXPECT_EQ(20'280, sizeof(Medias));
+    EXPECT_EQ( 6'608, sizeof(CodecsMap));
 }
 
 }

@@ -25,7 +25,7 @@ protected:
 
 TEST_F(RequestReaderWriterTest, Options) {
     Request request{
-        .uri = "*",
+        .uri = "rtsp://127.0.0.1/stream",
         .method = Method::kOptions,
         .headers = {}
     };
