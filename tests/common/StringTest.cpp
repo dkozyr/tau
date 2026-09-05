@@ -191,6 +191,41 @@ TEST(StringTest, PrefixCaseInsensitive) {
     ASSERT_FALSE(IsPrefix("Hello world", "hElLo"));
 }
 
+TEST(StringTest, Trim) {
+    EXPECT_EQ("", Trim({}));
+    EXPECT_EQ("", Trim(" \t \t"));
+    EXPECT_EQ("value", Trim("value"));
+    EXPECT_EQ("value", Trim(" \tvalue"));
+    EXPECT_EQ("value", Trim("value\t "));
+    EXPECT_EQ("two \t words", Trim(" \ttwo \t words\t "));
+    EXPECT_EQ("\r\nvalue\n", Trim(" \r\nvalue\n\t"));
+
+    const char input[] = {' ', 'x', '\t'};
+    const auto trimmed = Trim(etl::string_view(input, sizeof(input)));
+    EXPECT_EQ("x", trimmed);
+    EXPECT_EQ(input + 1, trimmed.data());
+}
+
+TEST(StringTest, Equal) {
+    EXPECT_TRUE(Equal({}, {}));
+    EXPECT_TRUE(Equal("profile", "profile"));
+    EXPECT_TRUE(Equal("PROFILE", "profile"));
+    EXPECT_TRUE(Equal("profile", "PROFILE"));
+    EXPECT_TRUE(Equal("PrOfIlE-1", "pRoFiLe-1"));
+    EXPECT_FALSE(Equal("", "profile"));
+    EXPECT_FALSE(Equal("profile", ""));
+    EXPECT_FALSE(Equal("profile", "profiles"));
+    EXPECT_FALSE(Equal("profile", "profill"));
+    EXPECT_FALSE(Equal(" profile", "profile"));
+
+    const char first[]  = {'A', '\0', 'B'};
+    const char second[] = {'a', '\0', 'b'};
+    EXPECT_TRUE(Equal(etl::string_view(first, sizeof(first)), etl::string_view(second, sizeof(second))));
+
+    const char high_byte[] = {static_cast<char>(0xff)};
+    EXPECT_TRUE(Equal(etl::string_view(high_byte, 1), etl::string_view(high_byte, 1)));
+}
+
 TEST(StringTest, HexDump) {
     etl::array<uint8_t, 8> data = {0x12, 0x34, 0x56, 0x78, 0x9A, 0xBC, 0xDE, 0xF0};
     etl::string<256> dump;

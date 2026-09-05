@@ -64,6 +64,28 @@ bool IsPrefix(etl::string_view str, etl::string_view prefix, bool case_insensiti
     }
 }
 
+etl::string_view Trim(etl::string_view value) {
+    while(!value.empty() && ((value.front() == ' ') || (value.front() == '\t'))) {
+        value.remove_prefix(1);
+    }
+    while(!value.empty() && ((value.back() == ' ') || (value.back() == '\t'))) {
+        value.remove_suffix(1);
+    }
+    return value;
+}
+
+bool Equal(etl::string_view left, etl::string_view right) {
+    if(left.size() != right.size()) {
+        return false;
+    }
+    for(size_t i = 0; i < left.size(); ++i) {
+        if(ToLower(left[i]) != ToLower(right[i])) {
+            return false;
+        }
+    }
+    return true;
+}
+
 bool IsAlphaDigit(char c) {
     return IsDigit(c) || (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z');
 }

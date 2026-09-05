@@ -23,6 +23,9 @@ etl::string_view SplitNext(etl::string_view str, size_t& pos, etl::string_view m
 void ReplaceAll(etl::istring& output, etl::string_view input, etl::string_view from, etl::string_view to);
 void ToLowerCase(etl::istring& value);
 bool IsPrefix(etl::string_view str, etl::string_view prefix, bool case_insensitive = false);
+etl::string_view Trim(etl::string_view value);
+bool Equal(etl::string_view left, etl::string_view right);
+
 bool IsAlphaDigit(char c);
 bool IsDigit(char c);
 char ToUpper(char c);
