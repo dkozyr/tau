@@ -5,6 +5,7 @@
 #include "tau/common/Log.h"
 #include "mbedtls/ssl.h"
 #include <mbedtls/debug.h>
+
 namespace tau::dtls {
 
 static const int ciphersuites[] = {
@@ -29,6 +30,15 @@ Session::Session(Dependencies&& deps, Options&& options)
 
 Session::~Session() {
     Deinit();
+}
+
+void Session::SetSendCallback(Callback callback) {
+    _send_callback = std::move(callback);
+
+    for(size_t i = 0; i < _buffered_packets.size(); ++i) {
+        _send_callback(std::move(_buffered_packets[i]));
+    }
+    _buffered_packets.clear();
 }
 
 void Session::Stop() {
@@ -290,12 +300,20 @@ void Session::Deinit() {
     mbedtls_entropy_free(&_entropy);
 }
 
+void Session::ToSendCallback(Buffer&& packet) {
+    if(_send_callback) {
+        _send_callback(std::move(packet));
+    } else {
+        _buffered_packets.emplace_back(std::move(packet));
+    }
+}
+
 int Session::SendCallback(void* ctx, const uint8_t* buffer, size_t size) {
     auto self = static_cast<Session*>(ctx);
     auto packet = Buffer::Create(self->_deps.udp_allocator);
     memcpy(packet.GetView().ptr, buffer, size);
     packet.SetSize(size);
-    self->_send_callback(std::move(packet));
+    self->ToSendCallback(std::move(packet));
     return size;
 }
 

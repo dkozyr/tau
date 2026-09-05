@@ -16,6 +16,7 @@ namespace tau {
 
 namespace asio = boost::asio;
 using Executor = asio::any_io_executor;
+using Strand   = boost::asio::strand<Executor>;
 using boost_ec = boost::system::error_code;
 
 namespace beast      = boost::beast;

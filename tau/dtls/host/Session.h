@@ -4,6 +4,7 @@
 #include <tau/srtp/KeyMaterial.h>
 #include <tau/memory/Buffer.h>
 #include <openssl/ssl.h>
+#include <etl/vector.h>
 #include <etl/string_stream.h>
 #include <functional>
 #include <optional>
@@ -57,7 +58,7 @@ public:
     Session(Dependencies&& deps, Options&& options);
     ~Session();
 
-    void SetSendCallback(Callback callback) { _send_callback = std::move(callback); }
+    void SetSendCallback(Callback callback);
     void SetRecvCallback(Callback callback) { _recv_callback = std::move(callback); }
     void SetStateCallback(StateCallback callback) { _state_callback = std::move(callback); }
 
@@ -75,6 +76,7 @@ public:
 
 private:
     void ProcessPending();
+    void ToSendCallback(Buffer&& packet);
 
     static int OnVerifyPeerStatic(int preverify_ok, X509_STORE_CTX* x509_ctx);
     int OnVerifyPeer(int preverify_ok, X509_STORE_CTX* x509_ctx);
@@ -95,6 +97,8 @@ private:
     Callback _send_callback;
     Callback _recv_callback;
     StateCallback _state_callback;
+
+    etl::vector<Buffer, 16> _buffered_packets;
 };
 
 etl::string_stream& operator<<(etl::string_stream& ss, const Session::State& x);

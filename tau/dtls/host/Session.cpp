@@ -76,6 +76,15 @@ Session::~Session() {
     SSL_CTX_free(_ctx);
 }
 
+void Session::SetSendCallback(Callback callback) {
+    _send_callback = std::move(callback);
+
+    for(size_t i = 0; i < _buffered_packets.size(); ++i) {
+        _send_callback(std::move(_buffered_packets[i]));
+    }
+    _buffered_packets.clear();
+}
+
 void Session::Process() {
     switch(_state) {
         case State::kWaiting:
@@ -222,7 +231,7 @@ void Session::ProcessPending() {
         auto size = BIO_read(_bio_write, view.ptr, pending_size);
         if(size > 0) {
             packet.SetSize(size);
-            _send_callback(std::move(packet));
+            ToSendCallback(std::move(packet));
         } else {
             TAU_LOG_WARNING(_options.log_ctx << "BIO_read size: " << size);
         }
@@ -239,6 +248,14 @@ void Session::ProcessPending() {
         } else {
             break;
         }
+    }
+}
+
+void Session::ToSendCallback(Buffer&& packet) {
+    if(_send_callback) {
+        _send_callback(std::move(packet));
+    } else {
+        _buffered_packets.emplace_back(std::move(packet));
     }
 }
 

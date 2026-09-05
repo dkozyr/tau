@@ -8,6 +8,7 @@
 #include "mbedtls/pk.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
+#include <etl/vector.h>
 #include <etl/string.h>
 #include <etl/string_view.h>
 #include <etl/string_stream.h>
@@ -63,7 +64,7 @@ public:
     Session(Dependencies&& deps, Options&& options);
     ~Session();
 
-    void SetSendCallback(Callback callback) { _send_callback = std::move(callback); }
+    void SetSendCallback(Callback callback);
     void SetRecvCallback(Callback callback) { _recv_callback = std::move(callback); }
     void SetStateCallback(StateCallback callback) { _state_callback = std::move(callback); }
 
@@ -82,6 +83,8 @@ public:
 private:
     bool Init();
     void Deinit();
+
+    void ToSendCallback(Buffer&& packet);
 
     static int SendCallback(void* ctx, const uint8_t* buffer, size_t size);
     static int RecvCallback(void* ctx, uint8_t* buffer, size_t size);
@@ -131,6 +134,8 @@ private:
     Callback _send_callback;
     Callback _recv_callback;
     StateCallback _state_callback;
+
+    etl::vector<Buffer, 16> _buffered_packets;
 };
 
 etl::string_stream& operator<<(etl::string_stream& ss, const Session::State& x);
