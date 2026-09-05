@@ -8,6 +8,7 @@
 #include <atomic>
 #include <iostream>
 
+#define BOOST_STACKTRACE_USE_ADDR2LINE
 #include <boost/stacktrace.hpp>
 
 namespace tau {
