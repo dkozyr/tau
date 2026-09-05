@@ -25,7 +25,7 @@ bool H264Packetizer::Process(const Buffer& au) {
         view.ForwardPtrUnsafe(offset);
         for(size_t i = 0; i < nal_units.size(); ++i) {
             auto& nal_unit = nal_units[i];
-            bool last = (i + 1 == nal_units.size()) && (offset == view.size);
+            const bool last = (i + 1 == nal_units.size()) && (view.size == 0);
 
             nal_unit.ForwardPtrUnsafe(video::GetStartCodeLength(nal_unit, 0));
             if(!Process(nal_unit, au.GetInfo().tp, last)) {

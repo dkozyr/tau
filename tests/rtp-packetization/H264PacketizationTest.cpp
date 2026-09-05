@@ -56,6 +56,13 @@ TEST_F(H264PacketizationTest, Randomized_Au) {
 
         ASSERT_TRUE(_ctx->packetizer.Process(au));
         ASSERT_FALSE(_rtp_packets.empty());
+        for(size_t packet_index = 0; packet_index < _rtp_packets.size(); ++packet_index) {
+            const auto& packet = _rtp_packets[packet_index];
+            auto packet_view = packet.GetView();
+            ASSERT_TRUE(Reader::Validate(packet_view));
+            Reader reader(packet_view);
+            ASSERT_EQ(packet_index + 1 == _rtp_packets.size(), reader.Marker()) << "Packet index: " << packet_index;
+        }
         ASSERT_TRUE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
 
         ASSERT_EQ(nal_units.size(), _nal_units.size());

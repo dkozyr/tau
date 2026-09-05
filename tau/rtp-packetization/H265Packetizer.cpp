@@ -1,6 +1,7 @@
 #include <tau/rtp-packetization/H265Packetizer.h>
 #include <tau/rtp-packetization/FuHeader.h>
 #include <tau/video/h265/Nalu.h>
+#include <tau/video/AnnexBParser.h>
 #include <tau/common/Math.h>
 #include <cstring>
 
@@ -13,8 +14,34 @@ H265Packetizer::H265Packetizer(RtpAllocator& allocator)
     , _max_payload(_allocator.MaxRtpPayload())
 {}
 
+bool H265Packetizer::Process(const Buffer& au) {
+    auto view = au.GetView();
+    etl::vector<BufferViewConst, 4> nal_units;
+    while(view.size > 0) {
+        const auto offset = video::ParseAnnexB(view, nal_units);
+        if(offset == 0) {
+            break;
+        }
+        view.ForwardPtrUnsafe(offset);
+        for(size_t index = 0; index < nal_units.size(); ++index) {
+            auto& nal_unit = nal_units[index];
+            const bool last = (index + 1 == nal_units.size()) && (view.size == 0);
+
+            nal_unit.ForwardPtrUnsafe(video::GetStartCodeLength(nal_unit, 0));
+            if(!Process(nal_unit, au.GetInfo().tp, last)) {
+                return false;
+            }
+        }
+        nal_units.clear();
+    }
+    return true;
+}
+
 bool H265Packetizer::Process(const Buffer& nal_unit, bool last) {
-    auto view = nal_unit.GetView();
+    return Process(nal_unit.GetView(), nal_unit.GetInfo().tp, last);
+}
+
+bool H265Packetizer::Process(const BufferViewConst& view, Timepoint tp, bool last) {
     if(view.size <= kNaluHeaderSize) {
         return false;
     }
@@ -26,7 +53,6 @@ bool H265Packetizer::Process(const Buffer& nal_unit, bool last) {
         return false;
     }
 
-    const auto tp = nal_unit.GetInfo().tp;
     if(view.size <= _max_payload) {
         ProcessSingle(view, tp, last);
     } else {

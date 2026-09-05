@@ -15,9 +15,11 @@ public:
 
     void SetCallback(Callback callback) { _callback = std::move(callback); }
 
+    bool Process(const Buffer& au);
     bool Process(const Buffer& nal_unit, bool last);
 
 private:
+    bool Process(const BufferViewConst& view, Timepoint tp, bool last);
     void ProcessSingle(const BufferViewConst& view, Timepoint tp, bool last);
     void ProcessFu(const BufferViewConst& view, Timepoint tp, bool last);
 
