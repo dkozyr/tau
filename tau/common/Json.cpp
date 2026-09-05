@@ -134,6 +134,19 @@ etl::string_stream& Serialize(etl::string_stream& ss, const Json::value& value) 
             Serialize(ss, x);
         }
         ss << "]";
+    } else if(value.is_object()) {
+        ss << "{";
+        bool first = true;
+        for(const auto& [key, value] : value.get_object()) {
+            if(!first) {
+                ss << ",";
+            }
+            first = false;
+            SerializeString(ss, etl::string_view{key.data(), key.size()});
+            ss << ":";
+            Serialize(ss, value);
+        }
+        ss << "}";
     } else {
         ss << "null";
     }

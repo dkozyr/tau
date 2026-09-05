@@ -38,6 +38,51 @@ TEST(JsonTest, Basic) {
     }
 }
 
+TEST(JsonTest, Constructed) {
+    Json::array list_json;
+    list_json.reserve(2);
+
+    Json::object value_json{
+        {"class", 1},
+        {"confidence", 42}
+    };
+    list_json.push_back(std::move(value_json));
+
+    list_json.push_back({
+        {"class", 2},
+        {"confidence", 99}
+    });
+
+    Json::object object;
+    object["root"] = std::move(list_json);
+    object["test"] = 42;
+
+    etl::string<256> serialized;
+    json::Serialize(object, serialized);
+    ASSERT_STREQ(serialized.data(), R"({"root":[{"class":1,"confidence":42},{"class":2,"confidence":99}],"test":42})");
+}
+
+TEST(JsonTest, ObjectsInArray) {
+    const Json::object objects_array = {
+        {"items", Json::array{
+            Json::object{},
+            Json::object{
+                {"nested", Json::object{{"value", 42}}},
+                {"quoted\"key\\\n", "hello\tworld"}
+            }
+        }}
+    };
+
+    etl::string<256> serialized;
+    json::Serialize(objects_array, serialized);
+    ASSERT_STREQ(serialized.data(), R"({"items":[{},{"nested":{"value":42},"quoted\"key\\\n":"hello\tworld"}]})");
+
+    boost_ec error;
+    const auto parsed = Json::parse(serialized.data(), error);
+    ASSERT_EQ(0, error.value());
+    ASSERT_EQ(objects_array, parsed.as_object());
+}
+
 TEST(JsonTest, GetString) {
     etl::string<8> output;
     ASSERT_EQ("world", GetString(kObject, "hello", output));
