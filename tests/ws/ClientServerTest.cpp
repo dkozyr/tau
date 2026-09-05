@@ -165,6 +165,8 @@ TEST_F(ClientServerTest, CloseConnection) {
 
     Event on_ready;
     Event on_done;
+    Event on_error;
+
     auto client = std::make_shared<Client>(_io.GetExecutor(), Client::Options{kLocalHost, kWsPortTest, "/", *_client_ssl_ctx});
     client->SetOnConnectedCallback([&on_ready]() {
         on_ready.Set();
@@ -173,14 +175,20 @@ TEST_F(ClientServerTest, CloseConnection) {
         TAU_LOG_INFO("[client] incoming message: " << message);
         on_done.Set();
     });
-    client->SetOnErrorCallback([](beast_ec ec) {
-        TAU_LOG_INFO("[client] on error: " << ec);
+    client->SetOnErrorCallback([&on_error](beast_ec error) {
+        EXPECT_TRUE(error);
+        if(!on_error.IsSet()) {
+            EXPECT_EQ(beast_ws::error::closed, error);
+        }
+        on_error.Set();
     });
     client->Start();
     ASSERT_TRUE(on_ready.WaitFor(1s));
 
     connection_ptr->Close();
     connection_ptr = nullptr;
+    ASSERT_TRUE(on_error.WaitFor(100ms));
+
     client->PostMessage("Hello world");
     ASSERT_FALSE(on_done.WaitFor(100ms));
     client.reset();

@@ -151,7 +151,9 @@ void Client::OnRead(beast_ec ec, std::size_t bytes_transferred) {
         if((ec != beast_ws::error::closed) && (ec != asio::error::eof)) {
             TAU_LOG_WARNING("Error: " << ec << ", bytes_transferred: " << bytes_transferred);
         }
-        _on_error_callback(ec);
+        if(_on_error_callback) {
+            _on_error_callback(ec);
+        }
         return;
     }
 
@@ -191,7 +193,9 @@ void Client::OnWrite(beast_ec ec, size_t bytes_transferred) {
         if(ec != boost::system::errc::operation_canceled) {
             TAU_LOG_WARNING("Error: " << ec << ", bytes_transferred: " << bytes_transferred);
         }
-        _on_error_callback(ec);
+        if(_on_error_callback) {
+            _on_error_callback(ec);
+        }
         return;
     }
 
