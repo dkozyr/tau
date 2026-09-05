@@ -10,13 +10,14 @@ MediaDemuxer::MediaDemuxer(Options&& options)
     : _log_ctx(options.log_ctx) {
     for(size_t i = 0; i < options.local_sdp.medias.size(); ++i) {
         auto& media_local = options.local_sdp.medias[i];
-        if(media_local.direction & sdp::Direction::kRecv) {
-            if(media_local.ssrc) {
-                _local_media_ssrc_to_media_idx.insert({*media_local.ssrc, i});
-            }
-            auto& media_remote = options.remote_sdp.medias[i];
-            if(media_remote.ssrc) {
-                _remote_media_ssrc_to_media_idx.insert({*media_remote.ssrc, i});
+        auto& media_remote = options.remote_sdp.medias[i];
+        if(media_local.ssrc) {
+            _rtcp_ssrc_to_media_idx.insert({*media_local.ssrc, i});
+        }
+        if(media_remote.ssrc) {
+            _rtcp_ssrc_to_media_idx.insert({*media_remote.ssrc, i});
+            if(media_local.direction & sdp::Direction::kRecv) {
+                _remote_rtp_ssrc_to_media_idx.insert({*media_remote.ssrc, i});
             }
         }
     }
@@ -29,8 +30,8 @@ void MediaDemuxer::Process(Buffer&& packet, bool is_rtp) {
         auto reader = rtp::Reader(view);
         ssrc = reader.Ssrc();
 
-        auto it = _remote_media_ssrc_to_media_idx.find(ssrc);
-        if(it != _remote_media_ssrc_to_media_idx.end()) {
+        auto it = _remote_rtp_ssrc_to_media_idx.find(ssrc);
+        if(it != _remote_rtp_ssrc_to_media_idx.end()) {
             const auto& idx = it->second;
             _callback(idx, std::move(packet), is_rtp);
         } else {
@@ -39,9 +40,8 @@ void MediaDemuxer::Process(Buffer&& packet, bool is_rtp) {
     } else {
         if(auto ssrc_parsed = GetSsrcFromRtcp(view)) {
             ssrc = *ssrc_parsed;
-
-            auto it = _local_media_ssrc_to_media_idx.find(ssrc);
-            if(it != _local_media_ssrc_to_media_idx.end()) {
+            auto it = _rtcp_ssrc_to_media_idx.find(ssrc);
+            if(it != _rtcp_ssrc_to_media_idx.end()) {
                 const auto& idx = it->second;
                 _callback(idx, std::move(packet), is_rtp);
             } else {
@@ -57,7 +57,7 @@ std::optional<uint32_t> MediaDemuxer::GetSsrcFromRtcp(const BufferViewConst& vie
     if(!rtcp::Reader::Validate(view)) {
         TAU_LOG_WARNING_THR(128, _log_ctx << "Invalid RTCP, size: " << view.size);
         return std::nullopt;
-    };
+    }
 
     if(view.size < 3 * sizeof(uint32_t)) {
         return std::nullopt;

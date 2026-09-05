@@ -287,6 +287,10 @@ void PeerConnection::StartIceAgent() {
                 .remote_endpoint = pair.remote.endpoint
             });
             StartDtlsSession();
+            _dtls_session->SetSendCallback([this](Buffer&& packet) {
+                TAU_LOG_DEBUG(_options.log_ctx << "[DTLS] socket_idx: " << _ice_pair->socket_idx << ", remote: " << _ice_pair->remote_endpoint << ", size: " << packet.GetSize());
+                _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
+            });
         }
         switch(state) {
             case ice::State::kWaiting:   return;
@@ -387,10 +391,6 @@ void PeerConnection::StartDtlsSession() {
     });
     _dtls_session->SetRecvCallback([this](Buffer&& packet) {
         TAU_LOG_TRACE(_options.log_ctx << "[DTLS] recv packet: " << packet.GetSize());
-    });
-    _dtls_session->SetSendCallback([this](Buffer&& packet) {
-        TAU_LOG_TRACE(_options.log_ctx << "[DTLS] socket_idx: " << _ice_pair->socket_idx << ", remote: " << _ice_pair->remote_endpoint);
-        _udp_sockets.at(_ice_pair->socket_idx)->Send(std::move(packet), _ice_pair->remote_endpoint);
     });
 }
 

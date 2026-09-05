@@ -31,8 +31,8 @@ private:
 
 private:
     const etl::string_view _log_ctx;
-    etl::unordered_map<uint32_t, size_t, 2> _local_media_ssrc_to_media_idx;
-    etl::unordered_map<uint32_t, size_t, 2> _remote_media_ssrc_to_media_idx;
+    etl::unordered_map<uint32_t, size_t, 4> _remote_rtp_ssrc_to_media_idx;
+    etl::unordered_map<uint32_t, size_t, 8> _rtcp_ssrc_to_media_idx;
     Callback _callback;
 };
 
