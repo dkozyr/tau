@@ -29,6 +29,17 @@ protected:
     }
 };
 
+TEST_F(H264DepacketizerTest, AggregationLengthExceedsRemainingPayload) {
+    _rtp_packets.push_back(CreateRtpPacket(etl::vector<uint8_t, 1024>{
+        CreateNalUnitHeader(NaluType::kStapA, 0b11),
+        0, 3,
+        1, 2
+    }));
+
+    ASSERT_FALSE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
+    ASSERT_TRUE(_nal_units.empty());
+}
+
 TEST_F(H264DepacketizerTest, EmptyFrame) {
     ASSERT_TRUE(_ctx->depacketizer.Process(Frame{}));
     ASSERT_EQ(0, _nal_units.size());
@@ -140,6 +151,24 @@ TEST_F(H264DepacketizerTest, SkipIncompleteFuAPacket) {
     _rtp_packets[1].SetSize(kFixedHeaderSize + sizeof(FuAIndicator));
     ASSERT_FALSE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
     ASSERT_EQ(0, _nal_units.size());
+}
+
+TEST_F(H264DepacketizerTest, SkipFuAWithInvalidMiddlePacket) {
+    for(bool empty_payload : {true, false}) {
+        SCOPED_TRACE(empty_payload ? "empty payload" : "forbidden bit");
+
+        Init();
+        auto unit = CreateH264Nalu(NaluType::kSei, 3333);
+        ASSERT_TRUE(_ctx->packetizer.Process(unit, true));
+        ASSERT_EQ(3, _rtp_packets.size());
+        if(empty_payload) {
+            _rtp_packets[1].SetSize(kFixedHeaderSize);
+        } else {
+            _rtp_packets[1].GetView().ptr[kFixedHeaderSize] |= 0b10000000;
+        }
+        EXPECT_FALSE(_ctx->depacketizer.Process(std::move(_rtp_packets)));
+        EXPECT_TRUE(_nal_units.empty());
+    }
 }
 
 TEST_F(H264DepacketizerTest, SkipFuAWithWrongType) {

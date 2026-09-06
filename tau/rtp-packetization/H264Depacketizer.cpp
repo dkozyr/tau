@@ -14,8 +14,10 @@ H264Depacketizer::H264Depacketizer(Allocator& allocator)
 {}
 
 bool H264Depacketizer::Process(Frame&& frame) {
-    bool ok = true;
     _nalu_max_size = GetNaluMaxSize(frame);
+    _fua_nal_unit.reset(); // we assume separate frames between executions, should be revised for huge key-frames
+
+    bool ok = true;
     for(size_t i = 0; i < frame.size(); ++i) {
         const auto& packet = frame[i];
         Reader reader(packet.GetView());
@@ -27,10 +29,12 @@ bool H264Depacketizer::Process(Frame&& frame) {
 
 bool H264Depacketizer::Process(BufferViewConst rtp_payload_view, Timepoint tp, bool last) {
     if(rtp_payload_view.size == 0) {
+        _fua_nal_unit.reset();
         return false;
     }
     const auto header = reinterpret_cast<const NaluHeader*>(&rtp_payload_view.ptr[0]);
     if(header->forbidden) {
+        _fua_nal_unit.reset();
         return false;
     }
 
@@ -89,7 +93,7 @@ bool H264Depacketizer::ProcessStapA(BufferViewConst rtp_payload_view, Timepoint 
     rtp_payload_view.ForwardPtrUnsafe(sizeof(NaluHeader));
     while(rtp_payload_view.size > sizeof(uint16_t)) {
         const auto nalu_size = Read16(rtp_payload_view.ptr);
-        if((nalu_size == 0) || (rtp_payload_view.size < nalu_size)) {
+        if((nalu_size == 0) || (rtp_payload_view.size - sizeof(uint16_t) < nalu_size)) {
             break;
         }
         rtp_payload_view.ForwardPtrUnsafe(sizeof(uint16_t));
@@ -122,10 +126,11 @@ bool H264Depacketizer::ValidateFuA(BufferViewConst rtp_payload_view) const {
 }
 
 size_t H264Depacketizer::GetNaluMaxSize(const Frame& frame) {
-    auto sum = std::accumulate(frame.begin(), frame.end(), 0, [](size_t total, const Buffer& packet) {
-        return total + packet.GetSize();
-    });
-    return std::max(sum, kNaluMaxSizeDefault);
+    auto sum = std::accumulate(frame.begin(), frame.end(), (size_t)0,
+        [](size_t total, const Buffer& packet) {
+            return total + packet.GetSize();
+        });
+    return std::max<size_t>(sum, kNaluMaxSizeDefault);
 }
 
 }
