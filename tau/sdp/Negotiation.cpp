@@ -8,6 +8,7 @@ void SelectAudioMedia(Media& result, const Media& remote, const Media& local);
 void SelectVideoMedia(Media& result, const Media& remote, const Media& local);
 bool SelectVideoMediaH265(Media& result, const Media& remote, const Media& local);
 bool SelectVideoMediaH264(Media& result, const Media& remote, const Media& local);
+bool SelectVideoMediaAv1(Media& result, const Media& remote, const Media& local);
 etl::string<256> CreateH264Format(etl::string_view profile, etl::string_view level, bool asymmetry);
 
 std::optional<Media> SelectMedia(const Media& remote, const Media& local) {
@@ -60,12 +61,53 @@ void SelectAudioMedia(Media& result, const Media& remote, const Media& local) {
 }
 
 void SelectVideoMedia(Media& result, const Media& remote, const Media& local) {
+    if(SelectVideoMediaAv1(result, remote, local)) {
+        return;
+    }
     if(SelectVideoMediaH265(result, remote, local)) {
         return;
     }
-    if(SelectVideoMediaH264(result, remote, local)) {
-        return;
+    SelectVideoMediaH264(result, remote, local);
+}
+
+bool SelectVideoMediaAv1(Media& result, const Media& remote, const Media& local) {
+    const auto remote_codecs = FilterAv1Codec(remote.codecs);
+    const auto local_codecs = FilterAv1Codec(local.codecs);
+    const auto local_priority = GetPtWithPriority(local_codecs);
+    const auto remote_priority = GetPtWithPriority(remote_codecs);
+    for(const auto& local_payload : local_priority) {
+        const auto& local_codec = local_codecs.at(local_payload.pt);
+        for(const auto& remote_payload : remote_priority) {
+            const auto& remote_codec = remote_codecs.at(remote_payload.pt);
+            if(IsAv1SameProfile(remote_codec.format, local_codec.format)) {
+                result.codecs.insert({remote_payload.pt, Codec{
+                    .index      = 0,
+                    .name       = "AV1",
+                    .clock_rate = 90000,
+                    .rtcp_fb    = SelectRtcpFb(remote_codec.rtcp_fb, local_codec.rtcp_fb),
+                    .format     = CreateAv1Format(*ParseAv1Format(local_codec.format))
+                }});
+                return true;
+            }
+        }
     }
+    return false;
+}
+
+CodecsMap FilterAv1Codec(const CodecsMap& origin) {
+    CodecsMap result;
+    for(const auto& [pt, codec] : origin) {
+        if(Equal("AV1", codec.name) && (codec.clock_rate == 90000) && ParseAv1Format(codec.format)) {
+            result.insert({pt, codec});
+        }
+    }
+    return result;
+}
+
+bool IsAv1SameProfile(etl::string_view remote_format, etl::string_view local_format) {
+    const auto remote = ParseAv1Format(remote_format);
+    const auto local  = ParseAv1Format(local_format);
+    return remote && local && (remote->profile == local->profile);
 }
 
 bool SelectVideoMediaH265(Media& result, const Media& remote, const Media& local) {

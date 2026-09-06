@@ -1,6 +1,7 @@
 #pragma once
 
 #include "tau/sdp/Sdp.h"
+#include "tau/sdp/Av1Format.h"
 
 namespace tau::sdp {
 
@@ -10,6 +11,10 @@ inline constexpr etl::string_view kH264BaseProfileLevel1_0{"42000a"};
 std::optional<Media> SelectMedia(const Media& remote, const Media& local);
 Direction SelectDirection(Direction remote, Direction local);
 uint8_t SelectRtcpFb(uint8_t remote, uint8_t local);
+
+// AV1 specific
+CodecsMap FilterAv1Codec(const CodecsMap& origin);
+bool IsAv1SameProfile(etl::string_view remote_format, etl::string_view local_format);
 
 // H265 specific
 CodecsMap FilterH265Codec(const CodecsMap& origin);

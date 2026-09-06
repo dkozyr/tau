@@ -668,4 +668,20 @@ a=ssrc:1485109840 cname:{0081d7d9-16d1-465e-9c6f-a3f8e4832efb}
 a=ssrc-group:FID 1713748556 1485109840
 )";
 
+inline constexpr etl::string_view kWebrtcAv1SdpExample = R"(v=0
+o=- 1 1 IN IP4 127.0.0.1
+s=-
+t=0 0
+m=video 9 UDP/TLS/RTP/SAVPF 45 46
+c=IN IP4 0.0.0.0
+a=mid:video
+a=sendrecv
+a=rtpmap:45 AV1/90000
+a=fmtp:45 profile=0;level-idx=8;tier=1
+a=rtcp-fb:45 nack
+a=rtcp-fb:45 nack pli
+a=rtpmap:46 rtx/90000
+a=fmtp:46 apt=45
+)";
+
 }
