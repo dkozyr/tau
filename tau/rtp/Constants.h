@@ -5,6 +5,8 @@
 
 namespace tau::rtp {
 
+inline constexpr uint8_t kMarkerMask = 0b10000000;
+
 inline constexpr size_t kFixedHeaderSize = 3 * sizeof(uint32_t);
 inline constexpr size_t kExtensionHeaderSize = sizeof(uint32_t);
 
