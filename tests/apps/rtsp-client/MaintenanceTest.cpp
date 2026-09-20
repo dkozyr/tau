@@ -20,27 +20,17 @@ protected:
         _server.reset();
     }
 
-    void CreateMaintenance(bool connected = true, size_t initial_cseq = 0) {
-        if(connected) {
-            _connection = std::make_shared<Connection>(
-                _pool.GetExecutor(),
-                Connection::Options{
-                    .host = "127.0.0.1",
-                    .port = _server->Port(),
-                    .timeout = 1s
-                });
-            _session = Session::Create(_pool.GetExecutor(), {}, Transport::kTcp);
-        }
-        _maintenance = std::make_shared<Maintenance>(
-            Maintenance::Dependencies{_pool.GetExecutor(), _clock},
-            Maintenance::Options{
-                .connection = _connection,
-                .session = _session,
-                .cseq = initial_cseq,
-                .uri = "rtsp://127.0.0.1/video",
-                .session_id = "test",
-                .timeout = kSec
+    void CreateMaintenance(size_t initial_cseq = 0) {
+        _cseq = initial_cseq;
+        _connection = std::make_shared<Connection>(
+            _pool.GetExecutor(),
+            Connection::Options{
+                .host = "127.0.0.1",
+                .port = _server->Port(),
+                .timeout = 1s
             });
+        _session = Session::Create(_pool.GetExecutor(), {}, Transport::kTcp);
+        _maintenance.emplace(_clock, *_connection, _cseq);
     }
 
     void StartServer(etl::string_view status = "200 OK") {
@@ -63,23 +53,26 @@ protected:
             response.append("\r\n\r\n");
             server.SendBuffer(response);
             if(++_requests == 1) {
+                ASSERT_LE(cseq.size(), _received_cseq.capacity());
+                _received_cseq.assign(cseq);
                 _received.set_value();
             }
         });
     }
 
 protected:
+    size_t _cseq = 0;
+    etl::string<16> _received_cseq;
     MaintenanceClock _clock;
     ThreadPool _pool{2};
 
     std::unique_ptr<Server> _server;
     std::shared_ptr<Connection> _connection;
     std::shared_ptr<Session> _session;
-    std::shared_ptr<Maintenance> _maintenance;
+    std::optional<Maintenance> _maintenance;
 
     std::atomic<size_t> _requests{0};
     std::promise<void> _received;
-    std::promise<void> _closed;
 };
 
 TEST_F(RtspMaintenanceTest, SessionTimeout) {
@@ -109,51 +102,66 @@ TEST_F(RtspMaintenanceTest, SessionTimeout) {
 
 TEST_F(RtspMaintenanceTest, KeepaliveAndStop) {
     StartServer();
-    CreateMaintenance(true, 10);
+    CreateMaintenance(10);
 
     auto ready = _received.get_future();
-    _maintenance->Start();
-    EXPECT_EQ(std::future_status::timeout, ready.wait_for(1s));
+    _maintenance->Start(*_session, "rtsp://127.0.0.1/video", "test", kSec);
+    _maintenance->Process();
+    EXPECT_EQ(0, _requests.load());
 
     _clock.Add(kSec / 2);
+    _maintenance->Process();
     EXPECT_EQ(std::future_status::ready, ready.wait_for(2s));
 
     _maintenance->Stop();
     const auto count = _requests.load();
 
-    std::this_thread::sleep_for(1s);
+    _clock.Add(kSec);
+    _maintenance->Process();
     EXPECT_EQ(count, _requests);
 }
 
-TEST_F(RtspMaintenanceTest, RejectedKeepaliveClosesConnection) {
+TEST_F(RtspMaintenanceTest, RejectedKeepaliveReportsFailure) {
     StartServer("454 Session Not Found");
     CreateMaintenance();
-
-    auto ready = _closed.get_future();
-    _connection->SetCloseCallback([this]() {
-        _maintenance->Stop();
-        _closed.set_value();
-    });
-
-    _maintenance->Start();
+    auto ready = _received.get_future();
+    _maintenance->Start(*_session, "rtsp://127.0.0.1/video", "test", kSec);
     _clock.Add(kSec / 2);
-    EXPECT_EQ(std::future_status::ready, ready.wait_for(2s));
-}
-
-TEST_F(RtspMaintenanceTest, ExpiredDependenciesStopTimer) {
-    CreateMaintenance(false);
-    _maintenance->Start();
-    _maintenance->Start();
-    _pool.Join();
-    _maintenance->Stop();
+    _maintenance->Process();
+    ASSERT_EQ(std::future_status::ready, ready.wait_for(2s));
+    bool rejected = false;
+    for(size_t i = 0; (i < 200) && !rejected; ++i) {
+        try { _maintenance->Process(); }
+        catch(const std::runtime_error&) { rejected = true; }
+        if(!rejected) { std::this_thread::sleep_for(1ms); }
+    }
+    EXPECT_TRUE(rejected);
 }
 
 TEST_F(RtspMaintenanceTest, StopBeforeStart) {
-    CreateMaintenance(false);
+    StartServer();
+    CreateMaintenance();
     _maintenance->Stop();
     _maintenance->Stop();
-    _maintenance->Start();
-    _pool.Join();
+    _maintenance->Process();
+    EXPECT_EQ(0, _cseq);
+}
+
+TEST_F(RtspMaintenanceTest, SharesSequenceCounterWithCaller) {
+    StartServer();
+    CreateMaintenance(10);
+
+    auto ready = _received.get_future();
+    EXPECT_EQ(11, ++_cseq);
+
+    _maintenance->Start(*_session, "rtsp://127.0.0.1/video", "test", kSec);
+    _clock.Add(kSec / 2);
+    _maintenance->Process();
+    ASSERT_EQ(std::future_status::ready, ready.wait_for(2s));
+    EXPECT_EQ("12", _received_cseq);
+
+    _maintenance->Stop();
+    EXPECT_EQ(13, ++_cseq);
 }
 
 }

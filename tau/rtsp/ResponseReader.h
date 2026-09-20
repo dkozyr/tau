@@ -14,15 +14,20 @@ public:
         if(lines.size() < 2) {
             return std::nullopt;
         }
-        SplitTokens<3> tokens;
-        Split(tokens, lines[0], " ");
-        if((tokens.size() != 3) || (tokens[0] != kRtspVersion)) {
+
+        size_t position = 0;
+        const auto version = SplitNext(lines[0], position, " ");
+        if((version != kRtspVersion) || (position == etl::string_view::npos)) {
             return std::nullopt;
         }
-        auto status_code = StringToUnsigned<size_t>(tokens[1]);
-        if(!status_code) {
+
+        const auto status = SplitNext(lines[0], position, " ");
+        const auto status_code = StringToUnsigned<size_t>(status);
+        if((status.size() != 3) || !status_code) {
             return std::nullopt;
         }
+
+        const auto reason_phrase = (position == etl::string_view::npos) ? etl::string_view{} : lines[0].substr(position);
         auto headers = GetHeaders(str);
         if(GetHeaderValue(HeaderName::kCSeq, headers).empty()) {
             return std::nullopt;
@@ -31,7 +36,7 @@ public:
         const auto body_offset = str.find(kClRfClRf);
         return Response{
             .status_code = *status_code,
-            .reason_phrase = tokens[2],
+            .reason_phrase = reason_phrase,
             .headers = std::move(headers),
             .body = (body_offset != etl::string_view::npos)
                   ? str.substr(body_offset + kClRfClRf.size())

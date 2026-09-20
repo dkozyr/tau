@@ -2,103 +2,65 @@
 #include "tau/rtsp/RequestWriter.h"
 #include "tau/rtsp/ResponseReader.h"
 #include "tau/common/String.h"
-#include "tau/common/Log.h"
+#include "tau/common/Exception.h"
 
 namespace tau::rtsp {
 
-Maintenance::Maintenance(Dependencies deps, Options options)
-    : _clock(deps.clock)
-    , _timer(deps.executor)
-    , _connection(std::move(options.connection))
-    , _session(std::move(options.session))
-    , _cseq(std::move(options.cseq))
-    , _uri(options.uri)
-    , _session_id(options.session_id)
-    , _interval(options.timeout / 2)
+Maintenance::Maintenance(Clock& clock, Connection& connection, size_t& cseq, std::weak_ptr<Session> session)
+    : _clock(clock)
+    , _connection(connection)
+    , _cseq(cseq)
+    , _session(std::move(session))
 {}
 
-void Maintenance::Start() {
-    std::lock_guard lock{_mutex};
-    if(!_started && !_stopped) {
-        _started = true;
-        _next_keepalive = _clock.Now() + _interval;
-        Schedule();
+void Maintenance::Start(etl::string_view uri, etl::string_view session_id, Timepoint timeout) {
+    if((uri.size() > _uri.capacity()) || (session_id.size() > _session_id.capacity()) || (timeout == 0)) {
+        TAU_EXCEPTION(std::invalid_argument, "Invalid options");
     }
+
+    _started = true;
+    _uri = uri;
+    _session_id = session_id;
+    _interval = timeout / 2;
+    _next_keepalive = _clock.Now() + _interval;
 }
 
 void Maintenance::Stop() {
-    std::lock_guard lock{_mutex};
-    StopInternal();
-}
-
-void Maintenance::StopInternal() {
-    _stopped = true;
-    _timer.cancel();
+    _started = false;
     _response.reset();
 }
 
-void Maintenance::Schedule() {
-    _timer.expires_after(std::chrono::nanoseconds(100 * kMs));
-    _timer.async_wait([weak = weak_from_this()](boost_ec ec) {
-        if(auto self = weak.lock()) {
-            self->OnTimer(ec);
-        }
-    });
-}
-
-void Maintenance::OnTimer(boost_ec ec) {
-    auto [connection, session] = GetConnectionWithSession(ec);
-    if(!connection || !session) {
+void Maintenance::Process() {
+    if(!_started) { return; }
+    const auto session = _session.lock();
+    if(!session) {
         Stop();
         return;
     }
 
-    try {
-        session->Process();
-
-        std::unique_lock lock{_mutex};
-        if(_stopped) { return; }
-
-        if(_response && (_response->wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)) {
-            const auto message = _response->get();
-            const auto response = ResponseReader::Read(message.data);
-            if(!response || (response->status_code < 200) || (response->status_code >= 300)) {
-                throw std::runtime_error("RTSP keepalive rejected");
-            }
-            _response.reset();
+    session->Process();
+    if(_response && (_response->wait_for(std::chrono::seconds(0)) == std::future_status::ready)) {
+        const auto message = _response->get();
+        _response.reset();
+        const auto response = ResponseReader::Read(message.data);
+        if(!response || (response->status_code < 200) || (response->status_code >= 300)) {
+            TAU_EXCEPTION(std::runtime_error, "RTSP keepalive rejected");
         }
-
-        if(!_response && (_clock.Now() >= _next_keepalive)) {
-            const auto cseq = ToString<16>(++_cseq);
-            StreamReader::String text;
-            RequestWriter::Write(Request{
-                .uri = _uri,
-                .method = Method::kOptions,
-                .headers = {
-                    {HeaderName::kCSeq, cseq},
-                    {HeaderName::kSession, _session_id}
-                }
-            }, text);
-            _response.emplace(connection->SendRequest(std::move(text), cseq));
-            _next_keepalive = _clock.Now() + _interval;
-        }
-    } catch(const std::exception& exception) {
-        Stop();
-        TAU_LOG_WARNING("Exception: " << exception.what());
-        connection->Close();
-        return;
     }
 
-    Schedule();
-}
-
-Maintenance::ConnectionWithSession Maintenance::GetConnectionWithSession(boost_ec ec) {
-    std::unique_lock lock{_mutex};
-    if(ec || _stopped) {
-        return ConnectionWithSession{nullptr, nullptr};
+    if(!_response && (_clock.Now() >= _next_keepalive)) {
+        const auto cseq = ToString<16>(++_cseq);
+        StreamReader::String text;
+        RequestWriter::Write(Request{
+            .uri = _uri,
+            .method = Method::kOptions,
+            .headers = {
+                {HeaderName::kCSeq, cseq},
+                {HeaderName::kSession, _session_id}}
+        }, text);
+        _response.emplace(_connection.SendRequest(std::move(text), cseq));
+        _next_keepalive = _clock.Now() + _interval;
     }
-
-    return std::make_pair(_connection.lock(), _session.lock());
 }
 
 }

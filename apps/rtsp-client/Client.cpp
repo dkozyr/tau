@@ -1,30 +1,42 @@
 #include "apps/rtsp-client/Client.h"
 #include "apps/rtsp-client/Utils.h"
+#include "apps/rtsp-client/SetupUri.h"
 #include "tau/rtsp/RequestWriter.h"
 #include "tau/rtsp/ResponseReader.h"
 #include "tau/memory/SystemAllocator.h"
 #include "tau/asio/ToString.h"
 #include "tau/common/Exception.h"
 #include "tau/common/Log.h"
-#include <array>
+#include <cassert>
 
 namespace tau::rtsp {
 
 Client::Client(Executor executor, Options&& options)
     : _executor(std::move(executor))
+    , _strand(asio::make_strand(_executor))
+    , _timer(_strand)
     , _uri(CreateUriString(options))
-    , _endpoints(asio::ip::tcp::resolver(_executor).resolve(options.uri.host.data(), std::to_string(options.uri.port))) {
-    for(auto& endpoint : _endpoints) {
-        TAU_LOG_INFO("RTSP endpoint: " << endpoint.endpoint());
-    }
+    , _transport(options.transport)
+    , _request_timeout(options.request_timeout)
+    , _connection(_strand,
+        Connection::Options{
+            .host = options.uri.host,
+            .port = options.uri.port,
+            .timeout = std::chrono::milliseconds(options.request_timeout / kMs)
+        })
+{
+    _connection.SetCloseCallback([this]() {
+        _transport_closed.store(true);
+    });
+}
+
+Client::~Client() {
+    Close();
 }
 
 void Client::SetVideoCallback(VideoCallback callback) {
-    if(_session) {
-        _session->SetVideoCallback(std::move(callback));
-    } else {
-        _video_callback = std::move(callback);
-    }
+    assert(!_closed && !_session && !_session_tcp);
+    _video_callback = std::move(callback);
 }
 
 void Client::SendRequestOptions() {
@@ -55,29 +67,23 @@ void Client::SendRequestDescribe() {
         cseq);
     TAU_LOG_INFO("RTSP SDP:\r\n" << response.body);
     ParseAndValidateSdp(response.body);
+    _setup_uri = CreateSetupUri(_uri, GetHeaderValue(HeaderName::kContentBase, response.headers), _sdp->medias[0].control);
 }
 
 void Client::SendRequestSetup() {
-    _session.emplace(_executor, CreateSessionOptions());
-    if(_video_callback) {
-        _session->SetVideoCallback([this](Buffer&& nal_unit) {
-            _video_callback(std::move(nal_unit));
-        });
-    }
-    const auto rtp_port = _session->GetRtpPort();
-    const auto rtcp_port = rtp_port + 1;
-    TAU_LOG_INFO("Rtp port: " << rtp_port << ", rtcp port: " << rtcp_port);
+    assert(!_closed && _sdp && !_session && !_session_tcp && _session_id.empty());
 
-    _cseq++;
-    const auto cseq = ToString<8>(_cseq);
-    etl::string<64> value;
-    value.append("RTP/AVP/UDP;unicast;client_port=");
-    value.append(ToString<8>(rtp_port));
-    value.append("-");
-    value.append(ToString<8>(rtcp_port));
+    uint16_t rtp_port = 0;
+    if(_transport == Transport::kUdp) {
+        _session.emplace(_strand, CreateSessionOptions(), std::move(_video_callback));
+        rtp_port = _session->GetRtpPort();
+        TAU_LOG_INFO("Rtp port: " << rtp_port << ", rtcp port: " << rtp_port + 1);
+    }
+    const auto cseq = ToString<8>(++_cseq);
+    const auto value = CreateTransportHeader(_transport, rtp_port);
     auto response = SendRequestAndValidateResponse(
         Request{
-            .uri = _uri,
+            .uri = _setup_uri,
             .method = Method::kSetup,
             .headers {
                 Header{.name = HeaderName::kCSeq, .value = cseq},
@@ -85,15 +91,21 @@ void Client::SendRequestSetup() {
             }
         },
         cseq);
-    _server_rtp_port = ParseServerRtpPort(response);
-    _session_id = ParseSessionId(response);
-    if(!_server_rtp_port || _session_id.empty()) {
-        TAU_EXCEPTION(std::runtime_error, "Wrong SETUP response");
+    ApplySetupResponse(response);
+
+    if(_transport == Transport::kTcp) {
+        _session_tcp.emplace(_connection, SessionTcp::Options{
+            .channels = *_interleaved_channels,
+            .pipeline = CreateSessionOptions()
+        });
+        _session_tcp->SetVideoCallback(std::move(_video_callback));
     }
-    TAU_LOG_INFO("RTSP server rtp port: " << *_server_rtp_port << ", session id: " << _session_id);
+    TAU_LOG_INFO("RTSP session id: " << _session_id);
 }
 
 void Client::SendRequestPlay() {
+    assert(!_closed && !_session_id.empty());
+
     _cseq++;
     const auto cseq = ToString<8>(_cseq);
     SendRequestAndValidateResponse(
@@ -123,6 +135,49 @@ void Client::SendRequestTeardown() {
         cseq);
 }
 
+void Client::Close() {
+    if(_closed) {
+        return;
+    }
+    assert(!_strand.running_in_this_thread());
+
+    std::promise<void> completion;
+    auto shutdown = completion.get_future();
+    asio::post(_strand, [this, &completion]() {
+        if(_session) {
+            _session->Stop();
+        }
+        _connection.AsyncClose([&completion]() { completion.set_value(); });
+    });
+    shutdown.get();
+
+    if(_maintenance) {
+        _maintenance->Stop();
+    }
+    _session.reset();
+    _session_tcp.reset();
+    _video_callback = {};
+    _closed = true;
+}
+
+bool Client::IsClosed() const {
+    return _transport_closed.load();
+}
+
+void Client::ApplySetupResponse(const Response& response) {
+    const auto parameters = ParseTransport(GetHeaderValue(HeaderName::kTransport, response.headers));
+    if(!parameters || (parameters->transport != _transport)) {
+        TAU_EXCEPTION(std::runtime_error, "Invalid or mismatched SETUP transport");
+    }
+    const auto session_id = ParseSessionId(response);
+    if(session_id.empty() || (session_id.size() > _session_id.capacity())) {
+        TAU_EXCEPTION(std::runtime_error, "Invalid SETUP session id");
+    }
+    _server_rtp_port = parameters->server_rtp_port;
+    _interleaved_channels = parameters->channels;
+    _session_id = session_id;
+}
+
 Response Client::SendRequestAndValidateResponse(Request&& request, const etl::string_view& cseq) {
     auto response = SendRequest(std::move(request));
     if(!response) {
@@ -131,39 +186,19 @@ Response Client::SendRequestAndValidateResponse(Request&& request, const etl::st
     if(cseq != GetHeaderValue(HeaderName::kCSeq, response->headers)) {
         TAU_EXCEPTION(std::runtime_error, "Wrong response CSeq, expected CSeq: " << cseq);
     }
+    if((response->status_code < 200) || (response->status_code >= 300)) {
+        TAU_EXCEPTION(std::runtime_error, "RTSP request failed, status: " << response->status_code);
+    }
     return *response;
 }
 
 std::optional<Response> Client::SendRequest(Request&& request) {
-    boost_ec ec;
-    asio::ip::tcp::socket socket(_executor);
-    asio::connect(socket, _endpoints, ec);
-    if(ec) {
-        TAU_LOG_WARNING("connect error: " << ec);
-        return {};
-    }
-
+    assert(!_closed && !_strand.running_in_this_thread());
     RequestWriter::Write(request, _text);
     TAU_LOG_INFO("Request:\r\n" << _text);
-    asio::write(socket, asio::buffer(_text.data(), _text.size()), ec);
-    if(ec) {
-        TAU_LOG_WARNING("write error: " << ec);
-        return {};
-    }
-
-    _text.clear();
-    std::array<char, 256> buffer;
-    do {
-        auto bytes = socket.read_some(asio::buffer(buffer), ec);
-        if(ec) {
-            if(ec != asio::error::eof) {
-                TAU_LOG_WARNING("read_some error: " << ec);
-            }
-            break;
-        }
-        _text.append(buffer.data(), bytes);
-    } while(socket.available() > 0);
-    socket.close(ec);
+    const auto cseq = GetHeaderValue(HeaderName::kCSeq, request.headers);
+    auto response = _connection.SendRequest(_text, cseq);
+    _text = std::move(response.get().data);
 
     TAU_LOG_INFO("Response:\r\n" << _text);
     return ResponseReader::Read(_text);
@@ -215,10 +250,16 @@ Session::Options Client::CreateSessionOptions() const {
 
 Client::UriStr Client::CreateUriString(const Options& options) {
     UriStr uri;
+    const auto port = ToString<8>(options.uri.port);
     uri.append("rtsp://");
     uri.append(options.uri.host);
+    uri.append(":");
+    uri.append(port);
     uri.append("/");
     uri.append(options.uri.path);
+    if(uri.full()) {
+        TAU_EXCEPTION(std::invalid_argument, "RTSP URI too long");
+    }
     return uri;
 }
 

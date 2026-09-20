@@ -122,4 +122,18 @@ TEST_F(ResponseReaderWriterTest, ReadCaseInsensitivePrefixes) {
     ASSERT_EQ("313", headers[1].value);
 }
 
+TEST_F(ResponseReaderWriterTest, UnsupportedTransport) {
+    const auto response = ResponseReader::Read("RTSP/1.0 461 Unsupported transport\r\nCseq: 1\r\n\r\n");
+    ASSERT_TRUE(response);
+    EXPECT_EQ(461, response->status_code);
+    EXPECT_EQ("Unsupported transport", response->reason_phrase);
+}
+
+TEST_F(ResponseReaderWriterTest, EmptyReasonPhrase) {
+    const auto response = ResponseReader::Read("RTSP/1.0 461\r\nCseq: 1\r\n\r\n");
+    ASSERT_TRUE(response);
+    EXPECT_EQ(461, response->status_code);
+    EXPECT_TRUE(response->reason_phrase.empty());
+}
+
 }
